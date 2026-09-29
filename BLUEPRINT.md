@@ -19,7 +19,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Model                | Claude on Bedrock (EU inference profile), one model as a server setting                            | Anthropic API directly                      |
 | Accounting engine    | hledger, one pinned version                                                                        | None; decided                               |
 | App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
-| Sign-in              | Clerk (Apple, Google)                                                                              | Cognito                                     |
+| Sign-in              | Clerk, Sign in with Apple only                                                                     | Cognito                                     |
 | Payments             | RevenueCat on StoreKit 2                                                                           | Superwall                                   |
 
 The fork: this repo becomes the closed app; the open-source desktop app stays in its own repo. The ledger code no longer has to serve the desktop. The forked code is Apache-2.0: keep its license and notice.
@@ -31,7 +31,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 ```
 +------------------+  JWT  +-------------------------------+
 | Clerk            | ----> | iOS APP (Expo, React Native)  |
-| Apple and Google |       | chat with tool steps          |
+| Apple sign-in    |       | chat with tool steps          |
 +------------------+       | Transactions, Net worth       |
                            | export                        |
                            | camera, scanner, Files        |
@@ -243,7 +243,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 **At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills made in chat (instructions only), subscription, delete account.
 
-**Later:** skill scripts and the plugin marketplace, a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later:** Sign in with Google (with Android or a web app), skill scripts and the plugin marketplace, a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
 **Dropped:** provider, model and Ollama settings.
 
@@ -260,7 +260,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Launch checklist
 
-- **App Store:** organization account (5.1.1(ix)); Sign in with Apple next to Google; in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
+- **App Store:** organization account (5.1.1(ix)); Sign in with Apple as the only sign-in (so Apple's rule about offering it next to other providers doesn't apply yet); in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
 - **Privacy:** policy and terms; processor agreements with AWS, LangSmith, Clerk, RevenueCat, Sentry, PostHog; a DPIA; check where Clerk and RevenueCat keep data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
 - **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
