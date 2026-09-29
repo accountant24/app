@@ -27,67 +27,46 @@ This repo is a closed fork; the open-source desktop app stays in its own repo. K
 The books are git, so the agent works on real files exactly as on the Mac, and history and undo are plain git. Each chat gets a throwaway sandbox with a clone; the sandbox never holds the only copy, and pages never need a sandbox awake.
 
 ```
-+------------------+  JWT  +-------------------------------+
-| Clerk            | ----> | iOS APP (Expo, React Native)  |
-| Apple sign-in    |       | chat with tool steps          |
-+------------------+       | Transactions, Net worth       |
-                           | export                        |
-                           | photos, Files, share sheet    |
-                           | paywall                       |
-                           +-------------------------------+
-                               |                     |
-                          chat |                     | pages, export,
-                               |                     | account
-                               v                     v
-+-----------------------------------+         +-------------------------------------+
-| AGENT SERVER                      |         | AWS, eu-west-1 (Ireland), in CDK    |
-| LangSmith Deployment, EU          |         |                                     |
-|                                   |  tool   | API service, sandboxes, S3,         |
-| custom auth: Clerk token          |  calls, | DynamoDB, Bedrock                   |
-| deepagents graph: system.md,      |  run    |                                     |
-|   skills, memory.md               |  done,  | (see the next diagram)              |
-| ledger tools: thin wrappers       |  prompts|                                     |
-| chats, runs, rejoin, cron, traces | ------> |                                     |
-+-----------------------------------+         +-------------------------------------+
-                                                  ^
-                                          webhook |
-                                                  |
-                                        +------------------+
-                                        | RevenueCat       |
-                                        | StoreKit 2       |
-                                        +------------------+
-```
-
-```
-+-------------------------------------------------------------------------------------+
-| AWS, eu-west-1 (Ireland), defined in CDK                                            |
-|                                                                                     |
-|   from the phone and the agent server                                               |
-|              |                                                                      |
-|              v                                                                      |
-|   +------------------------+              +-----------------------------+           |
-|   | Lambda function URL    |              | Bedrock, EU inference       |           |
-|   +------------------------+              | profile: Claude Sonnet 5.5, |           |
-|              |                            | Haiku 4.5                   |           |
-|              v                            +-----------------------------+           |
-|   +---------------------------+                  ^  prompts from the agent server   |
-|   | API SERVICE (Lambda)      |                                                     |
-|   | container image, no state |   run commands   +-----------------------------+    |
-|   | Node + git + hledger      | ---------------> | SANDBOX SESSION             |    |
-|   | save checks               |                  | AgentCore Runtime           |    |
-|   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
-|   | accounts, webhooks        | <--------------> | clone of the books          |    |
-|   | drives the sandboxes      |   in and out     | hledger, git                |    |
-|   +---------------------------+                  | stops after 10 idle min     |    |
-|         |               |                        | no internet access          |    |
-|         |               |                        +-----------------------------+    |
-|         v               v                                                           |
-|   +--------------+  +--------------+                                                |
-|   | S3           |  | DynamoDB     |                                                |
-|   | versioned    |  | from launch: |                                                |
-|   | books.bundle |  | plan, daily  |                                                |
-|   | per user     |  |              |                                                |
-|   +--------------+  +--------------+                                                |
++------------------+ JWT   +-------------------------------+   +----------------+
+| Clerk            | ----> | iOS APP (Expo, React Native)  |   | RevenueCat     |
+| Apple sign-in    |       | chat with tool steps          |   | StoreKit 2     |
++------------------+       | Transactions, Net worth       |   +----------------+
+                           | export                        |            |
+                           | photos, Files, share sheet    |            |
+                           | paywall                       |            |
+                           +-------------------------------+            |
+                          chat |                     | pages, export,   |
+                               v                     | account          |
+              +---------------------------------+    |                  |
+              | AGENT SERVER, LangSmith, EU     |    |                  |
+              | custom auth: Clerk token        |    |                  | webhook
+              | deepagents: system.md, skills,  |    |                  |
+              |   memory.md                     |    |                  |
+              | ledger tools: thin wrappers     |    |                  |
+              | chats, runs, rejoin, traces     |    |                  |
+              +---------------------------------+    |                  |
+                  |                           |      |                  |
+          prompts |                tool calls |      |                  |
+                  v                           v      v                  v
++-- AWS, eu-west-1 (Ireland), defined in CDK -----------------------------------------+
+|  +--------------------------+             +---------------------------------------+ |
+|  | Bedrock, EU profile      |             | API SERVICE (Lambda)                  | |
+|  | Claude Sonnet 5.5        |             | container: Node, git, hledger         | |
+|  | or Haiku 4.5             |             | no state, temp folder per request     | |
+|  +--------------------------+             | save checks: ancestor + hledger       | |
+|                                           | pages: hledger on the latest save     | |
+|  +--------------------------+             | runs tools in the sandbox             | |
+|  | SANDBOX (AgentCore)      |             | copies books.bundle in and out        | |
+|  | one microVM per chat     |<-- tools ---| RevenueCat webhook (from launch)      | |
+|  | clone of the books       |<- bundle -->|                                       | |
+|  | hledger, git, ledger CLI |             +---------------------------------------+ |
+|  | no internet, no keys     |                     |                   |             |
+|  | stops after 10 idle min  |                     v                   v             |
+|  +--------------------------+             +-----------------+   +-----------------+ |
+|                                           | S3, versioned   |   | DynamoDB        | |
+|                                           | books.bundle    |   | from launch:    | |
+|                                           | per user        |   | plan, daily cap | |
+|                                           +-----------------+   +-----------------+ |
 +-------------------------------------------------------------------------------------+
 ```
 
