@@ -9,15 +9,15 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Area              | Pick                                                                                                                              |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Cloud             | AWS, Ireland (eu-west-1), defined in CDK                                                                                          |
-| Books             | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write                                  |
+| Books             | A git repo per ledger, one bundle file in a versioned S3 bucket, replaced with a conditional write                                |
 | Server            | One stateless API function on Lambda (container image: Node, git, hledger)                                                        |
-| Accounts          | None for the beta (Clerk lists users); DynamoDB from the public launch                                                            |
+| Accounts          | DynamoDB: users, sign-in methods, ledgers and members from the beta; plans and the daily cap from the public launch               |
 | Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                          |
 | Sandboxes         | AgentCore Runtime, one session per chat, with a connector we write                                                                |
 | Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering |
 | Accounting engine | hledger, one pinned version                                                                                                       |
 | App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                             |
-| Sign-in           | Clerk, Sign in with Apple only                                                                                                    |
+| Sign-in           | Sign in with Apple only, no auth vendor: the API service checks Apple's token and issues our own JWT                              |
 | Payments          | RevenueCat on StoreKit 2                                                                                                          |
 
 This repo is a closed fork; the open-source desktop app stays in its own repo. Keep the Apache-2.0 license and notice for the forked code.
@@ -27,19 +27,19 @@ This repo is a closed fork; the open-source desktop app stays in its own repo. K
 The books are git, so the agent works on real files exactly as on the Mac, and history and undo are plain git. Each chat gets a throwaway sandbox with a clone; the sandbox never holds the only copy, and pages never need a sandbox awake.
 
 ```
-+------------------+ JWT   +-------------------------------+   +----------------+
-| Clerk            | ----> | iOS APP (Expo, React Native)  |   | RevenueCat     |
-| Apple sign-in    |       | chat with tool steps          |   | StoreKit 2     |
++------------------+ token +-------------------------------+   +----------------+
+| Sign in with     | ----> | iOS APP (Expo, React Native)  |   | RevenueCat     |
+| Apple            |       | chat with tool steps          |   | StoreKit 2     |
 +------------------+       | Transactions, Net worth       |   +----------------+
                            | export                        |            |
                            | photos, Files, share sheet    |            |
                            | paywall                       |            |
                            +-------------------------------+            |
                           chat |                     | pages, export,   |
-                               v                     | account          |
+                               v                     | sign-in, account |
               +---------------------------------+    |                  |
               | AGENT SERVER, LangSmith, EU     |    |                  |
-              | custom auth: Clerk token        |    |                  | webhook
+              | custom auth: our JWT            |    |                  | webhook
               | deepagents: system.md, skills,  |    |                  |
               |   memory.md                     |    |                  |
               | ledger tools: thin wrappers     |    |                  |
@@ -58,14 +58,14 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |  +--------------------------+             | runs tools in the sandbox             | |
 |  | SANDBOX (AgentCore)      |             | copies books.bundle in and out        | |
 |  | one microVM per chat     |<-- tools ---| RevenueCat webhook (from launch)      | |
-|  | clone of the books       |<- bundle -->|                                       | |
+|  | clone of the books       |<- bundle -->| sign-in: Apple token in, our JWT out  | |
 |  | hledger, git, ledger CLI |             +---------------------------------------+ |
 |  | no internet, no keys     |                     |                   |             |
 |  | stops after 10 idle min  |                     v                   v             |
 |  +--------------------------+             +-----------------+   +-----------------+ |
 |                                           | S3, versioned   |   | DynamoDB        | |
-|                                           | books.bundle    |   | from launch:    | |
-|                                           | per user        |   | plan, daily cap | |
+|                                           | books.bundle    |   | users, ledgers; | |
+|                                           | per ledger      |   | later: plans    | |
 |                                           +-----------------+   +-----------------+ |
 +-------------------------------------------------------------------------------------+
 ```
@@ -74,12 +74,16 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 
 ```
 -- S3 bucket "a24-books" (eu-west-1, versioning on)
-users/<user_id>/books.bundle       -- the whole git repo at the latest commit
+ledgers/<ledger_id>/books.bundle   -- the whole git repo at the latest commit
                                    -- metadata: commit=<sha>; replaced only with If-Match
                                    -- older versions expire 30 days after they are replaced
 
--- DynamoDB, on-demand, from the public launch; the free beta needs none (Clerk lists the users)
-plans        user_id · plan · renews_at                  -- from RevenueCat
+-- DynamoDB, on-demand
+users        user_id · created_at                        -- our own ID, never a provider's
+identities   provider#sub · user_id · refresh_token      -- one row per sign-in method: apple now, google later
+ledgers      ledger_id · owner_user_id · created_at      -- one per user at first; shared ledgers later
+members      ledger_id · user_id · role                  -- owner, editor, viewer; the owner's row at first
+plans        user_id · plan · renews_at                  -- from RevenueCat, from public launch
 daily_runs   user_id · day · count                       -- hidden daily cap, from public launch
 ```
 
@@ -134,7 +138,9 @@ The phone sees each step as it happens, so the user watches the progress. When t
 
 ## How it works
 
-**Identity.** The user ID comes only from the verified Clerk token, never from the request or the model. Every storage path is built from it, and cross-user tests in CI check that one user can't reach another's data. Each user has one ledger, keyed by that ID.
+**Sign-in.** The app signs in with `expo-apple-authentication`. The API service checks Apple's identity token against Apple's public keys, exchanges the authorization code for a refresh token, stores it in `identities` against our own `user_id` (a new user also gets a `ledgers` row and an owner `members` row), and issues our own JWT; the agent server's custom auth verifies that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), then deletes the ledgers they own, their threads and their rows.
+
+**Identity.** The user ID comes only from our verified JWT, never from the request or the model. Every request names a ledger, and the server serves it only if `members` lists that user for it; every storage path is built from that ledger ID. Cross-user tests in CI check that one user can't reach another's ledger. Each user has one ledger at first, but user and ledger stay separate IDs so shared ledgers need no migration.
 
 **The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session with our image: hledger, git and the ledger program. It copies the user's `books.bundle` in and runs `git clone`, so the first tool waits about 2 seconds. Later tools reuse the session until it stops after 10 idle minutes. The sandbox is only a working copy. It has no internet and no credentials, and a change counts only once the API service has saved it.
 
@@ -170,12 +176,12 @@ Pages refetch when the chat reports a save and when the app returns to the foreg
 
 One CDK app in TypeScript and one AWS account with dev and prod stacks. GitHub Actions deploys over OIDC.
 
-| Stack   | What it creates                                                                                                            |
-| ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Network | VPC with private subnets for the sandboxes only; no NAT gateway, no endpoints (the API runs outside the VPC)               |
-| Data    | Versioned books bucket with the 30-day rule and AWS default encryption (kept on stack delete); DynamoDB at launch          |
-| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                          |
-| API     | Lambda function from a container image in ECR, function URL, execution role, and the AWS Budgets alarm on spend            |
+| Stack   | What it creates                                                                                                                                     |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network | VPC with private subnets for the sandboxes only; no NAT gateway, no endpoints (the API runs outside the VPC)                                        |
+| Data    | Versioned books bucket with the 30-day rule and AWS default encryption (kept on stack delete); DynamoDB tables from the beta                        |
+| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                                                   |
+| API     | Lambda function from a container image in ECR, function URL, execution role, JWT signing key in Secrets Manager, and the AWS Budgets alarm on spend |
 
 ## Costs and unit economics
 
@@ -185,7 +191,7 @@ One CDK app in TypeScript and one AWS account with dev and prod stacks. GitHub A
 | AWS base (Lambda, logs)                  | ≈ $0–5                          | ≈ $20–60                              |
 | S3, DynamoDB                             | ≈ $1                            | ≈ $5–20 at 10k users                  |
 | Sandboxes (AgentCore, per second of use) | usage                           | ≈ $500–1,500 at 10k users             |
-| Clerk, RevenueCat, Expo, Sentry, PostHog | $0                              | $0–50                                 |
+| RevenueCat, Expo, Sentry, PostHog        | $0                              | $0–50                                 |
 | **Total**                                | **≈ $40–50**                    | **≈ $450–550** + model + sandbox time |
 
 The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; model prices are Bedrock EU, 10% above Anthropic's.
@@ -238,7 +244,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 - The camera and a document scanner
 - Budget alerts and a monthly review
 - App help pages
-- Shared ledgers
+- Shared ledgers: invite links that add a `members` row, roles, Family Sharing on the subscription
 - Widgets and Siri
 - Live page updates across devices
 - Long chats with summarization, plus a separate `ui_messages` display copy
@@ -273,8 +279,8 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 
 ## Launch checklist
 
-- **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
-- **Privacy:** policy and terms; processor agreements with AWS, LangSmith, Clerk, RevenueCat, Sentry, PostHog; a DPIA; check where Clerk and RevenueCat keep data; privacy label.
+- **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that revokes the Apple token and reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
+- **Privacy:** policy and terms; processor agreements with AWS, LangSmith, RevenueCat, Sentry, PostHog; a DPIA; check where RevenueCat keeps data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
 - **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
 - **Operations:** a tested restore from an older S3 version; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger GPL).
@@ -291,5 +297,4 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 ## Decisions for you
 
 1. **Sonnet 5.5 or Haiku 4.5?** One model for everything at launch. With EU VAT, Sonnet 5.5 loses money at $9.99; Haiku 4.5 (35%) or $12.99 (12%) fixes it, if it passes the evals against the pi baseline.
-2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
-3. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
+2. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
