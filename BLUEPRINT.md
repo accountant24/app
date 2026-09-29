@@ -18,7 +18,6 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
 | Model                | Claude on Bedrock (EU inference profile), one model as a server setting                            | Anthropic API directly                      |
 | Accounting engine    | hledger, one pinned version                                                                        | None; decided                               |
-| Python packages      | CodeArtifact PyPI mirror, no internet in sandboxes                                                 | An internet allowlist                       |
 | App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
 | Sign-in              | Clerk (Apple, Google)                                                                              | Cognito                                     |
 | Payments             | RevenueCat on StoreKit 2                                                                           | Superwall                                   |
@@ -46,7 +45,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 | AGENT SERVER                      |         | AWS, eu-west-1 (Ireland), in CDK    |
 | LangSmith Deployment, EU          |         |                                     |
 |                                   |  tool   | API service, sandboxes, S3,         |
-| custom auth: Clerk token          |  calls, | DynamoDB, Bedrock, CodeArtifact     |
+| custom auth: Clerk token          |  calls, | DynamoDB, Bedrock                   |
 | deepagents graph: system.md,      |  run    |                                     |
 |   skills, memory.md               |  done,  | (see the next diagram)              |
 | ledger tools: thin wrappers       |  prompts|                                     |
@@ -80,16 +79,16 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   | save checks               |                  | AgentCore Runtime           |    |
 |   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
 |   | accounts, webhooks        | <--------------> | clone of the books          |    |
-|   | drives the sandboxes      |   in and out     | hledger, git, uv            |    |
+|   | drives the sandboxes      |   in and out     | hledger, git                |    |
 |   +---------------------------+                  | stops after 10 idle min     |    |
 |         |               |                        | no internet access          |    |
 |         |               |                        +-----------------------------+    |
-|         v               v                                      |                    |
-|   +--------------+  +--------------+                           v                    |
-|   | S3           |  | DynamoDB     |                 +------------------+           |
-|   | versioned    |  | users,       |                 | CodeArtifact     |           |
-|   | books.bundle |  | plan, daily  |                 | PyPI mirror      |           |
-|   | per user     |  |              |                 +------------------+           |
+|         v               v                                                           |
+|   +--------------+  +--------------+                                                |
+|   | S3           |  | DynamoDB     |                                                |
+|   | versioned    |  | users,       |                                                |
+|   | books.bundle |  | plan, daily  |                                                |
+|   | per user     |  |              |                                                |
 |   +--------------+  +--------------+                                                |
 +-------------------------------------------------------------------------------------+
 ```
@@ -159,7 +158,7 @@ Step 10 is the only save. When the phone sees "saved r42" in the stream, open pa
 
 ## How it works
 
-**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, uv, the ledger program), uploads the ledger's `books.bundle` into it and runs `git clone` there. The agent gets a normal repo with the full history. The session stops after 10 idle minutes.
+**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, the ledger program), uploads the ledger's `books.bundle` into it and runs `git clone` there. The agent gets a normal repo with the full history. The session stops after 10 idle minutes.
 
 **Tools.** The agent loop runs on LangSmith; every tool runs in the sandbox. Our deepagents connector maps the file tools and `execute` to three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers that pass JSON to the ledger program.
 
@@ -175,7 +174,7 @@ Commits carry the chat and run as trailers, so "undo the last change" reverts ex
 
 **Documents.** Photos, scans and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Nothing reaches the sandbox, and the chat history is the only place that keeps the file. A `pdftotext` path through the sandbox, which cuts a statement's tokens several times over, comes back if imports get expensive or a text-only model joins.
 
-**Scripts and new skills.** Skill scripts run in the sandbox with packages from CodeArtifact. New skills are files the agent writes; the save check validates plugin manifests.
+**Skills.** Built-in skills and skills users create in chat are instructions only: `SKILL.md` files in the books repo, saved like any other change. Skill scripts (uv, Python, a PyPI mirror) and the plugin marketplace come after launch.
 
 ## Pages
 
@@ -199,7 +198,7 @@ One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Acti
 | ------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Network | VPC with public and private subnets, no NAT gateway; free S3 and DynamoDB endpoints, interface endpoints only where needed |
 | Data    | Versioned books bucket with the 30-day rule and DynamoDB tables, both with AWS default encryption (kept on stack delete)   |
-| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets, CodeArtifact with a PyPI upstream                              |
+| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                          |
 | API     | Fargate service, public load balancer, task role, and the AWS Budgets alarm on spend                                       |
 
 Per-user things (a user's folder, a chat's session) are created by the app, not by CDK. EventBridge Scheduler comes with budget alerts and the monthly review, after launch.
@@ -210,7 +209,7 @@ Per-user things (a user's folder, a chat's session) are created by the app, not 
 | --------------------------------------------- | -------------- | ------------------------------------- |
 | LangSmith (agent server)                      | $39            | ≈ $430                                |
 | AWS base (load balancer, Fargate, endpoints)  | ≈ $60–90       | ≈ $120–200                            |
-| S3, DynamoDB, CodeArtifact                    | ≈ $1           | ≈ $5–20 at 10k users                  |
+| S3, DynamoDB                                  | ≈ $1           | ≈ $5–20 at 10k users                  |
 | Sandboxes (AgentCore, per second of use)      | usage          | ≈ $500–1,500 at 10k users             |
 | Clerk, RevenueCat, Expo, Sentry, PostHog      | $0             | $0–50                                 |
 | **Total**                                     | **≈ $100–130** | **≈ $600–700** + model + sandbox time |
@@ -242,9 +241,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills with scripts, plugin install, subscription, delete account.
+**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills made in chat (instructions only), subscription, delete account.
 
-**Later:** a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later:** skill scripts and the plugin marketplace, a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
 **Dropped:** provider, model and Ollama settings.
 
@@ -272,7 +271,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
-| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts); sandbox image, AgentCore, connector;               deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, export, delete account                                                                                                               | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, daily cap, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
 | 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
@@ -281,11 +280,10 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. Sonnet 5 leaves 5% at $9.99; Haiku 4.5 or $12.99 fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
 2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
-3. **Community plugins with one tap?** Their scripts run next to the user's books. One tap with a warning, or reviewed plugins only.
-4. **What does a subscription buy?** One unlimited plan under fair use at launch; tiers or a monthly limit only if beta usage shows heavy users cost more than they pay.
-5. **Keep bring-your-own-key?** Cheap to run, but it brings back provider settings and support load.
-6. **Android at launch?** The code is nearly free with Expo; testing and store work are not.
-7. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
+3. **What does a subscription buy?** One unlimited plan under fair use at launch; tiers or a monthly limit only if beta usage shows heavy users cost more than they pay.
+4. **Keep bring-your-own-key?** Cheap to run, but it brings back provider settings and support load.
+5. **Android at launch?** The code is nearly free with Expo; testing and store work are not.
+6. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
 
 ## Sources
 
