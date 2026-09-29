@@ -1,6 +1,6 @@
 # Accountant24 Mobile Blueprint
 
-Draft 3 · 27 Sep 2026 · Forked from accountant24 v0.3.4 (13c2f44)
+Forked from accountant24 v0.3.4 (13c2f44).
 
 How to turn the desktop agent into a paid, closed-source iPhone app on AWS, with the model, compute and storage included.
 
@@ -69,7 +69,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |              v                                                                      |
 |   +------------------------+              +-----------------------------+           |
 |   | Lambda function URL    |              | Bedrock, EU inference       |           |
-|   +------------------------+              | profile: Claude Sonnet 5,   |           |
+|   +------------------------+              | profile: Claude Sonnet 5.5, |           |
 |              |                            | Haiku 4.5                   |           |
 |              v                            +-----------------------------+           |
 |   +---------------------------+                  ^  prompts from the agent server   |
@@ -97,12 +97,10 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 
 - **The sandbox is never the database.** A throwaway clone per chat, stopped after 10 idle minutes. A change counts only once the API service has saved it to S3.
 - **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
-- **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise it fails, the sandbox gets the newer books, and the agent redoes its change. Undo is `git revert`.
 - **The server keeps nothing.** Each request works in its own temporary folder. Any invocation serves any ledger.
-- **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one user per request can come later.
+- **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it.
 - **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
-- **Uploads live in the chat only.** A receipt or statement travels in the chat message to the model; nothing stores it separately and it never reaches the sandbox.
-- **One ledger per user, keyed by the user ID.** Shared ledgers later add ledger IDs and a members list.
+- **One ledger per user, keyed by the user ID.**
 
 ### Storage
 
@@ -124,7 +122,6 @@ A git bundle is the whole repo, history included, in one file. Without uploads i
 Chats are LangSmith threads in the deployment's Postgres, with messages, tool steps and images. The app lists them by owner.
 
 - **Long chats end instead of being summarized.** deepagents' summarization is turned off, so a thread always holds every message and the app renders them as they are. When a chat reaches about 70% of the model's context, the app asks the user to start a new chat; `memory.md` carries the important facts over. Most bookkeeping chats are short, so this rarely shows.
-- Later, if long chats matter: turn summarization back on, keep a separate display copy (`ui_messages`) that summarization never touches, and route the summarized-history file to LangSmith's store so the agent can still look up old details.
 - Threads are not traces: traces expire (14 days on standard retention), threads stay until deleted.
 - Keep thread TTL (`checkpointer.ttl`) off, and delete threads when a chat or account is deleted.
 - The app reads chats through a thin adapter, so leaving LangSmith means exporting threads and changing only that adapter.
@@ -156,7 +153,7 @@ Step 8 is the only save. When the phone sees "saved r42" in the stream, open pag
 
 ## How it works
 
-**First tool call.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session (our image: hledger, git, the ledger program), uploads the user's `books.bundle` into it and runs `git clone` there, so that first tool waits about 2 seconds. The agent gets a normal repo with the full history, and later tools in the chat reuse the session until it stops after 10 idle minutes. Start sessions when a chat opens if the first-tool wait feels slow.
+**First tool call.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session (our image: hledger, git, the ledger program), uploads the user's `books.bundle` into it and runs `git clone` there, so that first tool waits about 2 seconds. The agent gets a normal repo with the full history, and later tools in the chat reuse the session until it stops after 10 idle minutes.
 
 **Tools.** The agent loop runs on LangSmith; every tool runs in the sandbox. Our deepagents connector maps the file tools and `execute` to three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers that pass JSON to the ledger program.
 
@@ -164,19 +161,19 @@ Step 8 is the only save. When the phone sees "saved r42" in the stream, open pag
 
 1. `commit_and_push` commits in the sandbox and packs the whole repo with `git bundle create books.bundle --all`, then asks the API service to save.
 2. The API service downloads that one file from the sandbox and clones it into a temporary folder.
-3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, and that `hledger check --strict` passes. Everything in the repo is the user's workspace, so there is no path allowlist; add one if the repo ever holds files the agent shouldn't touch.
+3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, and that `hledger check --strict` passes. Everything in the repo is the user's workspace, so there is no path allowlist.
 4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
-5. If the write fails, the save returns "the books changed in another chat". The API service copies the latest `books.bundle` into the sandbox and re-clones, and the agent redoes its change on top. There is no automatic rebase; add one if users often save from parallel chats.
+5. If the write fails, the save returns "the books changed in another chat". The API service copies the latest `books.bundle` into the sandbox and re-clones, and the agent redoes its change on top.
 
 Commits carry the chat and run as trailers, so "undo the last change" reverts exactly that run.
 
-**Documents.** Photos, scans and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Nothing reaches the sandbox, and the chat history is the only place that keeps the file. A `pdftotext` path through the sandbox, which cuts a statement's tokens several times over, comes back if imports get expensive or a text-only model joins.
+**Documents.** Photos, scans and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Nothing reaches the sandbox, and the chat history is the only place that keeps the file.
 
-**Skills.** Built-in skills and skills users create in chat are instructions only: `SKILL.md` files in the books repo, saved like any other change. Skill scripts (uv, Python, a PyPI mirror) and the plugin marketplace come after launch.
+**Skills.** Built-in skills and skills users create in chat are instructions only: `SKILL.md` files in the books repo, saved like any other change.
 
 ## Pages
 
-A page request: check the token, download the ledger's `books.bundle` into a temporary folder, run hledger, parse the output with `ledger-json.ts`, and delete the folder. Pages always read the latest saved version. Add caching, keyed by commit, only if pages get slow.
+A page request: check the token, download the ledger's `books.bundle` into a temporary folder, run hledger, parse the output with `ledger-json.ts`, and delete the folder. Pages always read the latest saved version; there is no cache.
 
 | Page                 | hledger command                                         |
 | -------------------- | ------------------------------------------------------- |
@@ -184,13 +181,11 @@ A page request: check the token, download the ledger's `books.bundle` into a tem
 | Net worth            | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
 | Mentions, pickers    | `hledger accounts`, `payees`, `tags`                    |
 
-Later pages are each one more command: net worth over time (`hledger bs -M -V --historical`), spending by category (`hledger bal expenses -M --depth 2`), and a History page from `git log` with the chat and run trailers.
-
-Pages refetch when the chat reports a save and when the app returns to the foreground. Live updates across devices can come later.
+Pages refetch when the chat reports a save and when the app returns to the foreground.
 
 ## Infrastructure as code
 
-One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Actions deploys over OIDC. A separate prod account and our own KMS key come before real users' data grows.
+One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Actions deploys over OIDC.
 
 | Stack   | What it creates                                                                                                            |
 | ------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -199,7 +194,7 @@ One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Acti
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                          |
 | API     | Lambda function from a container image in ECR, function URL, execution role, and the AWS Budgets alarm on spend            |
 
-Per-user things (a user's folder, a chat's session) are created by the app, not by CDK. EventBridge Scheduler comes with budget alerts and the monthly review, after launch.
+Per-user things (a user's folder, a chat's session) are created by the app, not by CDK.
 
 ## Costs and unit economics
 
@@ -217,36 +212,38 @@ AWS figures are estimates; confirm them in the AWS pricing calculator.
 Per subscriber per month, assuming 80 messages, 3 model calls each, 20k tokens of context at 75% cache hits, 800 output tokens, 2,000 subscribers, 20% EU VAT included in the price, Apple's 15% commission on the price after VAT, and Bedrock EU prices (10% above Anthropic's):
 
 ```
-                               ||    Sonnet 5    Sonnet 5   Haiku 4.5  Sonnet 5.5
-                               ||       $9.99      $12.99       $9.99       $9.99
-===============================++================================================
-income:subscription            ||        9.99       12.99        9.99        9.99
--------------------------------++------------------------------------------------
-expenses:tax:vat               ||        1.67        2.17        1.67        1.67
-expenses:store:commission      ||        1.25        1.62        1.25        1.25
-expenses:llm:tokens            ||        7.52        7.52        3.76        7.52
-expenses:sandbox               ||        0.06        0.06        0.06        0.06
-expenses:revenuecat            ||        0.09        0.12        0.09        0.09
-expenses:platform:shared       ||        0.24        0.24        0.24        0.24
-expenses:storage               ||        0.01        0.01        0.01        0.01
--------------------------------++------------------------------------------------
-                               ||       10.84       11.74        7.08       10.84
-===============================++================================================
-Net                            ||       -0.85        1.25        2.91       -0.85
-Margin (of revenue after VAT)  ||        -10%         12%         35%        -10%
+                               ||  Sonnet 5.5  Sonnet 5.5   Haiku 4.5
+                               ||       $9.99      $12.99       $9.99
+===============================++====================================
+income:subscription            ||        9.99       12.99        9.99
+-------------------------------++------------------------------------
+expenses:tax:vat               ||        1.67        2.17        1.67
+expenses:store:commission      ||        1.25        1.62        1.25
+expenses:llm:tokens            ||        7.52        7.52        3.76
+expenses:sandbox               ||        0.06        0.06        0.06
+expenses:revenuecat            ||        0.09        0.12        0.09
+expenses:platform:shared       ||        0.24        0.24        0.24
+expenses:storage               ||        0.01        0.01        0.01
+-------------------------------++------------------------------------
+                               ||       10.84       11.74        7.08
+===============================++====================================
+Net                            ||       -0.85        1.25        2.91
+Margin (of revenue after VAT)  ||        -10%         12%         35%
 ```
 
-EU prices include VAT, which Apple pays out of the price, so a $9.99 subscription brings about $8.33 before Apple's 15%. US prices exclude sales tax, so US users come out closer to the table without the VAT line. Sonnet 5.5 costs the same per token as Sonnet 5 ($2 in, $10 out per million, before the EU premium), so under these fixed assumptions its column matches Sonnet 5. Reports say it finishes tasks with up to 30% fewer tokens; if our evals confirm that, its token line drops to about $5.27 and the margin at $9.99 to about 17%. Confirm it's available through Bedrock's EU profile.
+EU prices include VAT, which Apple pays out of the price, so a $9.99 subscription brings about $8.33 before Apple's 15%. US prices exclude sales tax, so US users come out closer to the table without the VAT line. Sonnet 5.5 costs $2 in and $10 out per million tokens before the EU premium, the same as Sonnet 5. Reports say it finishes tasks with up to 30% fewer tokens; if our evals confirm that, its token line drops to about $5.27 and the margin at $9.99 to about 17%. Confirm it's available through Bedrock's EU profile.
 
-The same token counts are assumed for every model, but Claude 4.7 and later models (Sonnet 5 and 5.5) use a newer tokenizer that turns the same text into about 30% more tokens than Haiku 4.5's. So the Sonnet columns are likely optimistic next to Haiku; measure real token counts in the evals.
+The same token counts are assumed for every model, but Claude 4.7 and later models, including Sonnet 5.5, use a newer tokenizer that turns the same text into about 30% more tokens than Haiku 4.5's. So the Sonnet columns are likely optimistic next to Haiku; measure real token counts in the evals.
 
-Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. There is no monthly limit at first: TestFlight and the invite-only beta run unlimited, and the terms carry a fair-use clause. Before the public launch, add a hidden daily cap per user (about 200 messages, which only a script reaches) and the Bedrock budget alarm. Beta usage then shows whether a monthly limit is needed; per-dollar metering comes only with usage-priced plans.
+Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. There is no monthly limit at first: TestFlight and the invite-only beta run unlimited, and the terms carry a fair-use clause. Before the public launch, add a hidden daily cap per user (about 200 messages, which only a script reaches) and the Bedrock budget alarm.
 
 ## Scope
 
 **At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, attachments picked from the photo library or Files, files shared into the app from other apps (a statement downloaded in a bank app goes straight into a new chat), `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills made in chat (instructions only), subscription, delete account.
 
-**Later:** Sign in with Google (with Android or a web app), skill scripts and the plugin marketplace, a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, the camera and a document scanner, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later, in the product:** Sign in with Google (with Android or a web app); skill scripts and the plugin marketplace; a History screen with an undo button (until then, undo is asking the agent); a Memory screen; more charts, each one more hledger command (net worth over time, spending by category); steering and queueing messages while the agent works; push notifications when a run finishes; the camera and a document scanner; budget alerts and a monthly review (with EventBridge Scheduler); app help pages; shared ledgers (ledger IDs and a members list); widgets and Siri; live page updates across devices; long chats with summarization (a `ui_messages` display copy that summarization never touches, and the summarized-history file in LangSmith's store).
+
+**Later, in the tech, when needed:** page caching keyed by commit (pages get slow); starting the sandbox when a chat opens (the first-tool wait feels slow); automatic rebase (users often save from parallel chats); a path allowlist on saves (the repo holds files the agent shouldn't touch); a `pdftotext` path through the sandbox (imports get expensive, or a text-only model joins); routing tasks to different models (costs need cutting); a monthly limit or per-dollar metering (heavy users cost more than they pay); AWS credentials scoped to one user per request; a separate prod account and our own KMS key (before real users' data grows); agent hosting on AgentCore instead of LangSmith.
 
 **Dropped:** provider, model and Ollama settings.
 
@@ -254,7 +251,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 - **Switching from pi to deepagents is the biggest risk**; the prompt was tuned on pi. Build the eval set and record pi's baseline first, and pin deepagents (it ships almost weekly).
 - **Confirm with LangSmith:** the Serverless deployment's limits and EU availability are enough for the beta; the Dedicated deployment is a new deployment, since a deployment's type can't change.
-- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota (fallback: Daytona, through the same connector interface); Lambda cold starts for the container image (measure page latency; add provisioned concurrency, or fall back to ECS Fargate behind a load balancer); Bedrock's size limit for PDFs attached to a message.
+- **Confirm with AWS:** Sonnet 5.5 and Haiku 4.5 are on the EU profile and callable from Ireland; AgentCore prices and concurrent-session quota (fallback: Daytona, through the same connector interface); Lambda cold starts for the container image (measure page latency; add provisioned concurrency, or fall back to ECS Fargate behind a load balancer); Bedrock's size limit for PDFs attached to a message.
 - **AgentCore CDK constructs are alpha**; pin the version.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`); budget a few days and test with real statements shared from bank apps.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
@@ -276,20 +273,12 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
-| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages);           sandbox image, AgentCore, connector;               deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages); sandbox image, AgentCore, connector; deepagents graph on LangSmith with ledger tools                                                 | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, export, delete account                                                                                                         | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, DynamoDB with plans and the daily cap, RevenueCat and its webhook, paywall, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
-| 4 · After launch      |             | Push notifications, alerts and monthly review, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
 
-1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. With EU VAT, Sonnet 5 loses money at $9.99; Haiku 4.5 (35%) or $12.99 (12%) fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
+1. **Sonnet 5.5 or Haiku 4.5?** One model for everything at launch. With EU VAT, Sonnet 5.5 loses money at $9.99; Haiku 4.5 (35%) or $12.99 (12%) fixes it, if it passes the evals against the pi baseline.
 2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
-3. **What does a subscription buy?** One unlimited plan under fair use at launch; tiers or a monthly limit only if beta usage shows heavy users cost more than they pay.
-4. **Keep bring-your-own-key?** Cheap to run, but it brings back provider settings and support load.
-5. **Android at launch?** The code is nearly free with Expo; testing and store work are not.
-6. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
-
-## Sources
-
-Checked 25–27 September 2026: [AgentCore Runtime sessions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html), [AgentCore shell commands](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-execute-command.html), [new AgentCore Runtime](https://aws.amazon.com/about-aws/whats-new/2026/09/new-agentcore-runtime-generally-available/), [Claude Sonnet 5 on Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5.html), [Bedrock inference profiles](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html), [S3 conditional writes](https://aws.amazon.com/about-aws/whats-new/2024/11/amazon-s3-functionality-conditional-writes/), [CodeCommit quotas](https://docs.aws.amazon.com/codecommit/latest/userguide/limits.md), [App Runner availability change](https://docs.aws.amazon.com/apprunner/latest/dg/apprunner-availability-change.html), [deepagents sandboxes](https://docs.langchain.com/oss/javascript/deepagents/sandboxes), [LangSmith pricing](https://www.langchain.com/pricing), [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+3. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
