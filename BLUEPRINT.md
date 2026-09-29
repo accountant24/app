@@ -35,13 +35,13 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 | Clerk            | ----> | iOS APP (Expo, React Native)  |
 | Apple and Google |       | chat with tool steps          |
 +------------------+       | Transactions, Net worth       |
-                           | History, undo, export         |
+                           | export                        |
                            | camera, scanner, Files        |
                            | paywall                       |
                            +-------------------------------+
                                |                     |
-                          chat |                     | pages, history,
-                               |                     | export, account
+                          chat |                     | pages, export,
+                               |                     | account
                                v                     v
 +-----------------------------------+         +-------------------------------------+
 | AGENT SERVER                      |         | AWS, eu-west-1 (Ireland), in CDK    |
@@ -186,10 +186,9 @@ A page request: check the token, download the ledger's `books.bundle` into a tem
 | -------------------- | ------------------------------------------------------- |
 | Transactions         | `hledger print -O json`, limited by date range          |
 | Net worth            | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
-| Net worth over time  | `hledger bs -M -V --historical -O json`                 |
-| Spending by category | `hledger bal expenses -M --depth 2 -O json`             |
 | Mentions, pickers    | `hledger accounts`, `payees`, `tags`                    |
-| History              | `git log` with the chat and run trailers                |
+
+Later pages are each one more command: net worth over time (`hledger bs -M -V --historical`), spending by category (`hledger bal expenses -M --depth 2`), and a History page from `git log` with the chat and run trailers.
 
 Pages refetch when the chat reports a save and when the app returns to the foreground. Live updates across devices can come later.
 
@@ -245,9 +244,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, delete account.
+**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills with scripts, plugin install, subscription, delete account.
 
-**Later:** steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later:** a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
 **Dropped:** provider, model and Ollama settings.
 
@@ -276,7 +275,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
 | 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
-| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account                                                                                              | You keep your own books on the phone for two weeks                           |
+| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, export, delete account                                                                                                               | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, daily cap, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
 | 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
