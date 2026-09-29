@@ -216,26 +216,31 @@ Per-user things (a user's folder, a chat's session) are created by the app, not 
 
 AWS figures are estimates; confirm them in the AWS pricing calculator.
 
-Per subscriber per month, assuming 80 messages, 3 model calls each, 20k tokens of context at 75% cache hits, 800 output tokens, 2,000 subscribers, 15% store commission, and Bedrock EU prices (10% above Anthropic's):
+Per subscriber per month, assuming 80 messages, 3 model calls each, 20k tokens of context at 75% cache hits, 800 output tokens, 2,000 subscribers, 20% EU VAT included in the price, Apple's 15% commission on the price after VAT, and Bedrock EU prices (10% above Anthropic's):
 
 ```
-                               ||  Sonnet 5  Sonnet 5  Haiku 4.5
-                               ||     $9.99    $12.99      $9.99
-===============================++==============================
-income:subscription            ||      9.99     12.99       9.99
--------------------------------++------------------------------
-expenses:store:commission      ||      1.50      1.95       1.50
-expenses:llm:tokens            ||      7.52      7.52       3.76
-expenses:sandbox               ||      0.06      0.06       0.06
-expenses:revenuecat            ||      0.09      0.12       0.09
-expenses:platform:shared       ||      0.24      0.24       0.24
-expenses:storage               ||      0.01      0.01       0.01
--------------------------------++------------------------------
-                               ||      9.42      9.90       5.66
-===============================++==============================
-Net                            ||      0.57      3.09       4.33
-Margin                         ||        6%       24%        43%
+                               ||    Sonnet 5    Sonnet 5   Haiku 4.5  Sonnet 5.5
+                               ||       $9.99      $12.99       $9.99       $9.99
+===============================++================================================
+income:subscription            ||        9.99       12.99        9.99        9.99
+-------------------------------++------------------------------------------------
+expenses:tax:vat               ||        1.67        2.17        1.67        1.67
+expenses:store:commission      ||        1.25        1.62        1.25        1.25
+expenses:llm:tokens            ||        7.52        7.52        3.76        7.52
+expenses:sandbox               ||        0.06        0.06        0.06        0.06
+expenses:revenuecat            ||        0.09        0.12        0.09        0.09
+expenses:platform:shared       ||        0.24        0.24        0.24        0.24
+expenses:storage               ||        0.01        0.01        0.01        0.01
+-------------------------------++------------------------------------------------
+                               ||       10.84       11.74        7.08       10.84
+===============================++================================================
+Net                            ||       -0.85        1.25        2.91       -0.85
+Margin (of revenue after VAT)  ||        -10%         12%         35%        -10%
 ```
+
+EU prices include VAT, which Apple pays out of the price, so a $9.99 subscription brings about $8.33 before Apple's 15%. US prices exclude sales tax, so US users come out closer to the table without the VAT line. Sonnet 5.5 costs the same per token as Sonnet 5 ($2 in, $10 out per million, before the EU premium), so under these fixed assumptions its column matches Sonnet 5. Reports say it finishes tasks with up to 30% fewer tokens; if our evals confirm that, its token line drops to about $5.27 and the margin at $9.99 to about 17%. Confirm it's available through Bedrock's EU profile.
+
+The same token counts are assumed for every model, but Claude 4.7 and later models (Sonnet 5 and 5.5) use a newer tokenizer that turns the same text into about 30% more tokens than Haiku 4.5's. So the Sonnet columns are likely optimistic next to Haiku; measure real token counts in the evals.
 
 Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. There is no monthly limit at first: TestFlight and the invite-only beta run unlimited, and the terms carry a fair-use clause. Before the public launch, add a hidden daily cap per user (about 200 messages, which only a script reaches) and the Bedrock budget alarm. Beta usage then shows whether a monthly limit is needed; per-dollar metering comes only with usage-priced plans.
 
@@ -279,7 +284,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Decisions for you
 
-1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. Sonnet 5 leaves 6% at $9.99; Haiku 4.5 or $12.99 fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
+1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. With EU VAT, Sonnet 5 loses money at $9.99; Haiku 4.5 (35%) or $12.99 (12%) fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
 2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
 3. **What does a subscription buy?** One unlimited plan under fair use at launch; tiers or a monthly limit only if beta usage shows heavy users cost more than they pay.
 4. **Keep bring-your-own-key?** Cheap to run, but it brings back provider settings and support load.
