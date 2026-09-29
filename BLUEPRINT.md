@@ -245,9 +245,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), steering and stop, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, delete account.
+**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, delete account.
 
-**Later:** push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later:** steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
 **Dropped:** provider, model and Ollama settings.
 
