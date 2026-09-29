@@ -11,7 +11,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Area                 | Pick                                                                                               | Runner-up                                   |
 | -------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | Cloud                | AWS, Ireland (eu-west-1), defined in CDK                                                           | Frankfurt, with the older AgentCore Runtime |
-| Books                | A git repo per ledger, one bundle file in a versioned S3 bucket, replaced with a conditional write | CodeCommit, one repo per ledger             |
+| Books                | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write   | CodeCommit, one repo per user               |
 | Server               | One stateless API service on ECS Fargate (Node, git, hledger)                                      | Lambda with a container image               |
 | Accounts             | DynamoDB                                                                                           | Aurora Serverless Postgres                  |
 | Agent                | deepagents (TypeScript) on LangSmith Deployment, EU                                                | deepagents on AgentCore Runtime             |
@@ -89,8 +89,8 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   +--------------+  +--------------+                           v                    |
 |   | S3           |  | DynamoDB     |                 +------------------+           |
 |   | versioned    |  | users,       |                 | CodeArtifact     |           |
-|   | books.bundle |  | ledgers,     |                 | PyPI mirror      |           |
-|   | per ledger   |  | plan, usage  |                 +------------------+           |
+|   | books.bundle |  | plan, usage  |                 | PyPI mirror      |           |
+|   | per user     |  |              |                 +------------------+           |
 |   +--------------+  +--------------+                                                |
 +-------------------------------------------------------------------------------------+
 ```
@@ -101,23 +101,21 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 - **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
 - **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise the sandbox rebases on the newer version and saves again. Undo is `git revert`.
 - **The server keeps nothing.** Each request works in its own temporary folder. Any task serves any ledger.
-- **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one ledger per request can come later.
+- **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one user per request can come later.
 - **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
 - **Uploads live in the chat only.** A receipt travels in the chat message and sits in the sandbox while the chat is open; nothing stores it separately.
-- **Keyed by ledger, not by user**, so shared ledgers later only add a members list.
+- **One ledger per user, keyed by the user ID.** Shared ledgers later add ledger IDs and a members list.
 
 ### Storage
 
 ```
 -- S3 bucket "a24-books" (eu-west-1, versioning on)
-ledgers/<ledger_id>/books.bundle   -- the whole git repo at the latest commit
+users/<user_id>/books.bundle       -- the whole git repo at the latest commit
                                    -- metadata: commit=<sha>; replaced only with If-Match
                                    -- older versions expire 30 days after they are replaced
 
 -- DynamoDB, on-demand
 users        id (Clerk) · created_at
-ledgers      id · owner_id · created_at
-members      ledger_id · user_id · role                  -- later: shared ledgers
 plans        user_id · plan · allowance_usd · renews_at  -- from RevenueCat
 usage        user_id · period · input_tokens · output_tokens · usd
 ```
@@ -207,7 +205,7 @@ One CDK app in TypeScript. Separate dev and prod accounts; GitHub Actions deploy
 | API     | Fargate service, public load balancer, task role                                                                           |
 | Jobs    | EventBridge Scheduler, AWS Budgets alarms                                                                                  |
 
-Per-user things (a ledger's folder, a chat's session) are created by the app, not by CDK.
+Per-user things (a user's folder, a chat's session) are created by the app, not by CDK.
 
 ## Costs and unit economics
 
