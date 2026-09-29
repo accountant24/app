@@ -101,8 +101,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 - **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
 - **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise the sandbox rebases on the newer version and saves again. Undo is `git revert`.
 - **The server keeps nothing.** Each request works in its own temporary folder. Any task serves any ledger.
-- **Identity comes from a verified token only**, never from the request body or the model.
-- **AWS enforces the ledger boundary.** Each request gets temporary credentials that reach only `ledgers/<id>/` in S3.
+- **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one ledger per request can come later.
 - **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
 - **Uploads live in the chat only.** A receipt travels in the chat message and sits in the sandbox while the chat is open; nothing stores it separately.
 - **Keyed by ledger, not by user**, so shared ledgers later only add a members list.
@@ -205,7 +204,7 @@ One CDK app in TypeScript. Separate dev and prod accounts; GitHub Actions deploy
 | Network | VPC with public and private subnets, no NAT gateway; free S3 and DynamoDB endpoints, interface endpoints only where needed |
 | Data    | Versioned books bucket with the 30-day rule, DynamoDB tables, KMS key (kept on stack delete)                               |
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets, CodeArtifact with a PyPI upstream                              |
-| API     | Fargate service, public load balancer, task role, per-ledger role with a session policy                                    |
+| API     | Fargate service, public load balancer, task role                                                                           |
 | Jobs    | EventBridge Scheduler, AWS Budgets alarms                                                                                  |
 
 Per-user things (a ledger's folder, a chat's session) are created by the app, not by CDK.
