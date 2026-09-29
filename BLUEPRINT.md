@@ -12,7 +12,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | -------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | Cloud                | AWS, Ireland (eu-west-1), defined in CDK                                                           | Frankfurt, with the older AgentCore Runtime |
 | Books                | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write   | CodeCommit, one repo per user               |
-| Server               | One stateless API service on ECS Fargate (Node, git, hledger)                                      | Lambda with a container image               |
+| Server               | One stateless API function on Lambda (container image: Node, git, hledger)                         | ECS Fargate behind a load balancer          |
 | Accounts             | DynamoDB                                                                                           | Aurora Serverless Postgres                  |
 | Agent                | deepagents (TypeScript) on LangSmith Deployment, EU                                                | deepagents on AgentCore Runtime             |
 | Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
@@ -68,13 +68,13 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |              |                                                                      |
 |              v                                                                      |
 |   +------------------------+              +-----------------------------+           |
-|   | Public load balancer   |              | Bedrock, EU inference       |           |
+|   | Lambda function URL    |              | Bedrock, EU inference       |           |
 |   +------------------------+              | profile: Claude Sonnet 5,   |           |
 |              |                            | Haiku 4.5                   |           |
 |              v                            +-----------------------------+           |
 |   +---------------------------+                  ^  prompts from the agent server   |
-|   | API SERVICE (ECS Fargate) |                                                     |
-|   | stateless, 1 small task   |   run commands   +-----------------------------+    |
+|   | API SERVICE (Lambda)      |                                                     |
+|   | container image, no state |   run commands   +-----------------------------+    |
 |   | Node + git + hledger      | ---------------> | SANDBOX SESSION             |    |
 |   | save checks               |                  | AgentCore Runtime           |    |
 |   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
@@ -98,7 +98,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 - **The sandbox is never the database.** A throwaway clone per chat, stopped after 10 idle minutes. A change counts only once the API service has saved it to S3.
 - **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
 - **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise the sandbox rebases on the newer version and saves again. Undo is `git revert`.
-- **The server keeps nothing.** Each request works in its own temporary folder. Any task serves any ledger.
+- **The server keeps nothing.** Each request works in its own temporary folder. Any invocation serves any ledger.
 - **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one user per request can come later.
 - **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
 - **Uploads live in the chat only.** A receipt or statement travels in the chat message to the model; nothing stores it separately and it never reaches the sandbox.
@@ -192,14 +192,14 @@ Pages refetch when the chat reports a save and when the app returns to the foreg
 
 ## Infrastructure as code
 
-One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Actions deploys over OIDC. A separate prod account, a second API task and our own KMS key come before real users' data grows.
+One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Actions deploys over OIDC. A separate prod account and our own KMS key come before real users' data grows.
 
 | Stack   | What it creates                                                                                                            |
 | ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Network | VPC with public and private subnets, no NAT gateway; free S3 and DynamoDB endpoints, interface endpoints only where needed |
+| Network | VPC with private subnets for the sandboxes only; no NAT gateway, no endpoints (the API runs outside the VPC)               |
 | Data    | Versioned books bucket with the 30-day rule and DynamoDB tables, both with AWS default encryption (kept on stack delete)   |
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                          |
-| API     | Fargate service, public load balancer, task role, and the AWS Budgets alarm on spend                                       |
+| API     | Lambda function from a container image in ECR, function URL, execution role, and the AWS Budgets alarm on spend            |
 
 Per-user things (a user's folder, a chat's session) are created by the app, not by CDK. EventBridge Scheduler comes with budget alerts and the monthly review, after launch.
 
@@ -208,11 +208,11 @@ Per-user things (a user's folder, a chat's session) are created by the app, not 
 |                                               | Before launch  | At launch                             |
 | --------------------------------------------- | -------------- | ------------------------------------- |
 | LangSmith (agent server)                      | $39            | ≈ $430                                |
-| AWS base (load balancer, Fargate, endpoints)  | ≈ $60–90       | ≈ $120–200                            |
+| AWS base (Lambda, logs)                       | ≈ $0–5         | ≈ $20–60                              |
 | S3, DynamoDB                                  | ≈ $1           | ≈ $5–20 at 10k users                  |
 | Sandboxes (AgentCore, per second of use)      | usage          | ≈ $500–1,500 at 10k users             |
 | Clerk, RevenueCat, Expo, Sentry, PostHog      | $0             | $0–50                                 |
-| **Total**                                     | **≈ $100–130** | **≈ $600–700** + model + sandbox time |
+| **Total**                                     | **≈ $40–50**   | **≈ $450–550** + model + sandbox time |
 
 AWS figures are estimates; confirm them in the AWS pricing calculator.
 
@@ -228,13 +228,13 @@ expenses:store:commission      ||      1.50      1.95       1.50
 expenses:llm:tokens            ||      7.52      7.52       3.76
 expenses:sandbox               ||      0.06      0.06       0.06
 expenses:revenuecat            ||      0.09      0.12       0.09
-expenses:platform:shared       ||      0.31      0.31       0.31
+expenses:platform:shared       ||      0.24      0.24       0.24
 expenses:storage               ||      0.01      0.01       0.01
 -------------------------------++------------------------------
-                               ||      9.49      9.97       5.73
+                               ||      9.42      9.90       5.66
 ===============================++==============================
-Net                            ||      0.50      3.02       4.26
-Margin                         ||        5%       23%        43%
+Net                            ||      0.57      3.09       4.33
+Margin                         ||        6%       24%        43%
 ```
 
 Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. There is no monthly limit at first: TestFlight and the invite-only beta run unlimited, and the terms carry a fair-use clause. Before the public launch, add a hidden daily cap per user (about 200 messages, which only a script reaches) and the Bedrock budget alarm. Beta usage then shows whether a monthly limit is needed; per-dollar metering comes only with usage-priced plans.
@@ -250,7 +250,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 ## Risks and things to verify
 
 - **Switching from pi to deepagents is the biggest risk**; the prompt was tuned on pi. Build the eval set and record pi's baseline first, and pin deepagents (it ships almost weekly).
-- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; ECS Express Mode in CDK (otherwise the standard load-balanced Fargate pattern); Bedrock's size limit for PDFs attached to a message.
+- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; Lambda cold starts for the container image (measure page latency; add provisioned concurrency if needed); Bedrock's size limit for PDFs attached to a message.
 - **AgentCore CDK constructs are alpha**; pin the version.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
 - **LangSmith traces are full copies of users' books**; sample them, keep retention short, keep the workspace to one person.
@@ -278,7 +278,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Decisions for you
 
-1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. Sonnet 5 leaves 5% at $9.99; Haiku 4.5 or $12.99 fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
+1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. Sonnet 5 leaves 6% at $9.99; Haiku 4.5 or $12.99 fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
 2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
 3. **What does a subscription buy?** One unlimited plan under fair use at launch; tiers or a monthly limit only if beta usage shows heavy users cost more than they pay.
 4. **Keep bring-your-own-key?** Cheap to run, but it brings back provider settings and support load.
