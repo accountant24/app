@@ -134,30 +134,29 @@ Chats are LangSmith threads in the deployment's Postgres, with messages, tool st
 ```
 iPhone           Agent server          Sandbox              API service          Bedrock
   |                   |                   |                      |                   |
-  | 1 chat opened ---------------------------------------------->|                   |
-  |                   |                   |<--- 2 start sandbox -|                   |
-  |                   |                   |<-- 3 books.bundle ---|                   |
-  | 4 run + receipt   |                   |                      |                   |
+  | 1 run + receipt   |                   |                      |                   |
   |   photo --------->|                   |                      |                   |
-  |                   |-- 5 prompt (cached prefix) + image ------------------------->|
-  |                   |<----------------------------------- 6 add_transactions(...) |
-  |                   |-- 7 run the tool (via the API) ->|       |                   |
-  |                   |                   | 8 entry, check,      |                   |
+  |                   |-- 2 prompt (cached prefix) + image ------------------------->|
+  |                   |<- 3 add_transactions(...) -----------------------------------|
+  |                   |-- 4 run the tool ----------------------->|                   |
+  |                   |                   |<- 5 start sandbox ---|                   |
+  |                   |                   |   + books.bundle r41 |                   |
+  |                   |                   | 6 entry, check,      |                   |
   |                   |                   |   commit             |                   |
-  |                   |                   |-- 9 books.bundle --->|                   |
-  |                   |                   |   (full repo)        | 10 check,         |
-  |                   |                   |                      |    save r42       |
-  |                   |<- 11 saved r42 ---|                      |                   |
-  |                   |-- 12 tool result -> final reply ---------------------------->|
-  |<- 13 stream steps |                   |                      |                   |
+  |                   |                   |-- 7 books.bundle --->|                   |
+  |                   |                   |  (full repo)         | 8 check,          |
+  |                   |                   |                      |   save r42        |
+  |                   |<- 9 saved r42 ---------------------------|                   |
+  |                   |-- 10 tool result -> final reply ---------------------------->|
+  |<- 11 stream steps |                   |                      |                   |
   |      + reply -----|                   |                      |                   |
 ```
 
-Step 10 is the only save. When the phone sees "saved r42" in the stream, open pages refetch. If the phone disconnects, the run keeps going and the phone rejoins the stream.
+Step 8 is the only save. When the phone sees "saved r42" in the stream, open pages refetch. If the phone disconnects, the run keeps going and the phone rejoins the stream.
 
 ## How it works
 
-**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, the ledger program), uploads the ledger's `books.bundle` into it and runs `git clone` there. The agent gets a normal repo with the full history. The session stops after 10 idle minutes.
+**First tool call.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session (our image: hledger, git, the ledger program), uploads the user's `books.bundle` into it and runs `git clone` there, so that first tool waits about 2 seconds. The agent gets a normal repo with the full history, and later tools in the chat reuse the session until it stops after 10 idle minutes. Start sessions when a chat opens if the first-tool wait feels slow.
 
 **Tools.** The agent loop runs on LangSmith; every tool runs in the sandbox. Our deepagents connector maps the file tools and `execute` to three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers that pass JSON to the ledger program.
 
