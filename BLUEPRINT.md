@@ -22,7 +22,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Sign-in           | Clerk, Sign in with Apple only                                                                                                    |
 | Payments          | RevenueCat on StoreKit 2                                                                                                          |
 
-The fork: this repo becomes the closed app; the open-source desktop app stays in its own repo. The ledger code no longer has to serve the desktop. The forked code is Apache-2.0: keep its license and notice.
+This repo is a closed fork; the open-source desktop app stays in its own repo. Keep the Apache-2.0 license and notice for the forked code.
 
 ## Architecture
 
@@ -93,15 +93,6 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 +-------------------------------------------------------------------------------------+
 ```
 
-### Rules
-
-- **The sandbox is never the database.** A throwaway clone per chat, stopped after 10 idle minutes. A change counts only once the API service has saved it to S3.
-- **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
-- **The server keeps nothing.** Each request works in its own temporary folder. Any invocation serves any ledger.
-- **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it.
-- **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
-- **One ledger per user, keyed by the user ID.**
-
 ### Storage
 
 ```
@@ -115,16 +106,13 @@ plans        user_id · plan · renews_at                  -- from RevenueCat
 daily_runs   user_id · day · count                       -- hidden daily cap, from public launch
 ```
 
-A git bundle is the whole repo, history included, in one file. Without uploads in git it stays a few MB for years. Chats and traces live in LangSmith (Netherlands); everything else stays in Ireland.
+A git bundle is the whole repo, history included, in one file. It stays a few MB for years because uploads never go into git. Chats and traces live in LangSmith in the Netherlands; everything else stays in Ireland.
 
 ### Chat history
 
-Chats are LangSmith threads in the deployment's Postgres, with messages, tool steps and images. The app lists them by owner.
+Each chat is a LangSmith thread with its messages, tool steps and images. The app lists a user's threads through a thin adapter, so moving off LangSmith later only changes that adapter.
 
-- **Long chats end instead of being summarized.** deepagents' summarization is turned off, so a thread always holds every message and the app renders them as they are. When a chat reaches about 70% of the model's context, the app asks the user to start a new chat; `memory.md` carries the important facts over. Most bookkeeping chats are short, so this rarely shows.
-- Threads are not traces: traces expire (14 days on standard retention), threads stay until deleted.
-- Keep thread TTL (`checkpointer.ttl`) off, and delete threads when a chat or account is deleted.
-- The app reads chats through a thin adapter, so leaving LangSmith means exporting threads and changing only that adapter.
+Summarization is off, so a thread always keeps every message. When a chat nears 70% of the model's context, the app asks the user to start a new one, and `memory.md` carries the important facts over. Threads never expire, unlike traces, which last 14 days. Keep thread TTL off, and delete a user's threads when they delete a chat or their account.
 
 ## One turn, end to end
 
@@ -153,27 +141,29 @@ Step 8 is the only save. When the phone sees "saved r42" in the stream, open pag
 
 ## How it works
 
-**First tool call.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session (our image: hledger, git, the ledger program), uploads the user's `books.bundle` into it and runs `git clone` there, so that first tool waits about 2 seconds. The agent gets a normal repo with the full history, and later tools in the chat reuse the session until it stops after 10 idle minutes.
+**Identity.** The user ID comes only from the verified Clerk token, never from the request or the model. Every storage path is built from it, and cross-user tests in CI check that one user can't reach another's data. Each user has one ledger, keyed by that ID.
 
-**Tools.** The agent loop runs on LangSmith; every tool runs in the sandbox. Our deepagents connector maps the file tools and `execute` to three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers that pass JSON to the ledger program.
+**The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session with our image: hledger, git and the ledger program. It copies the user's `books.bundle` in and runs `git clone`, so the first tool waits about 2 seconds. Later tools reuse the session until it stops after 10 idle minutes. The sandbox is only a working copy. It has no internet and no credentials, and a change counts only once the API service has saved it.
 
-**Saving:**
+**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers around the ledger program.
 
-1. `commit_and_push` commits in the sandbox and packs the whole repo with `git bundle create books.bundle --all`, then asks the API service to save.
-2. The API service downloads that one file from the sandbox and clones it into a temporary folder.
-3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, and that `hledger check --strict` passes. Everything in the repo is the user's workspace, so there is no path allowlist.
+**Saving.** The API service keeps no state; each request works in its own temporary folder.
+
+1. `commit_and_push` commits in the sandbox, packs the whole repo with `git bundle create books.bundle --all`, and asks the API service to save.
+2. The API service downloads that file and clones it into a temporary folder.
+3. It runs two checks. The last saved commit, stored as metadata on the S3 object, must be an ancestor of the new `main`. And `hledger check --strict` must pass. The sandbox already ran the same check, but it runs model-written code, so the server checks again.
 4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
-5. If the write fails, the save returns "the books changed in another chat". The API service copies the latest `books.bundle` into the sandbox and re-clones, and the agent redoes its change on top.
+5. If the write fails, the save returns "the books changed in another chat". The API service copies the latest books into the sandbox, and the agent redoes its change.
 
-Commits carry the chat and run as trailers, so "undo the last change" reverts exactly that run.
+Commits carry the chat and run IDs, so "undo the last change" reverts exactly that run with `git revert`.
 
-**Documents.** Photos, scans and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Nothing reaches the sandbox, and the chat history is the only place that keeps the file.
+**Documents.** Photos and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Files never reach the sandbox, and only the chat history keeps them.
 
-**Skills.** Built-in skills and skills users create in chat are instructions only: `SKILL.md` files in the books repo, saved like any other change.
+**Skills.** Skills are instructions only: `SKILL.md` files in the books repo. The built-in ones ship with the app, and users can create their own in chat.
 
 ## Pages
 
-A page request: check the token, download the ledger's `books.bundle` into a temporary folder, run hledger, parse the output with `ledger-json.ts`, and delete the folder. Pages always read the latest saved version; there is no cache.
+To serve a page, the API service checks the token, downloads the user's `books.bundle` into a temporary folder, runs hledger, and parses the output with `ledger-json.ts`. There is no cache, so pages always show the latest save.
 
 | Page                 | hledger command                                         |
 | -------------------- | ------------------------------------------------------- |
@@ -185,7 +175,7 @@ Pages refetch when the chat reports a save and when the app returns to the foreg
 
 ## Infrastructure as code
 
-One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Actions deploys over OIDC.
+One CDK app in TypeScript and one AWS account with dev and prod stacks. GitHub Actions deploys over OIDC.
 
 | Stack   | What it creates                                                                                                            |
 | ------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -194,22 +184,18 @@ One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Acti
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                          |
 | API     | Lambda function from a container image in ECR, function URL, execution role, and the AWS Budgets alarm on spend            |
 
-Per-user things (a user's folder, a chat's session) are created by the app, not by CDK.
-
 ## Costs and unit economics
 
-|                                               | Before launch  | At launch                             |
-| --------------------------------------------- | -------------- | ------------------------------------- |
-| LangSmith (agent server)                      | $39 (Serverless, beta included) | ≈ $430 (Dedicated)                    |
-| AWS base (Lambda, logs)                       | ≈ $0–5         | ≈ $20–60                              |
-| S3, DynamoDB                                  | ≈ $1           | ≈ $5–20 at 10k users                  |
-| Sandboxes (AgentCore, per second of use)      | usage          | ≈ $500–1,500 at 10k users             |
-| Clerk, RevenueCat, Expo, Sentry, PostHog      | $0             | $0–50                                 |
-| **Total**                                     | **≈ $40–50**   | **≈ $450–550** + model + sandbox time |
+|                                          | Before launch                   | At launch                             |
+| ---------------------------------------- | ------------------------------- | ------------------------------------- |
+| LangSmith (agent server)                 | $39 (Serverless, beta included) | ≈ $430 (Dedicated)                    |
+| AWS base (Lambda, logs)                  | ≈ $0–5                          | ≈ $20–60                              |
+| S3, DynamoDB                             | ≈ $1                            | ≈ $5–20 at 10k users                  |
+| Sandboxes (AgentCore, per second of use) | usage                           | ≈ $500–1,500 at 10k users             |
+| Clerk, RevenueCat, Expo, Sentry, PostHog | $0                              | $0–50                                 |
+| **Total**                                | **≈ $40–50**                    | **≈ $450–550** + model + sandbox time |
 
-AWS figures are estimates; confirm them in the AWS pricing calculator.
-
-Per subscriber per month, assuming 80 messages, 3 model calls each, 20k tokens of context at 75% cache hits, 800 output tokens, 2,000 subscribers, 20% EU VAT included in the price, Apple's 15% commission on the price after VAT, and Bedrock EU prices (10% above Anthropic's):
+The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; model prices are Bedrock EU, 10% above Anthropic's.
 
 ```
                                ||  Sonnet 5.5  Sonnet 5.5   Haiku 4.5
@@ -231,38 +217,70 @@ Net                            ||       -0.85        1.25        2.91
 Margin (of revenue after VAT)  ||        -10%         12%         35%
 ```
 
-EU prices include VAT, which Apple pays out of the price, so a $9.99 subscription brings about $8.33 before Apple's 15%. US prices exclude sales tax, so US users come out closer to the table without the VAT line. Sonnet 5.5 costs $2 in and $10 out per million tokens before the EU premium, the same as Sonnet 5. Reports say it finishes tasks with up to 30% fewer tokens; if our evals confirm that, its token line drops to about $5.27 and the margin at $9.99 to about 17%. Confirm it's available through Bedrock's EU profile.
+Sonnet 5.5 may do better than its column: reports say it needs up to 30% fewer tokens per task, which would lift its margin at $9.99 to about 17%. It may also do worse: its newer tokenizer turns the same text into about 30% more tokens than Haiku 4.5's. The evals should measure real token counts.
 
-The same token counts are assumed for every model, but Claude 4.7 and later models, including Sonnet 5.5, use a newer tokenizer that turns the same text into about 30% more tokens than Haiku 4.5's. So the Sonnet columns are likely optimistic next to Haiku; measure real token counts in the evals.
+Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model, and the price.
 
-Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. There is no monthly limit at first: TestFlight and the invite-only beta run unlimited, and the terms carry a fair-use clause. Before the public launch, add a hidden daily cap per user (about 200 messages, which only a script reaches) and the Bedrock budget alarm.
+TestFlight and the invite-only beta run with no usage limit, under a fair-use clause. Before the public launch, add a hidden daily cap of about 200 messages per user and the Bedrock budget alarm.
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, attachments picked from the photo library or Files, files shared into the app from other apps (a statement downloaded in a bank app goes straight into a new chat), `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills made in chat (instructions only), subscription, delete account.
+**At launch:**
 
-**Later, in the product:** Sign in with Google (with Android or a web app); skill scripts and the plugin marketplace; a History screen with an undo button (until then, undo is asking the agent); a Memory screen; more charts, each one more hledger command (net worth over time, spending by category); steering and queueing messages while the agent works; push notifications when a run finishes; the camera and a document scanner; budget alerts and a monthly review (with EventBridge Scheduler); app help pages; shared ledgers (ledger IDs and a members list); widgets and Siri; live page updates across devices; long chats with summarization (a `ui_messages` display copy that summarization never touches, and the summarized-history file in LangSmith's store).
+- Chat with tool steps, a stop button, and runs that finish with the app closed
+- Attachments from the photo library and Files, plus files shared from other apps (a bank statement straight into a new chat)
+- `@` mentions, the skills sheet, and instruction-only skills made in chat
+- Transactions and Net worth
+- Export as a zip or git repo
+- Subscription and account deletion
 
-**Later, in the tech, when needed:** page caching keyed by commit (pages get slow); starting the sandbox when a chat opens (the first-tool wait feels slow); automatic rebase (users often save from parallel chats); a path allowlist on saves (the repo holds files the agent shouldn't touch); a `pdftotext` path through the sandbox (imports get expensive, or a text-only model joins); routing tasks to different models (costs need cutting); a monthly limit or per-dollar metering (heavy users cost more than they pay); AWS credentials scoped to one user per request; a separate prod account and our own KMS key (before real users' data grows); agent hosting on AgentCore instead of LangSmith.
+**Later, in the product:**
+
+- Sign in with Google, with Android or a web app
+- Skill scripts and the plugin marketplace
+- A History screen with an undo button (until then, undo is asking the agent)
+- A Memory screen and more charts
+- Steering and queueing messages while the agent works
+- Push notifications
+- The camera and a document scanner
+- Budget alerts and a monthly review
+- App help pages
+- Shared ledgers
+- Widgets and Siri
+- Live page updates across devices
+- Long chats with summarization, plus a separate `ui_messages` display copy
+
+**Later, in the tech, when needed:**
+
+- Page caching keyed by commit
+- Starting the sandbox when a chat opens
+- Automatic rebase for parallel saves
+- A path allowlist on saves
+- A `pdftotext` path for cheaper statements
+- Different models for different tasks
+- A monthly limit or per-dollar metering
+- AWS credentials scoped to one user per request
+- A separate prod account and our own KMS key
+- Agent hosting on AgentCore instead of LangSmith
 
 **Dropped:** provider, model and Ollama settings.
 
 ## Risks and things to verify
 
-- **Switching from pi to deepagents is the biggest risk**; the prompt was tuned on pi. Build the eval set and record pi's baseline first, and pin deepagents (it ships almost weekly).
-- **Confirm with LangSmith:** the Serverless deployment's limits and EU availability are enough for the beta; the Dedicated deployment is a new deployment, since a deployment's type can't change.
-- **Confirm with AWS:** Sonnet 5.5 and Haiku 4.5 are on the EU profile and callable from Ireland; AgentCore prices and concurrent-session quota (fallback: Daytona, through the same connector interface); Lambda cold starts for the container image (measure page latency; add provisioned concurrency, or fall back to ECS Fargate behind a load balancer); Bedrock's size limit for PDFs attached to a message.
-- **AgentCore CDK constructs are alpha**; pin the version.
-- **Receiving shared files needs an iOS share extension** (`expo-share-intent`); budget a few days and test with real statements shared from bank apps.
-- **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
-- **LangSmith traces are full copies of users' books**; sample them, keep retention short, keep the workspace to one person.
-- **Statements are the priciest messages**: Claude reads each PDF page as text and an image (a 10-page statement is about 20–30k input tokens). Cap pages and size per upload.
-- **Measure hledger on a ten-year ledger** and page Transactions by date range.
-- **Pin one hledger version** in both Dockerfiles. It's GPL: fine on servers, never inside the iOS app.
+- **Switching from pi to deepagents is the biggest risk.** The prompt was tuned on pi, so build the eval set and record pi's baseline first.
+- **Pin versions.** deepagents ships almost weekly. hledger must be the same version in both images; it's GPL, which is fine on servers but rules it out inside the iOS app. The AgentCore CDK constructs are still alpha.
+- **Confirm with LangSmith** that the Serverless deployment is enough for the beta and runs in the EU. Dedicated, for launch, is a new deployment.
+- **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, AgentCore's prices and session quota (fallback: Daytona), and Bedrock's size limit for PDFs.
+- **Lambda cold starts may slow pages.** Measure them; add provisioned concurrency, or fall back to Fargate behind a load balancer.
+- **Receiving shared files needs an iOS share extension** (`expo-share-intent`). Budget a few days and test with statements shared from real bank apps.
+- **assistant-ui React Native with the LangGraph runtime is undocumented.** Prototype it first, using `expo/fetch` for streaming.
+- **LangSmith traces are full copies of users' books.** Sample them, keep retention short, and keep the workspace to one person.
+- **Statements are the priciest messages.** A 10-page PDF is about 20–30k input tokens, so cap pages and size per upload.
+- **Measure hledger on a ten-year ledger**, and page Transactions by date range.
 
 ## Launch checklist
 
-- **App Store:** organization account (5.1.1(ix)); Sign in with Apple as the only sign-in (so Apple's rule about offering it next to other providers doesn't apply yet); in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
+- **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
 - **Privacy:** policy and terms; processor agreements with AWS, LangSmith, Clerk, RevenueCat, Sentry, PostHog; a DPIA; check where Clerk and RevenueCat keep data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
 - **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
