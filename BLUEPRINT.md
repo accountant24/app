@@ -1,7 +1,5 @@
 # Accountant24 Mobile Blueprint
 
-Forked from accountant24 v0.3.4 (13c2f44).
-
 How to turn the desktop agent into a paid, closed-source iPhone app on AWS, with the model, compute and storage included.
 
 ## The short version
