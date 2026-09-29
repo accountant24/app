@@ -13,7 +13,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Cloud                | AWS, Ireland (eu-west-1), defined in CDK                                                           | Frankfurt, with the older AgentCore Runtime |
 | Books                | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write   | CodeCommit, one repo per user               |
 | Server               | One stateless API function on Lambda (container image: Node, git, hledger)                         | ECS Fargate behind a load balancer          |
-| Accounts             | DynamoDB                                                                                           | Aurora Serverless Postgres                  |
+| Accounts             | None for the beta (Clerk lists users); DynamoDB from the public launch                             | Aurora Serverless Postgres                  |
 | Agent                | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch           | deepagents on AgentCore Runtime             |
 | Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
 | Model                | Claude on Bedrock (EU inference profile), one model as a server setting                            | Anthropic API directly                      |
@@ -86,7 +86,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |         v               v                                                           |
 |   +--------------+  +--------------+                                                |
 |   | S3           |  | DynamoDB     |                                                |
-|   | versioned    |  | users,       |                                                |
+|   | versioned    |  | from launch: |                                                |
 |   | books.bundle |  | plan, daily  |                                                |
 |   | per user     |  |              |                                                |
 |   +--------------+  +--------------+                                                |
@@ -112,8 +112,7 @@ users/<user_id>/books.bundle       -- the whole git repo at the latest commit
                                    -- metadata: commit=<sha>; replaced only with If-Match
                                    -- older versions expire 30 days after they are replaced
 
--- DynamoDB, on-demand
-users        id (Clerk) · created_at
+-- DynamoDB, on-demand, from the public launch; the free beta needs none (Clerk lists the users)
 plans        user_id · plan · renews_at                  -- from RevenueCat
 daily_runs   user_id · day · count                       -- hidden daily cap, from public launch
 ```
@@ -197,7 +196,7 @@ One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Acti
 | Stack   | What it creates                                                                                                            |
 | ------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Network | VPC with private subnets for the sandboxes only; no NAT gateway, no endpoints (the API runs outside the VPC)               |
-| Data    | Versioned books bucket with the 30-day rule and DynamoDB tables, both with AWS default encryption (kept on stack delete)   |
+| Data    | Versioned books bucket with the 30-day rule and AWS default encryption (kept on stack delete); DynamoDB at launch          |
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                          |
 | API     | Lambda function from a container image in ECR, function URL, execution role, and the AWS Budgets alarm on spend            |
 
@@ -277,9 +276,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
-| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts); sandbox image, AgentCore, connector;               deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages);           sandbox image, AgentCore, connector;               deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, export, delete account                                                                                                               | You keep your own books on the phone for two weeks                           |
-| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, RevenueCat, paywall, daily cap, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
+| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, DynamoDB with plans and the daily cap, RevenueCat and its webhook, paywall, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
 | 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
