@@ -166,7 +166,7 @@ Step 10 is the only save. When the phone sees "saved r42" in the stream, open pa
 
 1. `commit_and_push` commits in the sandbox and packs the whole repo with `git bundle create books.bundle --all`, then asks the API service to save.
 2. The API service downloads that one file from the sandbox and clones it into a temporary folder.
-3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, that only workspace files changed since it, and that `hledger check --strict` passes.
+3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, and that `hledger check --strict` passes. Everything in the repo is the user's workspace, so there is no path allowlist; add one if the repo ever holds files the agent shouldn't touch.
 4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
 5. If the write fails, the save returns "the books changed in another chat". The API service copies the latest `books.bundle` into the sandbox and re-clones, and the agent redoes its change on top. There is no automatic rebase; add one if users often save from parallel chats.
 
