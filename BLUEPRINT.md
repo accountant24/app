@@ -8,19 +8,19 @@ How to turn the desktop agent into a paid, closed-source iPhone app on AWS, with
 
 Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run every tool in a sandbox per chat, read pages straight from the books, and run it all in one EU region of AWS.
 
-| Area                 | Pick                                                                                               | Runner-up                                   |
-| -------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Cloud                | AWS, Ireland (eu-west-1), defined in CDK                                                           | Frankfurt, with the older AgentCore Runtime |
-| Books                | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write   | CodeCommit, one repo per user               |
-| Server               | One stateless API function on Lambda (container image: Node, git, hledger)                         | ECS Fargate behind a load balancer          |
-| Accounts             | None for the beta (Clerk lists users); DynamoDB from the public launch                             | Aurora Serverless Postgres                  |
-| Agent                | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch           | deepagents on AgentCore Runtime             |
-| Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
-| Model                | Claude on Bedrock (EU inference profile), one model as a server setting                            | Anthropic API directly                      |
-| Accounting engine    | hledger, one pinned version                                                                        | None; decided                               |
-| App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
-| Sign-in              | Clerk, Sign in with Apple only                                                                     | Cognito                                     |
-| Payments             | RevenueCat on StoreKit 2                                                                           | Superwall                                   |
+| Area              | Pick                                                                                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Cloud             | AWS, Ireland (eu-west-1), defined in CDK                                                                                          |
+| Books             | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write                                  |
+| Server            | One stateless API function on Lambda (container image: Node, git, hledger)                                                        |
+| Accounts          | None for the beta (Clerk lists users); DynamoDB from the public launch                                                            |
+| Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                          |
+| Sandboxes         | AgentCore Runtime, one session per chat, with a connector we write                                                                |
+| Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering |
+| Accounting engine | hledger, one pinned version                                                                                                       |
+| App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                             |
+| Sign-in           | Clerk, Sign in with Apple only                                                                                                    |
+| Payments          | RevenueCat on StoreKit 2                                                                                                          |
 
 The fork: this repo becomes the closed app; the open-source desktop app stays in its own repo. The ledger code no longer has to serve the desktop. The forked code is Apache-2.0: keep its license and notice.
 
@@ -254,7 +254,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 - **Switching from pi to deepagents is the biggest risk**; the prompt was tuned on pi. Build the eval set and record pi's baseline first, and pin deepagents (it ships almost weekly).
 - **Confirm with LangSmith:** the Serverless deployment's limits and EU availability are enough for the beta; the Dedicated deployment is a new deployment, since a deployment's type can't change.
-- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; Lambda cold starts for the container image (measure page latency; add provisioned concurrency if needed); Bedrock's size limit for PDFs attached to a message.
+- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota (fallback: Daytona, through the same connector interface); Lambda cold starts for the container image (measure page latency; add provisioned concurrency, or fall back to ECS Fargate behind a load balancer); Bedrock's size limit for PDFs attached to a message.
 - **AgentCore CDK constructs are alpha**; pin the version.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`); budget a few days and test with real statements shared from bank apps.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
