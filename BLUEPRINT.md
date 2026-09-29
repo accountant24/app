@@ -22,7 +22,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
 | Sign-in              | Clerk (Apple, Google)                                                                              | Cognito                                     |
 | Payments             | RevenueCat on StoreKit 2                                                                           | Superwall                                   |
-| Push, scheduled jobs | Expo push, EventBridge Scheduler                                                                   | SNS mobile push                             |
+| Scheduled jobs       | EventBridge Scheduler                                                                              | None                                        |
 
 The fork: this repo becomes the closed app; the open-source desktop app stays in its own repo. The ledger code no longer has to serve the desktop. The forked code is Apache-2.0: keep its license and notice.
 
@@ -53,14 +53,13 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 | ledger tools: thin wrappers       |  prompts|                                     |
 | chats, runs, rejoin, cron, traces | ------> |                                     |
 +-----------------------------------+         +-------------------------------------+
-                                                  ^                     |
-                                          webhook |                     | push
-                                                  |                     v
-                                        +------------------+  +------------------+
-                                        | RevenueCat       |  | Expo Push, APNs  |
-                                        | StoreKit 2       |  | run finished,    |
-                                        +------------------+  | alerts           |
-                                                              +------------------+
+                                                  ^
+                                          webhook |
+                                                  |
+                                        +------------------+
+                                        | RevenueCat       |
+                                        | StoreKit 2       |
+                                        +------------------+
 ```
 
 ```
@@ -81,7 +80,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   | Node + git + hledger      | ---------------> | SANDBOX SESSION             |    |
 |   | save checks               |                  | AgentCore Runtime           |    |
 |   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
-|   | accounts, webhooks, push  | <--------------> | clone of the books          |    |
+|   | accounts, webhooks        | <--------------> | clone of the books          |    |
 |   | drives the sandboxes      |   in and out     | hledger, git, uv, pdftotext |    |
 |   +---------------------------+                  | uploads/, never saved       |    |
 |         |               |                        | no internet access          |    |
@@ -91,9 +90,8 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   | S3           |  | DynamoDB     |                 +------------------+           |
 |   | versioned    |  | users,       |                 | CodeArtifact     |           |
 |   | books.bundle |  | ledgers,     |                 | PyPI mirror      |           |
-|   | per ledger   |  | plan, usage, |                 +------------------+           |
-|   +--------------+  | push tokens  |                                                |
-|                     +--------------+                                                |
+|   | per ledger   |  | plan, usage  |                 +------------------+           |
+|   +--------------+  +--------------+                                                |
 +-------------------------------------------------------------------------------------+
 ```
 
@@ -123,7 +121,6 @@ ledgers      id · owner_id · created_at
 members      ledger_id · user_id · role                  -- later: shared ledgers
 plans        user_id · plan · allowance_usd · renews_at  -- from RevenueCat
 usage        user_id · period · input_tokens · output_tokens · usd
-push_tokens  user_id · token · device · updated_at
 ```
 
 A git bundle is the whole repo, history included, in one file. Without uploads in git it stays a few MB for years. Chats and traces live in LangSmith (Netherlands); everything else stays in Ireland.
@@ -160,8 +157,6 @@ iPhone           Agent server          Sandbox              API service         
   |                   |-- 12 tool result -> final reply ---------------------------->|
   |<- 13 stream steps |                   |                      |                   |
   |      + reply -----|                   |                      |                   |
-  |                   |-- 14 run finished ---------------------->|                   |
-  |<----------------------------------------- 15 push if the app is closed          |
 ```
 
 Step 10 is the only save. When the phone sees "saved r42" in the stream, open pages refetch. If the phone disconnects, the run keeps going and the phone rejoins the stream.
@@ -253,9 +248,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed plus a push, steering and stop, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, usage, delete account.
+**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), steering and stop, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, usage, delete account.
 
-**Later:** share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later:** push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
 **Dropped:** provider, model and Ollama settings.
 
@@ -274,7 +269,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 ## Launch checklist
 
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple next to Google; in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
-- **Privacy:** policy and terms; processor agreements with AWS, LangSmith, Clerk, RevenueCat, Expo, Sentry, PostHog; a DPIA; check where Clerk, Expo push and RevenueCat keep data; privacy label.
+- **Privacy:** policy and terms; processor agreements with AWS, LangSmith, Clerk, RevenueCat, Sentry, PostHog; a DPIA; check where Clerk and RevenueCat keep data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
 - **Cost control:** per-user allowance, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
 - **Operations:** a tested restore from an older S3 version; remote config for model and allowances; a license review (Apache-2.0 notices, hledger GPL).
@@ -287,7 +282,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts, metering); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account                                                                                              | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, allowance, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
-| 4 · After launch      |             | Alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
+| 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
 
