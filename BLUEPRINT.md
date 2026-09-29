@@ -34,7 +34,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 | Apple sign-in    |       | chat with tool steps          |
 +------------------+       | Transactions, Net worth       |
                            | export                        |
-                           | camera, scanner, Files        |
+                           | photos, Files, share sheet    |
                            | paywall                       |
                            +-------------------------------+
                                |                     |
@@ -244,9 +244,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills made in chat (instructions only), subscription, delete account.
+**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), a stop button, attachments picked from the photo library or Files, files shared into the app from other apps (a statement downloaded in a bank app goes straight into a new chat), `@` mentions, the skills sheet, Transactions, Net worth, export as a zip or git repo, skills made in chat (instructions only), subscription, delete account.
 
-**Later:** Sign in with Google (with Android or a web app), skill scripts and the plugin marketplace, a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
+**Later:** Sign in with Google (with Android or a web app), skill scripts and the plugin marketplace, a History screen with an undo button (until then, undo is asking the agent), a Memory screen, more charts, steering and queueing messages while the agent works, push notifications when a run finishes, the camera and a document scanner, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
 **Dropped:** provider, model and Ollama settings.
 
@@ -256,6 +256,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 - **Confirm with LangSmith:** the Serverless deployment's limits and EU availability are enough for the beta; the Dedicated deployment is a new deployment, since a deployment's type can't change.
 - **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; Lambda cold starts for the container image (measure page latency; add provisioned concurrency if needed); Bedrock's size limit for PDFs attached to a message.
 - **AgentCore CDK constructs are alpha**; pin the version.
+- **Receiving shared files needs an iOS share extension** (`expo-share-intent`); budget a few days and test with real statements shared from bank apps.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
 - **LangSmith traces are full copies of users' books**; sample them, keep retention short, keep the workspace to one person.
 - **Statements are the priciest messages**: Claude reads each PDF page as text and an image (a 10-page statement is about 20–30k input tokens). Cap pages and size per upload.
@@ -276,9 +277,9 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
 | 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages);           sandbox image, AgentCore, connector;               deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
-| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, export, delete account                                                                                                               | You keep your own books on the phone for two weeks                           |
+| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, export, delete account                                                                                                         | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, DynamoDB with plans and the daily cap, RevenueCat and its webhook, paywall, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
-| 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
+| 4 · After launch      |             | Push notifications, alerts and monthly review, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
 
