@@ -37,7 +37,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 +------------------+       | Transactions, Net worth       |
                            | History, undo, export         |
                            | camera, scanner, Files        |
-                           | paywall, usage meter          |
+                           | paywall                       |
                            +-------------------------------+
                                |                     |
                           chat |                     | pages, history,
@@ -89,7 +89,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   +--------------+  +--------------+                           v                    |
 |   | S3           |  | DynamoDB     |                 +------------------+           |
 |   | versioned    |  | users,       |                 | CodeArtifact     |           |
-|   | books.bundle |  | plan, usage  |                 | PyPI mirror      |           |
+|   | books.bundle |  | plan, daily  |                 | PyPI mirror      |           |
 |   | per user     |  |              |                 +------------------+           |
 |   +--------------+  +--------------+                                                |
 +-------------------------------------------------------------------------------------+
@@ -116,8 +116,8 @@ users/<user_id>/books.bundle       -- the whole git repo at the latest commit
 
 -- DynamoDB, on-demand
 users        id (Clerk) · created_at
-plans        user_id · plan · allowance_usd · renews_at  -- from RevenueCat
-usage        user_id · period · input_tokens · output_tokens · usd
+plans        user_id · plan · renews_at                  -- from RevenueCat
+daily_runs   user_id · day · count                       -- hidden daily cap, from public launch
 ```
 
 A git bundle is the whole repo, history included, in one file. Without uploads in git it stays a few MB for years. Chats and traces live in LangSmith (Netherlands); everything else stays in Ireland.
@@ -241,11 +241,11 @@ Net                            ||      0.50      3.02       4.26
 Margin                         ||        5%       23%        43%
 ```
 
-Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. Every plan gets a monthly allowance, checked before each run.
+Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model for everyday logging, and the price. There is no monthly limit at first: TestFlight and the invite-only beta run unlimited, and the terms carry a fair-use clause. Before the public launch, add a hidden daily cap per user (about 200 messages, which only a script reaches) and the Bedrock budget alarm. Beta usage then shows whether a monthly limit is needed; per-dollar metering comes only with usage-priced plans.
 
 ## Scope
 
-**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), steering and stop, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, usage, delete account.
+**At launch:** chat with tool steps, runs that finish with the app closed (the answer is there on reopening), steering and stop, camera/scanner/Files attachments, `@` mentions, the skills sheet, Transactions, Net worth, charts from hledger, memory screen, history with undo, export as a zip or git repo, skills with scripts, plugin install, subscription, delete account.
 
 **Later:** push notifications when a run finishes, share sheet into a chat, budget alerts and a monthly review, app help pages, shared ledgers, widgets and Siri.
 
@@ -258,7 +258,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 - **AgentCore CDK constructs are alpha**; pin the version.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
 - **LangSmith traces are full copies of users' books**; sample them, keep retention short, keep the workspace to one person.
-- **Statements as images are expensive**; prefer the text path, cap pages and size, count imports against the allowance.
+- **Statements as images are expensive**; prefer the text path and cap pages and size per upload.
 - **Measure hledger on a ten-year ledger** and page Transactions by date range.
 - **Pin one hledger version** in both Dockerfiles. It's GPL: fine on servers, never inside the iOS app.
 
@@ -267,17 +267,17 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple next to Google; in-app account deletion that reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
 - **Privacy:** policy and terms; processor agreements with AWS, LangSmith, Clerk, RevenueCat, Sentry, PostHog; a DPIA; check where Clerk and RevenueCat keep data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
-- **Cost control:** per-user allowance, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
-- **Operations:** a tested restore from an older S3 version; remote config for model and allowances; a license review (Apache-2.0 notices, hledger GPL).
+- **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
+- **Operations:** a tested restore from an older S3 version; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger GPL).
 
 ## Build order
 
 | Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
-| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts, metering); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account                                                                                              | You keep your own books on the phone for two weeks                           |
-| 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, allowance, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
+| 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, daily cap, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
 | 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
@@ -285,7 +285,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. Sonnet 5 leaves 5% at $9.99; Haiku 4.5 or $12.99 fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
 2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
 3. **Community plugins with one tap?** Their scripts run next to the user's books. One tap with a warning, or reviewed plugins only.
-4. **What does a subscription buy?** One plan with an allowance, or tiers plus top-up credits.
+4. **What does a subscription buy?** One unlimited plan under fair use at launch; tiers or a monthly limit only if beta usage shows heavy users cost more than they pay.
 5. **Keep bring-your-own-key?** Cheap to run, but it brings back provider settings and support load.
 6. **Android at launch?** The code is nearly free with Expo; testing and store work are not.
 7. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
