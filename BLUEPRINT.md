@@ -14,7 +14,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Books                | A git repo per user, one bundle file in a versioned S3 bucket, replaced with a conditional write   | CodeCommit, one repo per user               |
 | Server               | One stateless API function on Lambda (container image: Node, git, hledger)                         | ECS Fargate behind a load balancer          |
 | Accounts             | DynamoDB                                                                                           | Aurora Serverless Postgres                  |
-| Agent                | deepagents (TypeScript) on LangSmith Deployment, EU                                                | deepagents on AgentCore Runtime             |
+| Agent                | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch           | deepagents on AgentCore Runtime             |
 | Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
 | Model                | Claude on Bedrock (EU inference profile), one model as a server setting                            | Anthropic API directly                      |
 | Accounting engine    | hledger, one pinned version                                                                        | None; decided                               |
@@ -207,7 +207,7 @@ Per-user things (a user's folder, a chat's session) are created by the app, not 
 
 |                                               | Before launch  | At launch                             |
 | --------------------------------------------- | -------------- | ------------------------------------- |
-| LangSmith (agent server)                      | $39            | ≈ $430                                |
+| LangSmith (agent server)                      | $39 (Serverless, beta included) | ≈ $430 (Dedicated)                    |
 | AWS base (Lambda, logs)                       | ≈ $0–5         | ≈ $20–60                              |
 | S3, DynamoDB                                  | ≈ $1           | ≈ $5–20 at 10k users                  |
 | Sandboxes (AgentCore, per second of use)      | usage          | ≈ $500–1,500 at 10k users             |
@@ -250,6 +250,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 ## Risks and things to verify
 
 - **Switching from pi to deepagents is the biggest risk**; the prompt was tuned on pi. Build the eval set and record pi's baseline first, and pin deepagents (it ships almost weekly).
+- **Confirm with LangSmith:** the Serverless deployment's limits and EU availability are enough for the beta; the Dedicated deployment is a new deployment, since a deployment's type can't change.
 - **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; Lambda cold starts for the container image (measure page latency; add provisioned concurrency if needed); Bedrock's size limit for PDFs attached to a message.
 - **AgentCore CDK constructs are alpha**; pin the version.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
@@ -273,7 +274,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 | 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
 | 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts); sandbox image, AgentCore, connector;               deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, export, delete account                                                                                                               | You keep your own books on the phone for two weeks                           |
-| 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, daily cap, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
+| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, RevenueCat, paywall, daily cap, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
 | 4 · After launch      |             | Push notifications, alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
