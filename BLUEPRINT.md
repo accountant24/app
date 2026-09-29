@@ -8,21 +8,21 @@ How to turn the desktop agent into a paid, closed-source iPhone app on AWS, with
 
 Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run every tool in a sandbox per chat, read pages straight from the books, and run it all in one EU region of AWS.
 
-| Area | Pick | Runner-up |
-| --- | --- | --- |
-| Cloud | AWS, Ireland (eu-west-1), defined in CDK | Frankfurt, with the older AgentCore Runtime |
-| Books | A git repo per ledger, one bundle file in a versioned S3 bucket, replaced with a conditional write | CodeCommit, one repo per ledger |
-| Server | One stateless API service on ECS Fargate (Node, git, hledger) | Lambda with a container image |
-| Accounts | DynamoDB | Aurora Serverless Postgres |
-| Agent | deepagents (TypeScript) on LangSmith Deployment, EU | deepagents on AgentCore Runtime |
-| Sandboxes | AgentCore Runtime, one session per chat, with a connector we write | Daytona |
-| Model | Claude on Bedrock (EU inference profile), chosen per task by evals | Anthropic API directly |
-| Accounting engine | hledger, one pinned version | None; decided |
-| Python packages | CodeArtifact PyPI mirror, no internet in sandboxes | An internet allowlist |
-| App | Expo, assistant-ui (React Native + LangGraph runtime) | SwiftUI |
-| Sign-in | Clerk (Apple, Google) | Cognito |
-| Payments | RevenueCat on StoreKit 2 | Superwall |
-| Push, scheduled jobs | Expo push, EventBridge Scheduler | SNS mobile push |
+| Area                 | Pick                                                                                               | Runner-up                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Cloud                | AWS, Ireland (eu-west-1), defined in CDK                                                           | Frankfurt, with the older AgentCore Runtime |
+| Books                | A git repo per ledger, one bundle file in a versioned S3 bucket, replaced with a conditional write | CodeCommit, one repo per ledger             |
+| Server               | One stateless API service on ECS Fargate (Node, git, hledger)                                      | Lambda with a container image               |
+| Accounts             | DynamoDB                                                                                           | Aurora Serverless Postgres                  |
+| Agent                | deepagents (TypeScript) on LangSmith Deployment, EU                                                | deepagents on AgentCore Runtime             |
+| Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
+| Model                | Claude on Bedrock (EU inference profile), chosen per task by evals                                 | Anthropic API directly                      |
+| Accounting engine    | hledger, one pinned version                                                                        | None; decided                               |
+| Python packages      | CodeArtifact PyPI mirror, no internet in sandboxes                                                 | An internet allowlist                       |
+| App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
+| Sign-in              | Clerk (Apple, Google)                                                                              | Cognito                                     |
+| Payments             | RevenueCat on StoreKit 2                                                                           | Superwall                                   |
+| Push, scheduled jobs | Expo push, EventBridge Scheduler                                                                   | SNS mobile push                             |
 
 The fork: this repo becomes the closed app; the open-source desktop app stays in its own repo. The ledger code no longer has to serve the desktop. The forked code is Apache-2.0: keep its license and notice.
 
@@ -79,11 +79,11 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   | API SERVICE (ECS Fargate) |                                                     |
 |   | stateless, 2 small tasks  |   run commands   +-----------------------------+    |
 |   | Node + git + hledger      | ---------------> | SANDBOX SESSION             |    |
-|   | git remote, push checks   |                  | AgentCore Runtime           |    |
-|   | pages: hledger on HEAD    |  git clone, push | one microVM per chat        |    |
-|   | accounts, webhooks, push  | <--------------- | clone of the books          |    |
-|   | drives the sandboxes      |  (internal load  | hledger, git, uv, pdftotext |    |
-|   +---------------------------+   balancer)      | uploads/, never saved       |    |
+|   | save checks               |                  | AgentCore Runtime           |    |
+|   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
+|   | accounts, webhooks, push  | <--------------> | clone of the books          |    |
+|   | drives the sandboxes      |   in and out     | hledger, git, uv, pdftotext |    |
+|   +---------------------------+                  | uploads/, never saved       |    |
 |         |               |                        | no internet access          |    |
 |         |               |                        +-----------------------------+    |
 |         v               v                                      |                    |
@@ -101,12 +101,11 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 
 - **The sandbox is never the database.** A throwaway clone per chat, stopped after 10 idle minutes. A change counts only once the API service has saved it to S3.
 - **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
-- **Only the server moves `main`.** Sandboxes push their own chat branch. A push is saved only if `books.bundle` is still the version it was based on; otherwise the sandbox pulls, rebases, re-checks and pushes again. Undo is `git revert`.
+- **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise the sandbox rebases on the newer version and saves again. Undo is `git revert`.
 - **The server keeps nothing.** Each request works in its own temporary folder. Any task serves any ledger.
 - **Identity comes from a verified token only**, never from the request body or the model.
 - **AWS enforces the ledger boundary.** Each request gets temporary credentials that reach only `ledgers/<id>/` in S3.
-- **Sandboxes hold no keys.** Only a short-lived token for their own ledger's git remote; no internet, no AWS credentials, no model keys.
-- **The sandbox only knows the git URL and token the server gives it**, so the storage behind it can change without touching the sandbox.
+- **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
 - **Uploads live in the chat only.** A receipt travels in the chat message and sits in the sandbox while the chat is open; nothing stores it separately.
 - **Keyed by ledger, not by user**, so shared ledgers later only add a members list.
 
@@ -146,7 +145,7 @@ iPhone           Agent server          Sandbox              API service         
   |                   |                   |                      |                   |
   | 1 chat opened ---------------------------------------------->|                   |
   |                   |                   |<--- 2 start sandbox -|                   |
-  |                   |                   |-- 3 git clone r41 -->|                   |
+  |                   |                   |<-- 3 books.bundle ---|                   |
   | 4 run + receipt   |                   |                      |                   |
   |   photo --------->|                   |                      |                   |
   |                   |-- 5 prompt (cached prefix) + image ------------------------->|
@@ -154,8 +153,8 @@ iPhone           Agent server          Sandbox              API service         
   |                   |-- 7 run the tool (via the API) ->|       |                   |
   |                   |                   | 8 entry, check,      |                   |
   |                   |                   |   commit             |                   |
-  |                   |                   |-- 9 push chat ------>|                   |
-  |                   |                   |   branch             | 10 check,         |
+  |                   |                   |-- 9 books.bundle --->|                   |
+  |                   |                   |   (full repo)        | 10 check,         |
   |                   |                   |                      |    save r42       |
   |                   |<- 11 saved r42 ---|                      |                   |
   |                   |-- 12 tool result -> final reply ---------------------------->|
@@ -169,36 +168,36 @@ Step 10 is the only save. When the phone sees "saved r42" in the stream, open pa
 
 ## How it works
 
-**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, uv, pdftotext, the ledger program). It gets a short-lived git token and clones the books over the internal network. It stops after 10 idle minutes.
+**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, uv, pdftotext, the ledger program), uploads the ledger's `books.bundle` into it and runs `git clone` there. The agent gets a normal repo with the full history. The session stops after 10 idle minutes.
 
 **Tools.** The agent loop runs on LangSmith; every tool runs in the sandbox. Our deepagents connector maps the file tools and `execute` to three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers that pass JSON to the ledger program.
 
 **Saving:**
 
-1. The sandbox commits and pushes `chat/<chat_id>` to the API service's git URL. The token can write only that branch.
-2. The API service downloads `books.bundle` into a temporary folder, notes its ETag, and receives the push with real git.
-3. A hook checks that the commit builds on the current `main`, only workspace files changed, and `hledger check --strict` passes.
-4. It moves `main`, writes the new bundle with `If-Match` on the ETag, and only then reports success. S3 versioning keeps the previous bundle.
-5. If another chat saved first, the push is rejected and the sandbox pulls, rebases, re-checks and pushes again. A real conflict goes back to the agent.
+1. `commit_and_push` commits in the sandbox and packs the whole repo with `git bundle create books.bundle --all`, then asks the API service to save.
+2. The API service downloads that one file from the sandbox and clones it into a temporary folder.
+3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, that only workspace files changed since it, and that `hledger check --strict` passes.
+4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
+5. If the write fails, the API service uploads the newer `books.bundle` into the sandbox; the sandbox fetches from it, rebases, re-checks and saves again. A real conflict goes back to the agent.
 
 Commits carry the chat and run as trailers, so "undo the last change" reverts exactly that run.
 
 **Documents.** Photos and scans go to the model as images. A text PDF is also written into the sandbox's `uploads/` (outside git) and read with `pdftotext`. The chat history shows the file; nothing else keeps it.
 
-**Scripts and new skills.** Skill scripts run in the sandbox with packages from CodeArtifact. New skills are files the agent writes; the push check validates plugin manifests.
+**Scripts and new skills.** Skill scripts run in the sandbox with packages from CodeArtifact. New skills are files the agent writes; the save check validates plugin manifests.
 
 ## Pages
 
-A page request: check the token, read the commit ID on `books.bundle` (a metadata request), return the cached result for (ledger, commit, page, filters), or on a miss download the bundle, run hledger, parse with `ledger-json.ts` and cache. A new save means a new commit, so nothing is ever invalidated or stale.
+A page request: check the token, download the ledger's `books.bundle` into a temporary folder, run hledger, parse the output with `ledger-json.ts`, and delete the folder. Pages always read the latest saved version. Add caching, keyed by commit, only if pages get slow.
 
-| Page | hledger command |
-| --- | --- |
-| Transactions | `hledger print -O json`, limited by date range |
-| Net worth | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
-| Net worth over time | `hledger bs -M -V --historical -O json` |
-| Spending by category | `hledger bal expenses -M --depth 2 -O json` |
-| Mentions, pickers | `hledger accounts`, `payees`, `tags` |
-| History | `git log` with the chat and run trailers |
+| Page                 | hledger command                                         |
+| -------------------- | ------------------------------------------------------- |
+| Transactions         | `hledger print -O json`, limited by date range          |
+| Net worth            | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
+| Net worth over time  | `hledger bs -M -V --historical -O json`                 |
+| Spending by category | `hledger bal expenses -M --depth 2 -O json`             |
+| Mentions, pickers    | `hledger accounts`, `payees`, `tags`                    |
+| History              | `git log` with the chat and run trailers                |
 
 Pages refetch when the chat reports a save and when the app returns to the foreground. Live updates across devices can come later.
 
@@ -206,26 +205,26 @@ Pages refetch when the chat reports a save and when the app returns to the foreg
 
 One CDK app in TypeScript. Separate dev and prod accounts; GitHub Actions deploys over OIDC.
 
-| Stack | What it creates |
-| --- | --- |
+| Stack   | What it creates                                                                                                            |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Network | VPC with public and private subnets, no NAT gateway; free S3 and DynamoDB endpoints, interface endpoints only where needed |
-| Data | Versioned books bucket with the 30-day rule, DynamoDB tables, KMS key (kept on stack delete) |
-| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets, CodeArtifact with a PyPI upstream |
-| API | Fargate service, public and internal load balancers, task role, per-ledger role with a session policy |
-| Jobs | EventBridge Scheduler, AWS Budgets alarms |
+| Data    | Versioned books bucket with the 30-day rule, DynamoDB tables, KMS key (kept on stack delete)                               |
+| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets, CodeArtifact with a PyPI upstream                              |
+| API     | Fargate service, public load balancer, task role, per-ledger role with a session policy                                    |
+| Jobs    | EventBridge Scheduler, AWS Budgets alarms                                                                                  |
 
 Per-user things (a ledger's folder, a chat's session) are created by the app, not by CDK.
 
 ## Costs and unit economics
 
-| | Before launch | At launch |
-| --- | --- | --- |
-| LangSmith (agent server) | $39 | ≈ $430 |
-| AWS base (load balancers, Fargate, endpoints) | ≈ $60–90 | ≈ $120–200 |
-| S3, DynamoDB, CodeArtifact | ≈ $1 | ≈ $5–20 at 10k users |
-| Sandboxes (AgentCore, per second of use) | usage | ≈ $500–1,500 at 10k users |
-| Clerk, RevenueCat, Expo, Sentry, PostHog | $0 | $0–50 |
-| **Total** | **≈ $100–130** | **≈ $600–700** + model + sandbox time |
+|                                               | Before launch  | At launch                             |
+| --------------------------------------------- | -------------- | ------------------------------------- |
+| LangSmith (agent server)                      | $39            | ≈ $430                                |
+| AWS base (load balancer, Fargate, endpoints)  | ≈ $60–90       | ≈ $120–200                            |
+| S3, DynamoDB, CodeArtifact                    | ≈ $1           | ≈ $5–20 at 10k users                  |
+| Sandboxes (AgentCore, per second of use)      | usage          | ≈ $500–1,500 at 10k users             |
+| Clerk, RevenueCat, Expo, Sentry, PostHog      | $0             | $0–50                                 |
+| **Total**                                     | **≈ $100–130** | **≈ $600–700** + model + sandbox time |
 
 AWS figures are estimates; confirm them in the AWS pricing calculator.
 
@@ -282,13 +281,13 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Build order
 
-| Phase | Time | Work | Done when |
-| --- | --- | --- | --- |
-| 0 · Groundwork | ≈ 2 weeks | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS accounts and CDK Network and Data stacks; model evals on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
-| 1 · Cloud agent | ≈ 3–4 weeks | API service (git endpoint, checks, pages, accounts, metering); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools | Evals match pi, concurrent saves never lose a change, cross-user tests pass |
-| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account | You keep your own books on the phone for two weeks |
-| 3 · Launch | ≈ 2–3 weeks | RevenueCat, paywall, allowance, consent screen, privacy label, legal entity, App Review, prod stacks | Live, first renewal goes through |
-| 4 · After launch | | Alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore | |
+| Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
+| --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS accounts and CDK Network and Data stacks; model evals on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts, metering); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
+| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account                                                                                              | You keep your own books on the phone for two weeks                           |
+| 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, allowance, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
+| 4 · After launch      |             | Alerts and monthly review, share extension, widgets, shared ledgers, maybe agent hosting on AgentCore                                                                                     |                                                                              |
 
 ## Decisions for you
 
