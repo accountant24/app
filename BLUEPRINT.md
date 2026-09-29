@@ -142,9 +142,9 @@ The phone sees each step as it happens, so the user watches the progress. When t
 
 **Identity.** The user ID comes only from our verified JWT, never from the request or the model. Every request names a ledger, and the server serves it only if `members` lists that user for it; every storage path is built from that ledger ID. Cross-user tests in CI check that one user can't reach another's ledger. Each user has one ledger at first, but user and ledger stay separate IDs so shared ledgers need no migration.
 
-**The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the API service starts an AgentCore session with our image: hledger, git and the ledger program. It copies the user's `books.bundle` in and runs `git clone`, so the first tool waits about 2 seconds. Later tools reuse the session until it stops after 10 idle minutes. The sandbox is only a working copy. It has no internet and no credentials, and a change counts only once the API service has saved it.
+**The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the API service starts a session on the new AgentCore Runtime (GA in Ireland since September 2026, starts in about 2 seconds) with our image: hledger, git and the ledger program. It copies the user's `books.bundle` in and runs `git clone`, so the first tool waits about 2–3 seconds. Later tools reuse the session until it stops after 10 idle minutes. The sandbox is only a working copy. It has no internet and no credentials, and a change counts only once the API service has saved it.
 
-**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers around the ledger program.
+**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role, and retries a command that gets a 409 because the session is still starting or stopping. Ledger tools are thin wrappers around the ledger program.
 
 **Saving.** The API service keeps no state; each request works in its own temporary folder.
 
@@ -180,7 +180,7 @@ One CDK app in TypeScript and one AWS account with dev and prod stacks. GitHub A
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Network | VPC with private subnets for the sandboxes only; no NAT gateway, no endpoints (the API runs outside the VPC)                                        |
 | Data    | Versioned books bucket with the 30-day rule and AWS default encryption (kept on stack delete); DynamoDB tables from the beta                        |
-| Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets with no network access                                                                   |
+| Sandbox | Sandbox image in ECR, AgentCore Runtime (new runtime version, stable `aws-cdk-lib` constructs) in private subnets with no network access            |
 | API     | Lambda function from a container image in ECR, function URL, execution role, JWT signing key in Secrets Manager, and the AWS Budgets alarm on spend |
 
 ## Costs and unit economics
@@ -267,7 +267,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 ## Risks and things to verify
 
 - **Switching from pi to deepagents is the biggest risk.** The prompt was tuned on pi, so build the eval set and record pi's baseline first.
-- **Pin versions.** deepagents ships almost weekly. hledger must be the same version in both images; it's GPL, which is fine on servers but rules it out inside the iOS app. The AgentCore CDK constructs are still alpha.
+- **Pin versions.** deepagents ships almost weekly. hledger must be the same version in both images; it's GPL, which is fine on servers but rules it out inside the iOS app. Pin the new AgentCore runtime version.
 - **Confirm with LangSmith** that the Serverless deployment is enough for the beta and runs in the EU. Dedicated, for launch, is a new deployment.
 - **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, AgentCore's prices and session quota (fallback: Daytona), and Bedrock's size limit for PDFs.
 - **Lambda cold starts may slow pages.** Measure them; add provisioned concurrency, or fall back to Fargate behind a load balancer.
