@@ -22,7 +22,6 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
 | Sign-in              | Clerk (Apple, Google)                                                                              | Cognito                                     |
 | Payments             | RevenueCat on StoreKit 2                                                                           | Superwall                                   |
-| Scheduled jobs       | EventBridge Scheduler                                                                              | None                                        |
 
 The fork: this repo becomes the closed app; the open-source desktop app stays in its own repo. The ledger code no longer has to serve the desktop. The forked code is Apache-2.0: keep its license and notice.
 
@@ -201,10 +200,9 @@ One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Acti
 | Network | VPC with public and private subnets, no NAT gateway; free S3 and DynamoDB endpoints, interface endpoints only where needed |
 | Data    | Versioned books bucket with the 30-day rule and DynamoDB tables, both with AWS default encryption (kept on stack delete)   |
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets, CodeArtifact with a PyPI upstream                              |
-| API     | Fargate service, public load balancer, task role                                                                           |
-| Jobs    | EventBridge Scheduler, AWS Budgets alarms                                                                                  |
+| API     | Fargate service, public load balancer, task role, and the AWS Budgets alarm on spend                                       |
 
-Per-user things (a user's folder, a chat's session) are created by the app, not by CDK.
+Per-user things (a user's folder, a chat's session) are created by the app, not by CDK. EventBridge Scheduler comes with budget alerts and the monthly review, after launch.
 
 ## Costs and unit economics
 
