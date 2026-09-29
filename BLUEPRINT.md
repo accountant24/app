@@ -91,30 +91,46 @@ Each chat is a LangSmith thread with its messages, tool steps and images. The ap
 
 Summarization is off, so a thread always keeps every message. When a chat nears 70% of the model's context, the app asks the user to start a new one, and `memory.md` carries the important facts over. Threads never expire, unlike traces, which last 14 days. Keep thread TTL off, and delete a user's threads when they delete a chat or their account.
 
-## One turn, end to end
+## Example: logging a receipt
+
+What happens when a user sends a photo of a receipt and asks the agent to record it. Time runs from top to bottom, and each arrow is one message between two parts of the system. r41 and r42 are versions of the user's books.
 
 ```
 iPhone           Agent server          Sandbox              API service          Bedrock
   |                   |                   |                      |                   |
-  | 1 run + receipt   |                   |                      |                   |
-  |   photo --------->|                   |                      |                   |
-  |                   |-- 2 prompt (cached prefix) + image ------------------------->|
-  |                   |<- 3 add_transactions(...) -----------------------------------|
-  |                   |-- 4 run the tool ----------------------->|                   |
+  | 1 "log receipt"   |                   |                      |                   |
+  |   + photo ------->|                   |                      |                   |
+  |                   |-- 2 chat + photo ------------------------------------------->|
+  |                   |<- 3 tool call: "add_transactions" ---------------------------|
+  |                   |-- 4 run add_transactions --------------->|                   |
   |                   |                   |<- 5 start sandbox ---|                   |
-  |                   |                   |   + books.bundle r41 |                   |
-  |                   |                   | 6 entry, check,      |                   |
-  |                   |                   |   commit             |                   |
-  |                   |                   |-- 7 books.bundle --->|                   |
-  |                   |                   |  (full repo)         | 8 check,          |
-  |                   |                   |                      |   save r42        |
-  |                   |<- 9 saved r42 ---------------------------|                   |
-  |                   |-- 10 tool result -> final reply ---------------------------->|
-  |<- 11 stream steps |                   |                      |                   |
-  |      + reply -----|                   |                      |                   |
+  |                   |                   |   + books (r41)      |                   |
+  |                   |                   | 6 write entry,       |                   |
+  |                   |                   |   hledger check,     |                   |
+  |                   |                   |   git commit         |                   |
+  |                   |                   |-- 7 whole repo ----->|                   |
+  |                   |                   |                      | 8 check again,    |
+  |                   |                   |                      |   save r42 to S3  |
+  |                   |<- 9 "saved r42" -------------------------|                   |
+  |                   |-- 10 tool result ------------------------------------------->|
+  |                   |<- 11 final reply --------------------------------------------|
+  |<- 12 reply -------|                   |                      |                   |
 ```
 
-Step 8 is the only save. When the phone sees "saved r42" in the stream, open pages refetch. If the phone disconnects, the run keeps going and the phone rejoins the stream.
+1. The user sends a photo of a receipt with a short message.
+2. The agent server sends the chat and the photo to Claude on Bedrock.
+3. Claude answers with a tool call: add this transaction.
+4. The agent server asks the API service to run that tool.
+5. It's the chat's first tool, so the API service starts a sandbox and copies the user's books into it (version r41).
+6. In the sandbox, the tool writes the journal entry, checks the ledger with hledger, and commits it with git.
+7. The sandbox sends the whole repo back to the API service.
+8. The API service checks it again and saves it to S3 as version r42. This is the only moment the books change.
+9. The API service tells the agent server the save worked.
+10. The agent server gives the tool's result back to Claude.
+11. Claude writes the final reply.
+12. The phone shows the reply.
+
+The phone sees each step as it happens, so the user watches the progress. When the phone sees "saved r42", open pages reload. If the phone disconnects, the run keeps going and the phone picks the stream back up.
 
 ## How it works
 
