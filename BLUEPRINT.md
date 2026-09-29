@@ -80,8 +80,8 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |   | save checks               |                  | AgentCore Runtime           |    |
 |   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
 |   | accounts, webhooks        | <--------------> | clone of the books          |    |
-|   | drives the sandboxes      |   in and out     | hledger, git, uv, pdftotext |    |
-|   +---------------------------+                  | uploads/, never saved       |    |
+|   | drives the sandboxes      |   in and out     | hledger, git, uv            |    |
+|   +---------------------------+                  | stops after 10 idle min     |    |
 |         |               |                        | no internet access          |    |
 |         |               |                        +-----------------------------+    |
 |         v               v                                      |                    |
@@ -102,7 +102,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 - **The server keeps nothing.** Each request works in its own temporary folder. Any task serves any ledger.
 - **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one user per request can come later.
 - **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
-- **Uploads live in the chat only.** A receipt travels in the chat message and sits in the sandbox while the chat is open; nothing stores it separately.
+- **Uploads live in the chat only.** A receipt or statement travels in the chat message to the model; nothing stores it separately and it never reaches the sandbox.
 - **One ledger per user, keyed by the user ID.** Shared ledgers later add ledger IDs and a members list.
 
 ### Storage
@@ -159,7 +159,7 @@ Step 10 is the only save. When the phone sees "saved r42" in the stream, open pa
 
 ## How it works
 
-**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, uv, pdftotext, the ledger program), uploads the ledger's `books.bundle` into it and runs `git clone` there. The agent gets a normal repo with the full history. The session stops after 10 idle minutes.
+**Chat opens.** The API service starts an AgentCore session (our image: hledger, git, uv, the ledger program), uploads the ledger's `books.bundle` into it and runs `git clone` there. The agent gets a normal repo with the full history. The session stops after 10 idle minutes.
 
 **Tools.** The agent loop runs on LangSmith; every tool runs in the sandbox. Our deepagents connector maps the file tools and `execute` to three API calls: run a command, upload a file, download a file. The API service runs them with `InvokeAgentRuntimeCommand` under its own AWS role. Ledger tools are thin wrappers that pass JSON to the ledger program.
 
@@ -173,7 +173,7 @@ Step 10 is the only save. When the phone sees "saved r42" in the stream, open pa
 
 Commits carry the chat and run as trailers, so "undo the last change" reverts exactly that run.
 
-**Documents.** Photos and scans go to the model as images. A text PDF is also written into the sandbox's `uploads/` (outside git) and read with `pdftotext`. The chat history shows the file; nothing else keeps it.
+**Documents.** Photos, scans and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Nothing reaches the sandbox, and the chat history is the only place that keeps the file. A `pdftotext` path through the sandbox, which cuts a statement's tokens several times over, comes back if imports get expensive or a text-only model joins.
 
 **Scripts and new skills.** Skill scripts run in the sandbox with packages from CodeArtifact. New skills are files the agent writes; the save check validates plugin manifests.
 
@@ -251,11 +251,11 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 ## Risks and things to verify
 
 - **Switching from pi to deepagents is the biggest risk**; the prompt was tuned on pi. Build the eval set and record pi's baseline first, and pin deepagents (it ships almost weekly).
-- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; ECS Express Mode in CDK (otherwise the standard load-balanced Fargate pattern).
+- **Confirm with AWS:** the Sonnet 5 EU profile works from Ireland; AgentCore prices and concurrent-session quota; ECS Express Mode in CDK (otherwise the standard load-balanced Fargate pattern); Bedrock's size limit for PDFs attached to a message.
 - **AgentCore CDK constructs are alpha**; pin the version.
 - **assistant-ui React Native with the LangGraph runtime is undocumented**; prototype it first (use `expo/fetch` for streaming).
 - **LangSmith traces are full copies of users' books**; sample them, keep retention short, keep the workspace to one person.
-- **Statements as images are expensive**; prefer the text path and cap pages and size per upload.
+- **Statements are the priciest messages**: Claude reads each PDF page as text and an image (a 10-page statement is about 20–30k input tokens). Cap pages and size per upload.
 - **Measure hledger on a ten-year ledger** and page Transactions by date range.
 - **Pin one hledger version** in both Dockerfiles. It's GPL: fine on servers, never inside the iOS app.
 
