@@ -124,8 +124,8 @@ A git bundle is the whole repo, history included, in one file. Without uploads i
 
 Chats are LangSmith threads in the deployment's Postgres, with messages, tool steps and images. The app lists them by owner.
 
-- **What the user sees is separate from what the model sees.** deepagents' summarization replaces older messages in the thread's `messages` with a summary. So a middleware appends every user message, tool step and reply to a separate `ui_messages` field that summarization never touches, and the app renders `ui_messages`. The model gets the summary; the user keeps the whole chat.
-- When it summarizes, deepagents also writes the old conversation to a file so the agent can look up details later. Route that folder to LangSmith's store, so the file survives the sandbox and stays out of the books repo. The app doesn't read this file: it's plain text, covers only the summarized part, and its format belongs to deepagents.
+- **Long chats end instead of being summarized.** deepagents' summarization is turned off, so a thread always holds every message and the app renders them as they are. When a chat reaches about 70% of the model's context, the app asks the user to start a new chat; `memory.md` carries the important facts over. Most bookkeeping chats are short, so this rarely shows.
+- Later, if long chats matter: turn summarization back on, keep a separate display copy (`ui_messages`) that summarization never touches, and route the summarized-history file to LangSmith's store so the agent can still look up old details.
 - Threads are not traces: traces expire (14 days on standard retention), threads stay until deleted.
 - Keep thread TTL (`checkpointer.ttl`) off, and delete threads when a chat or account is deleted.
 - The app reads chats through a thin adapter, so leaving LangSmith means exporting threads and changing only that adapter.
