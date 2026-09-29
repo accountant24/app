@@ -76,7 +76,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |              v                            +-----------------------------+           |
 |   +---------------------------+                  ^  prompts from the agent server   |
 |   | API SERVICE (ECS Fargate) |                                                     |
-|   | stateless, 2 small tasks  |   run commands   +-----------------------------+    |
+|   | stateless, 1 small task   |   run commands   +-----------------------------+    |
 |   | Node + git + hledger      | ---------------> | SANDBOX SESSION             |    |
 |   | save checks               |                  | AgentCore Runtime           |    |
 |   | pages: hledger on HEAD    |   books.bundle   | one microVM per chat        |    |
@@ -195,12 +195,12 @@ Pages refetch when the chat reports a save and when the app returns to the foreg
 
 ## Infrastructure as code
 
-One CDK app in TypeScript. Separate dev and prod accounts; GitHub Actions deploys over OIDC.
+One CDK app in TypeScript, one AWS account with dev and prod stacks; GitHub Actions deploys over OIDC. A separate prod account, a second API task and our own KMS key come before real users' data grows.
 
 | Stack   | What it creates                                                                                                            |
 | ------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Network | VPC with public and private subnets, no NAT gateway; free S3 and DynamoDB endpoints, interface endpoints only where needed |
-| Data    | Versioned books bucket with the 30-day rule, DynamoDB tables, KMS key (kept on stack delete)                               |
+| Data    | Versioned books bucket with the 30-day rule and DynamoDB tables, both with AWS default encryption (kept on stack delete)   |
 | Sandbox | Sandbox image in ECR, AgentCore Runtime in private subnets, CodeArtifact with a PyPI upstream                              |
 | API     | Fargate service, public load balancer, task role                                                                           |
 | Jobs    | EventBridge Scheduler, AWS Budgets alarms                                                                                  |
@@ -274,7 +274,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 | Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS accounts and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
+| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
 | 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts, metering); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account                                                                                              | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, allowance, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
