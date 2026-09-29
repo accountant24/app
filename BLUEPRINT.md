@@ -97,7 +97,7 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 
 - **The sandbox is never the database.** A throwaway clone per chat, stopped after 10 idle minutes. A change counts only once the API service has saved it to S3.
 - **Every save passes hledger twice.** In the sandbox for fast feedback, then in the API service before saving, because the sandbox runs model-written code.
-- **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise the sandbox rebases on the newer version and saves again. Undo is `git revert`.
+- **Only the server writes the books.** The sandbox has no way to reach storage; the API service copies `books.bundle` in and out. A save lands only if `books.bundle` is still the version the sandbox cloned; otherwise it fails, the sandbox gets the newer books, and the agent redoes its change. Undo is `git revert`.
 - **The server keeps nothing.** Each request works in its own temporary folder. Any invocation serves any ledger.
 - **Identity comes from a verified token only**, never from the request body or the model. Every storage path is built from that ID, and cross-user tests guard it. AWS credentials scoped to one user per request can come later.
 - **Sandboxes hold no credentials**: no git token, no AWS credentials, no model keys, no internet. Because the API service moves the books, storage can change without touching the sandbox.
@@ -168,7 +168,7 @@ Step 10 is the only save. When the phone sees "saved r42" in the stream, open pa
 2. The API service downloads that one file from the sandbox and clones it into a temporary folder.
 3. It checks that the last saved commit (stored as metadata on the S3 object, read without a download) is an ancestor of the new `main`, that only workspace files changed since it, and that `hledger check --strict` passes.
 4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
-5. If the write fails, the API service uploads the newer `books.bundle` into the sandbox; the sandbox fetches from it, rebases, re-checks and saves again. A real conflict goes back to the agent.
+5. If the write fails, the save returns "the books changed in another chat". The API service copies the latest `books.bundle` into the sandbox and re-clones, and the agent redoes its change on top. There is no automatic rebase; add one if users often save from parallel chats.
 
 Commits carry the chat and run as trailers, so "undo the last change" reverts exactly that run.
 
