@@ -16,7 +16,7 @@ Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run
 | Accounts             | DynamoDB                                                                                           | Aurora Serverless Postgres                  |
 | Agent                | deepagents (TypeScript) on LangSmith Deployment, EU                                                | deepagents on AgentCore Runtime             |
 | Sandboxes            | AgentCore Runtime, one session per chat, with a connector we write                                 | Daytona                                     |
-| Model                | Claude on Bedrock (EU inference profile), chosen per task by evals                                 | Anthropic API directly                      |
+| Model                | Claude on Bedrock (EU inference profile), one model as a server setting                            | Anthropic API directly                      |
 | Accounting engine    | hledger, one pinned version                                                                        | None; decided                               |
 | Python packages      | CodeArtifact PyPI mirror, no internet in sandboxes                                                 | An internet allowlist                       |
 | App                  | Expo, assistant-ui (React Native + LangGraph runtime)                                              | SwiftUI                                     |
@@ -261,7 +261,6 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 - **Statements as images are expensive**; prefer the text path, cap pages and size, count imports against the allowance.
 - **Measure hledger on a ten-year ledger** and page Transactions by date range.
 - **Pin one hledger version** in both Dockerfiles. It's GPL: fine on servers, never inside the iOS app.
-- **Never use DeepSeek's own API** (data in China); only an EU host, and only if evals pass.
 
 ## Launch checklist
 
@@ -275,7 +274,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 | Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
 | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS accounts and CDK Network and Data stacks; model evals on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
+| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS accounts and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
 | 1 · Cloud agent       | ≈ 3–4 weeks | API service (save with checks, pages, accounts, metering); sandbox image, AgentCore, CodeArtifact, connector; deepagents graph on LangSmith with ledger tools                         | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, Transactions, Net worth, memory, history, export, delete account                                                                                              | You keep your own books on the phone for two weeks                           |
 | 3 · Launch            | ≈ 2–3 weeks | RevenueCat, paywall, allowance, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
@@ -283,7 +282,7 @@ Tokens are about 80% of all costs. The levers, in order: shorter chats, better c
 
 ## Decisions for you
 
-1. **Which model runs everyday chats?** Sonnet 5 on Bedrock EU leaves 5% at $9.99. A cheaper model or $12.99 fixes it; the evals decide.
+1. **Sonnet 5 or Haiku 4.5?** One model for everything at launch. Sonnet 5 leaves 5% at $9.99; Haiku 4.5 or $12.99 fixes it, if it passes the evals against the pi baseline. Routing tasks to different models comes later, when costs need cutting.
 2. **Clerk or Cognito?** Clerk is faster to build with; Cognito keeps sign-in on AWS, one vendor fewer.
 3. **Community plugins with one tap?** Their scripts run next to the user's books. One tap with a warning, or reviewed plugins only.
 4. **What does a subscription buy?** One plan with an allowance, or tiers plus top-up credits.
