@@ -119,7 +119,7 @@ iPhone           Agent server          Sandbox              Agent API           
   |                   |                   | 6 write entry,       |                   |
   |                   |                   |   hledger check,     |                   |
   |                   |                   |   git commit         |                   |
-  |                   |                   |-- 7 whole repo ----->|                   |
+  |                   |                   |<-- 7 read the repo --|                   |
   |                   |                   |                      | 8 check again,    |
   |                   |                   |                      |   save r42 to S3  |
   |                   |<- 9 "saved r42" -------------------------|                   |
@@ -134,7 +134,7 @@ iPhone           Agent server          Sandbox              Agent API           
 4. The agent server asks the Agent API to run that tool.
 5. It's the chat's first tool, so the Agent API starts a sandbox and copies the user's books into it (version r41).
 6. In the sandbox, the tool writes the journal entry, checks the ledger with hledger, and commits it with git.
-7. The sandbox sends the whole repo back to the Agent API.
+7. The Agent API reads the packed repo out of the sandbox. The sandbox can't send anything itself: the Agent API runs a command there that prints the file, and reads the output.
 8. The Agent API checks it again and saves it to S3 as version r42. This is the only moment the books change.
 9. The Agent API tells the agent server the save worked.
 10. The agent server gives the tool's result back to Claude.
@@ -165,8 +165,8 @@ Only the Agent API writes books to S3. On every call it checks `members`: the us
 
 **Saving.** The Agent API saves; the sandbox never writes to S3.
 
-1. `commit_and_push` commits in the sandbox, packs the whole repo with `git bundle create books.bundle --all`, and asks the Agent API to save.
-2. The Agent API downloads that file and clones it into a temporary folder.
+1. `commit_and_push` asks the Agent API to save. The Agent API runs `git commit` and `git bundle create books.bundle --all` in the sandbox.
+2. It reads the bundle out with a second command that prints the file, and clones it into a temporary folder. Copying books in works the same way in reverse: the file goes in with a command.
 3. It runs two checks. The last saved commit, stored as metadata on the S3 object, must be an ancestor of the new `main`. And `hledger check --strict` must pass. The sandbox already ran the same check, but it runs model-written code, so the server checks again.
 4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
 5. If the write fails, the save returns "the books changed in another chat". The Agent API copies the latest books into the sandbox, and the agent redoes its change.
@@ -294,7 +294,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 - **Switching from pi to deepagents is the biggest risk.** The prompt was tuned on pi, so build the eval set and record pi's baseline first.
 - **Pin versions.** deepagents ships almost weekly. hledger must be the same version in both images; it's GPL, which is fine on servers but rules it out inside the iOS app. Pin the new AgentCore runtime version.
 - **Confirm with LangSmith** that the Serverless deployment is enough for the beta and runs in the EU. Dedicated, for launch, is a new deployment.
-- **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, AgentCore's prices and session quota (fallback: Daytona), and Bedrock's size limit for PDFs.
+- **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, AgentCore's prices and session quota (fallback: Daytona), AgentCore's size limits on command input and output, since bundles travel through them (fallback: read in chunks, or serve upload and download from the sandbox's `/invocations` endpoint), and Bedrock's size limit for PDFs.
 - **Lambda cold starts may slow pages.** Measure them; add provisioned concurrency, or fall back to Fargate behind a load balancer.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`). Budget a few days and test with statements shared from real bank apps.
 - **assistant-ui React Native with the LangGraph runtime is undocumented.** Prototype it first, using `expo/fetch` for streaming.
