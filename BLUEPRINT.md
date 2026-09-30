@@ -194,27 +194,35 @@ One CDK app in TypeScript and one AWS account with dev and prod stacks. GitHub A
 | RevenueCat, Expo, Sentry, PostHog        | $0                              | $0–50                                 |
 | **Total**                                | **≈ $40–50**                    | **≈ $450–550** + model + sandbox time |
 
-The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; model prices are Bedrock EU, 10% above Anthropic's.
+The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; model prices are each model's EU route, 10–20% above its global or US price: Claude, Nova, Qwen and Kimi on Bedrock, GPT on OpenAI's EU API, Gemini on Vertex's EU endpoint. Qwen and Kimi have no prompt caching on Bedrock, so they pay full price for the whole context.
 
 ```
-                               ||  Sonnet 5.5  Sonnet 5.5   Haiku 4.5
-                               ||       $9.99      $12.99       $9.99
-===============================++====================================
-income:subscription            ||        9.99       12.99        9.99
--------------------------------++------------------------------------
-expenses:tax:vat               ||        1.67        2.17        1.67
-expenses:store:commission      ||        1.25        1.62        1.25
-expenses:llm:tokens            ||        7.52        7.52        3.76
-expenses:sandbox               ||        0.06        0.06        0.06
-expenses:revenuecat            ||        0.09        0.12        0.09
-expenses:platform:shared       ||        0.24        0.24        0.24
-expenses:storage               ||        0.01        0.01        0.01
--------------------------------++------------------------------------
-                               ||       10.84       11.74        7.08
-===============================++====================================
-Net                            ||       -0.85        1.25        2.91
-Margin (of revenue after VAT)  ||        -10%         12%         35%
+                               ||   Sonnet 5.5   Sonnet 5.5    Haiku 4.5  GPT-6.1 Sol   GPT-6 Luna Gemini Flash  Nova 2 Lite     Qwen3 VL    Kimi K2.5
+                               ||        $9.99       $12.99        $9.99        $9.99        $9.99        $9.99        $9.99        $9.99        $9.99
+===============================++=====================================================================================================================
+income:subscription            ||         9.99        12.99         9.99         9.99         9.99         9.99         9.99         9.99         9.99
+-------------------------------++---------------------------------------------------------------------------------------------------------------------
+expenses:tax:vat               ||         1.67         2.17         1.67         1.67         1.67         1.67         1.67         1.67         1.67
+expenses:store:commission      ||         1.25         1.62         1.25         1.25         1.25         1.25         1.25         1.25         1.25
+expenses:llm:tokens            ||         7.52         7.52         3.76         7.13         0.38         2.48         1.57         3.87         4.49
+expenses:sandbox               ||         0.06         0.06         0.06         0.06         0.06         0.06         0.06         0.06         0.06
+expenses:revenuecat            ||         0.09         0.12         0.09         0.09         0.09         0.09         0.09         0.09         0.09
+expenses:platform:shared       ||         0.24         0.24         0.24         0.24         0.24         0.24         0.24         0.24         0.24
+expenses:storage               ||         0.01         0.01         0.01         0.01         0.01         0.01         0.01         0.01         0.01
+-------------------------------++---------------------------------------------------------------------------------------------------------------------
+                               ||        10.84        11.74         7.08        10.45         3.70         5.80         4.89         7.19         7.81
+===============================++=====================================================================================================================
+Net                            ||        -0.85         1.25         2.91        -0.46         6.29         4.19         5.10         2.80         2.18
+Margin (of revenue after VAT)  ||         -10%          12%          35%          -6%          76%          50%          61%          34%          26%
 ```
+
+The alternatives, all with image input for receipts:
+
+- **GPT-6.1 Sol and GPT-6 Luna** run in the EU only through OpenAI's API (`eu.api.openai.com`), which needs sales approval, and images there need enhanced zero data retention. On Bedrock, GPT models are global only.
+- **Gemini Flash** is Gemini 3.8 Flash on Vertex's EU endpoint, at an introductory price that doubles on 1 January 2027 (tokens $4.95, margin 21%).
+- **Nova 2 Lite** is on Bedrock's EU profile, **Qwen3 VL** (235B) in Ireland, and **Kimi K2.5** in Stockholm.
+- **Left out:** Sonnet 5 on the EU profile costs the same as the Sonnet 5.5 column. Opus 5.5 ($14.26 of tokens) and GPT-6 Astra ($37.62) lose money at these prices. Text-only models (gpt-oss, DeepSeek, MiniMax, GLM) can't read receipt photos. Haiku 5.5 has no price yet.
+- Every column assumes the same token counts and calls per message. Tokenizers differ, and the cheaper models' tool calling is unproven, so the evals decide.
 
 Sonnet 5.5 may do better than its column: reports say it needs up to 30% fewer tokens per task, which would lift its margin at $9.99 to about 17%. It may also do worse: its newer tokenizer turns the same text into about 30% more tokens than Haiku 4.5's. The evals should measure real token counts.
 
