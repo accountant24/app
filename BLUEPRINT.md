@@ -86,12 +86,14 @@ ledgers/<ledger_id>/books.bundle   -- the whole git repo at the latest commit
                                    -- older versions expire 30 days after they are replaced
 
 -- DynamoDB, on-demand
-users        user_id · created_at                        -- our own ID, never a provider's
-identities   provider#sub · user_id · refresh_token      -- one row per sign-in method: apple now, google later
-ledgers      ledger_id · owner_user_id · created_at      -- one per user at first; shared ledgers later
-members      ledger_id · user_id · role                  -- owner, editor, viewer; the owner's row at first
-plans        user_id · plan · renews_at                  -- from RevenueCat, from public launch
-daily_runs   user_id · day · count                       -- hidden daily cap, from public launch
+users           user_id · created_at                                   -- our own ID, never a provider's
+identities      provider#sub · user_id · refresh_token                 -- one row per sign-in method: apple now, google later
+ledgers         ledger_id · owner_user_id · created_at                 -- one per user at first; shared ledgers later
+members         ledger_id · user_id · role                             -- owner, editor, viewer; the owner's row at first
+plans           user_id · plan · renews_at                             -- from RevenueCat, from public launch
+daily_runs      user_id · day · count                                  -- hidden daily cap, from public launch
+refresh_tokens  token_hash · user_id · family_id · used · expires_at   -- hashes only; each works once
+webhook_events  event_id · received_at                                 -- RevenueCat events already handled, from public launch
 ```
 
 A git bundle is the whole repo, history included, in one file. It stays a few MB for years because uploads never go into git. Chats and traces live in LangSmith in the Netherlands; everything else stays in Ireland.
@@ -147,15 +149,15 @@ The phone sees each step as it happens, so the user watches the progress. When t
 
 **The API service.** Three stateless Lambda functions, built from one container image (Node, git, hledger) with a different entry point each. They are split by caller, so each gets only the access it needs, and each has its own function URL, timeout and concurrency limit, so a busy agent can't slow pages or sign-in. Each request works in its own temporary folder.
 
-| Function  | Called by                              | Does                                                               | Access                                                                                                                              |
-| --------- | -------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| App API   | the phone, with our JWT                | sign-in, pages, export, invites, account deletion                  | DynamoDB `users`, `identities`, `ledgers`, `members` (read and write), `plans` (read); books in S3 (read, delete); JWT signing key  |
-| Agent API | the agent server, with a service token | commands and files in the sandbox, saves, the check before a run   | AgentCore; books in S3 (read, conditional write); DynamoDB `members`, `ledgers`, `plans` (read), `daily_runs` (read and write)      |
-| Webhooks  | RevenueCat, with its webhook secret    | subscription changes                                               | DynamoDB `plans` (write)                                                                                                            |
+| Function  | Called by                              | Does                                                               | Access                                                                                                                                                       |
+| --------- | -------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| App API   | the phone, with our JWT                | sign-in, pages, export, invites, account deletion                  | DynamoDB `users`, `identities`, `ledgers`, `members`, `refresh_tokens` (read and write), `plans` (read); books in S3 (read, delete); the private signing key |
+| Agent API | the agent server, with a service token | commands and files in the sandbox, saves, the check before a run   | AgentCore; books in S3 (read, conditional write); DynamoDB `members`, `ledgers`, `plans` (read), `daily_runs` (read and write)                               |
+| Webhooks  | RevenueCat, with its webhook secret    | subscription changes                                               | DynamoDB `plans`, `webhook_events` (write)                                                                                                                   |
 
 Only the Agent API writes books to S3. On every call it checks `members`: the user must belong to the ledger, and only owners and editors can save. Before a run starts, the agent server's custom auth asks the Agent API whether the user may run (a plan, from launch, and room under the daily cap). The Agent API never sees `identities`, where the Apple refresh tokens live, and can't sign JWTs, change members or delete accounts.
 
-**Sign-in.** The app signs in with `expo-apple-authentication`. The App API checks Apple's identity token against Apple's public keys, exchanges the authorization code for a refresh token, stores it in `identities` against our own `user_id` (a new user also gets a `ledgers` row and an owner `members` row), and issues our own JWT; the agent server's custom auth verifies that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), then deletes the ledgers they own, their threads and their rows.
+**Sign-in.** The app signs in with `expo-apple-authentication`. The App API checks Apple's identity token against Apple's public keys, exchanges the authorization code for a refresh token, stores it in `identities` against our own `user_id` (a new user also gets a `ledgers` row and an owner `members` row), and issues a one-hour JWT and a refresh token (see Auth); the agent server's custom auth verifies that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), cancels the refresh tokens, then deletes the ledgers they own, their threads and their rows.
 
 **Identity.** The user ID comes only from our verified JWT, never from the request or the model. Every request names a ledger, and the server serves it only if `members` lists that user for it; every storage path is built from that ledger ID. Cross-user tests in CI check that one user can't reach another's ledger. Each user has one ledger at first, but user and ledger stay separate IDs so shared ledgers need no migration.
 
@@ -176,6 +178,29 @@ Commits carry the chat and run IDs, so "undo the last change" reverts exactly th
 **Documents.** Photos and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Files never reach the sandbox, and only the chat history keeps them.
 
 **Skills.** Skills are instructions only: `SKILL.md` files in the books repo. The built-in ones ship with the app, and users can create their own in chat.
+
+## Auth
+
+Two rules carry most of the security: the model never picks the user or the ledger, and every token either expires soon or can be cancelled.
+
+**From the start:**
+
+- **Apple sign-in.** The app sends Apple the hash of a one-time nonce and sends the App API the nonce itself. The App API checks Apple's signature against Apple's public keys, the nonce, the issuer, our bundle ID as the audience, and the expiry.
+- **Our tokens.** A login JWT that lasts one hour, and an opaque refresh token that lasts 90 days and works once. A JWT can't be taken back, so it stays short; the refresh token is checked against `refresh_tokens` on every use, so logout, deletion or a stolen phone cancels it. The app keeps the JWT in memory and the refresh token in the Keychain (`expo-secure-store`, this device only). A refresh token used twice cancels all of that user's refresh tokens.
+- **One signing key pair (ES256).** The App API signs with the private key from Secrets Manager; the agent server and the Agent API get only the public key from the App API's JWKS, so they can check tokens but never make them. Every key has a `kid` from day one.
+- **Audience.** Each JWT names the one service it's for, and every service rejects the others'.
+- **The model never picks the user or the ledger.** Tools take them from the user the agent server's custom auth verified (`langgraph_auth_user`), never from tool arguments, so a document that tricks the model still can't reach another ledger.
+- **Agent server to Agent API.** A long random service secret, kept in Secrets Manager and LangSmith's secrets, sent as a header.
+- **No secrets in logs or traces.** Tokens never go into graph state, tool arguments or the sandbox, and LangSmith hides them from traces.
+- **Webhooks, from the public launch.** RevenueCat sends a secret header, and the webhook skips events already in `webhook_events`.
+
+**Later, before the public launch or shared ledgers:**
+
+- **A run token.** Before a run, the Agent API checks the user's JWT, plan, cap and membership, and returns a JWT bound to that user, ledger and chat for about an hour. Tool calls carry it, and the Agent API takes the user and ledger only from it, so a leaked service secret alone opens nothing.
+- **Signed requests** from the agent server, with a timestamp, instead of the fixed secret, and a check against LangSmith's EU outbound IPs.
+- **The signing key in AWS KMS,** and a routine for rotating it.
+- **Apple's server-to-server notifications,** to catch users who disconnect the app from their Apple ID.
+- **RevenueCat's signature check,** and reading the subscription from RevenueCat's API after each event.
 
 ## Pages
 
