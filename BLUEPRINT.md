@@ -13,7 +13,7 @@ Keep the agent, the ledger logic, the prompt and hledger, and run them the way t
 | Server | One Worker (the worker): sign-in, the chat connection, uploads and pages |
 | State | The bookkeeper, one Durable Object per set of books, with its chats and page data; the directory (D1) for users, sessions, members and limits |
 | Agent | The desktop's agent host (pi + `pi-extension`) in the sandbox, one pi session per chat, as on the Mac |
-| Sandboxes | Cloudflare's Sandbox SDK: the bookkeeper extends its class and runs one sandbox per set of books, shared by its chats |
+| Sandboxes | Cloudflare Containers on the `durable_object` scheduling policy: the bookkeeper drives one sandbox per set of books through `ctx.container`, shared by its chats, with Sandbox SDK 1.0 as a helper library |
 | Model | Claude through Cloudflare's AI Gateway to Anthropic's API, one model as a server setting; open models on Workers AI as the cheaper option the evals may pick later |
 | Accounting engine | hledger, one pinned version |
 | Uploads | PDFs and CSVs in R2, read by the agent with `extract_text`; photos go to the model directly, as on the desktop |
@@ -47,8 +47,8 @@ The cloud is the desktop with its parts moved apart. The bookkeeper does what El
 |                          v                                                               |
 |  +------------------------------------------------+   +-------------------------------+  |
 |  | BOOKKEEPER (Durable Object)                    |-->| UPLOADS (R2)                  |  |
-|  | one per set of books; extends Cloudflare's     |   | PDFs and CSVs, per set of     |  |
-|  | Sandbox class; chat relay, chats, saves,       |   | books                         |  |
+|  | one per set of books; drives its container     |   | PDFs and CSVs, per set of     |  |
+|  | via ctx.container; chat relay, chats, saves,   |   | books                         |  |
 |  | pages; outbound rule: adds tokens, counts      |   +-------------------------------+  |
 |  | model calls                                    |                                      |
 |  +------------------------------------------------+                                      |
@@ -96,7 +96,7 @@ members         books_id · user_id · role                              -- owne
 daily_runs      user_id · day · count                                  -- hidden daily cap, from public launch
 ```
 
-Artifacts is Cloudflare's git server for agents: ordinary git clients clone and push with a scoped token, and a Worker can read history and files (`log`, `readCommit`, `readFile`) and copy a repo (`fork`) without git. A books repo stays a few MB for years because uploads never go into git (`files/` is git-ignored in the cloud); the limits are 1 GB per repo and 32 MB per file. The user ID is always our own, never Apple's, and users and books have separate IDs, so Google sign-in and shared books need no data migration. Everything is stored in Cloudflare's EU jurisdiction. Model calls go to Anthropic, whose processing may happen outside the EU; the privacy policy says so, and an EU-only route can replace it later as a server setting.
+Artifacts is Cloudflare's git server for agents: ordinary git clients clone and push with a scoped token, and a Worker can read history and files (`log`, `readCommit`, `readFile`) and copy a repo (`fork`) without git. A books repo stays a few MB for years because uploads never go into git (`files/` is git-ignored in the cloud); the limits are 1 GB per repo and 32 MB per file. The user ID is always our own, never Apple's, and users and books have separate IDs, so Google sign-in and shared books need no data migration. Everything is stored in Cloudflare's EU jurisdiction. Model calls go to Anthropic, whose processing may happen outside the EU, and for now so may the sandbox's: containers on the new scheduling policy can't yet be pinned to the EU, so a running sandbox, with its temporary copy of the books and chats, may run elsewhere. The privacy policy says both; an EU-only model route can replace the first later as a server setting, and container placement must be settled before the public launch (see Risks).
 
 ### Chat history
 
@@ -155,7 +155,7 @@ iPhone             Bookkeeper              Sandbox (pi)            Claude
 
 **Identity.** The user ID comes only from the session token. Every request names a `books_id`, and the worker passes it on only if `members` lists that user for it: when the chat connection opens and on every page or upload request. The agent can't pick a user or books at all: it runs inside one set of books' sandbox, and its only way out is the outbound rule of that set of books. Cross-user tests in CI check that one user can't reach another's books. Each user has one set of books at first.
 
-**The sandbox.** Opening a chat starts nothing. On the first message while the sandbox is asleep, the bookkeeper starts it from our image (see The image), clones the books and starts the agent host; Cloudflare's median container start is about 0.65 seconds, and with the clone the reply starts about 1–2 seconds later. All chats on the same books share this one sandbox and its one agent host, as on the Mac: a change one chat writes is visible to the others at once. The bookkeeper keeps the sandbox up while a run is in flight, so runs finish with the phone closed; after 10 idle minutes it saves anything unsaved and stops it. Its only network access is the outbound rule, a Sandbox SDK hook in the bookkeeper that sees every request: it lets through the books repo and AI Gateway, adds their tokens on the way out, and serves the sandbox its own uploads from R2. The sandbox holds no credentials, and a change counts only once it is pushed.
+**The sandbox.** Opening a chat starts nothing. On the first message while the sandbox is asleep, the bookkeeper starts it with `ctx.container.start()` from our image (see The image), clones the books and starts the agent host; Cloudflare's median container start is about 0.65 seconds, and with the clone the reply starts about 1–2 seconds later. The bookkeeper is a plain Durable Object, not a subclass of an SDK class: it drives the container through Cloudflare's own `ctx.container` API (start, stop, `exec`, files) and uses Sandbox SDK 1.0 only as a helper library. All chats on the same books share this one sandbox and its one agent host, as on the Mac: a change one chat writes is visible to the others at once. The bookkeeper keeps the sandbox up while a run is in flight, so runs finish with the phone closed; after 10 idle minutes it saves anything unsaved and stops it. Its only network access is the outbound rule, a handler the bookkeeper registers for every HTTP and HTTPS request the container makes: it lets through the books repo and AI Gateway, adds their tokens on the way out, and serves the sandbox its own uploads from R2. The sandbox holds no credentials, and a change counts only once it is pushed.
 
 **The agent.** The agent host is the desktop's own (`agent/host/`, which never imports Electron), moved into a package both builds share. Only its entry changes: the desktop talks to it over Electron's `parentPort`, the cloud over the bookkeeper's connection to the sandbox, with the same messages (`AgentHostRequest`, `AgentHostNotice`). It runs one pi session per chat with our extension, the system prompt and the built-in skills, configured exactly as on the desktop. Stop, the model choice and chat names are the same pi commands the desktop sends.
 
@@ -184,11 +184,10 @@ The save checks run in the sandbox, as on the desktop, and a tricked model could
 
 ### The image
 
-Cloudflare's sandbox image plus:
+Cloudflare's `cloudflare/debian-trixie` image (Debian with Node 24 LTS) plus:
 
 | Item | What it is |
 | --- | --- |
-| Node | runs the agent host; the base image's, or added and pinned |
 | git | clone, `commit_and_push`, history and undo |
 | hledger | one pinned version, the desktop's |
 | poppler-utils | `pdftotext` and `pdftoppm` for `extract_text` |
@@ -332,6 +331,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 **Later, in the tech, when needed:**
 
 - Starting the sandbox when a chat opens, to hide the start
+- Filesystem snapshots of an idle sandbox (`/workspace`, `/sessions`) to start from instead of cloning, as a cache only, once Cloudflare confirms where snapshots are stored
 - Pages for every version on a separate `pages` branch of the books repo, for a History screen and charts over time
 - Saving after every write, so each commit belongs to one chat (for shared books)
 - A path allowlist on saves
@@ -348,12 +348,13 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 
 - **Pi on a server.** Pi was built for one local user, so the server glue is ours: storing sessions, relaying and replaying events. Pin it and upgrade on purpose; it ships often and breaks things. Keep the ledger logic, the prompt building and memory free of pi imports, with the tools as thin wrappers, so leaving pi means rewriting only the wrappers and the host. Leave pi, for our own loop in the bookkeeper, if we need runs that survive a crash, workflows that pause for an approval, or pi's upgrades cost more than they give.
 - **A crashed container loses its turn.** The chat keeps every finished step, and the user sends the message again. Measure how often it happens in the beta.
-- **Cloudflare's new container setup and Sandbox SDK 1.0 are previews.** The `durable_object` scheduling policy launched on 30 September 2026, Sandbox SDK 1.0 is on its `@next` line, and the older Container and Sandbox classes get updates only until 31 December 2026. Build on the new API, pin the SDK and its image to the same version, and prove it in the Phase 0 spike.
-- **Confirm with Cloudflare** that containers under the new setup, Artifacts, R2 and D1 all run in the EU jurisdiction (the directory holds all user records); container prices and limits; point-in-time recovery for Durable Object storage; and, for Artifacts, beta access on our account, that a sandbox outbound rule can reach a repo and AI Gateway with injected tokens, and whether force pushes can be refused.
+- **Cloudflare's new container setup and Sandbox SDK 1.0 are previews.** The `durable_object` scheduling policy launched in public beta on 30 September 2026, Sandbox SDK 1.0 is on its `@next` line, and the older `Container` and `Sandbox` classes get updates only until 31 December 2026. Build on `ctx.container` in a plain Durable Object, pin the SDK, and prove it in the Phase 0 spike.
+- **Containers can't yet be pinned to the EU.** Under the new scheduling policy placement constraints are rejected, and a Durable Object's EU jurisdiction doesn't place its container ([workers-sdk #15995](https://github.com/cloudflare/workers-sdk/issues/15995)). The invite-only beta discloses it; before the public launch, get EU placement from Cloudflare or move to a policy that has it.
+- **Confirm with Cloudflare** when containers under the new setup can be placed in the EU, and that Artifacts, R2 and D1 all run in the EU jurisdiction (the directory holds all user records); container prices and limits; point-in-time recovery for Durable Object storage; and, for Artifacts, beta access on our account, that a sandbox outbound rule can reach a repo and AI Gateway with injected tokens, and whether force pushes can be refused.
 - **Confirm with Anthropic and Cloudflare** Anthropic's data retention for API calls (ask for zero retention), that AI Gateway passes images through unchanged with logging off, and Haiku 5.5's release and price.
 - **Chats in the bookkeeper's SQLite.** A row holds at most 2 MB, so the mobile app shrinks photos before sending, and a session entry larger than that fails loudly. Check in the spike.
 - **Pin versions.** Pi, hledger and poppler are pinned in the sandbox image; hledger is GPL, which is fine on servers but rules it out inside the iOS app. Pin the Workers compatibility date and the `cf` version; its config format may change before the beta ends.
-- **Check that the Sandbox SDK lets `bash` run as a separate user** that can't change the agent host, our extension, the prompt or hledger.
+- **Check in the spike that `bash` runs as a separate user** that can't change the agent host, our extension, the prompt or hledger.
 - **Deploys restart Durable Objects,** and a run in flight can fail. Make saves safe to retry, and let the phone resend a lost turn.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`). Budget a few days and test with statements shared from real bank apps.
 - **assistant-ui's pi runtime on React Native is unproven.** It runs the desktop's chat, but at version 0.0.5 and on the web. Prototype it first, using `expo/fetch` for streaming.
@@ -365,14 +366,14 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that revokes the Apple token and reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
 - **Privacy:** policy and terms; processor agreements with Cloudflare, Anthropic, RevenueCat, Sentry, PostHog; a DPIA; check where RevenueCat keeps data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger, git and poppler run; git hooks off on saves; `bash` as a user that can't change the agent; page data checked before it is stored.
-- **Cost control:** hidden daily cap per user, cap on model calls per run in the outbound rule, cache-friendly prompt order (context block last), Cloudflare usage notifications, a spend limit on the Anthropic account, and a switch that pauses new runs.
+- **Cost control:** hidden daily cap per user, cap on model calls per run in the outbound rule, a cap on running sandboxes in the bookkeeper (the new policy has no instance limit of its own), cache-friendly prompt order (context block last), Cloudflare usage notifications, a spend limit on the Anthropic account, and a switch that pauses new runs.
 - **Operations:** a tested restore, from git history and from a snapshot; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger GPL, poppler GPL).
 
 ## Build order
 
 | Phase | Time | Work | Done when |
 | --- | --- | --- | --- |
-| 0 · Groundwork | ≈ 2 weeks | Eval set and the desktop's baseline; move the agent host out of the desktop package into its own, then delete desktop, website, docs, demos from the fork; Cloudflare dev environment from `cloudflare.config.ts` and the bootstrap script; a spike: one bookkeeper with a sandbox in the EU jurisdiction running the agent host, cloning from and pushing to an Artifacts repo and reaching AI Gateway through the outbound rule; run the evals on Sonnet and Haiku, with GLM-5.3-Flash and Kimi K2.6 on Workers AI for comparison | the agent host and extension tests pass, `cf deploy` works in dev with the container and the bookkeeper's SQLite class, the spike's first-reply and save times and the baseline numbers exist |
+| 0 · Groundwork | ≈ 2 weeks | Eval set and the desktop's baseline; move the agent host out of the desktop package into its own, then delete desktop, website, docs, demos from the fork; Cloudflare dev environment from `cloudflare.config.ts` and the bootstrap script; a spike: one bookkeeper in the EU jurisdiction driving its container through `ctx.container` and running the agent host, cloning from and pushing to an Artifacts repo and reaching AI Gateway through the outbound rule; run the evals on Sonnet and Haiku, with GLM-5.3-Flash and Kimi K2.6 on Workers AI for comparison | the agent host and extension tests pass, `cf deploy` works in dev with the container and the bookkeeper's SQLite class, the spike's first-reply and save times and the baseline numbers exist |
 | 1 · Cloud agent | ≈ 3 weeks | worker and bookkeeper (chat relay and replay, chats, saves with checks, pages, uploads); sign-in and the directory tables; sandbox image with the agent host's cloud entry | Evals match the desktop, concurrent chats never lose a change, cross-user tests pass |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, delete account | You keep your own books on the phone for two weeks |
 | 3 · Launch | ≈ 2–3 weeks | payments and export as planned above, the daily cap in the directory, consent screen, privacy label, legal entity, App Review, prod environment | Live, first renewal goes through |
