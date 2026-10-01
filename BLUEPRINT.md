@@ -1,20 +1,20 @@
 # Accountant24 Mobile Blueprint
 
-How to turn the desktop agent into a paid, closed-source iPhone app on Cloudflare, with the model (on AWS Bedrock), compute and storage included.
+How to turn the desktop agent into a paid, closed-source iPhone app on Cloudflare, with the model (Claude), compute and storage included.
 
 ## The short version
 
-Keep the ledger logic, the prompt and hledger. Store the books as git in R2, give each ledger one Durable Object that owns it and runs its tool calls one at a time, run every tool in one sandbox per ledger shared by its chats (like the desktop's workspace folder), serve pages computed at save time, and keep it all in Cloudflare's EU jurisdiction. The model stays on Bedrock in the EU.
+Keep the ledger logic, the prompt and hledger. Store the books as git in R2, give each ledger one Durable Object that owns it and runs its tool calls one at a time, run every tool in one sandbox per ledger shared by its chats (like the desktop's workspace folder), serve pages computed at save time, and keep everything stored in Cloudflare's EU jurisdiction. The model is Claude, reached through Cloudflare's AI Gateway; EU-only inference is preferred but not required for the MVP.
 
 | Area              | Pick                                                                                                                                                               |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cloud             | Cloudflare (Workers, Durable Objects, Containers, R2, D1) in the EU jurisdiction, defined in wrangler config; AWS only for Bedrock                                 |
+| Cloud             | Cloudflare (Workers, Durable Objects, Containers, R2, D1, AI Gateway), storage in the EU jurisdiction, defined in wrangler config                                  |
 | Books             | A git repo per ledger as one bundle file in R2, overwritten on each save, with the save before kept as a spare                                                     |
 | Server            | Two Workers: API (tools, saves, pages) and Auth (sign-in and tokens)                                                                                               |
 | State             | One Durable Object per ledger; D1 for users, sign-in, members and limits                                                                                           |
 | Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                                                           |
-| Sandboxes         | Cloudflare's Sandbox SDK: the ledger's Durable Object extends its class and runs one container per ledger, shared by its chats, plus a checker from the same image |
-| Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering                                  |
+| Sandboxes         | Cloudflare's Sandbox SDK: the ledger's Durable Object extends its class and runs one container per ledger, shared by its chats                                     |
+| Model             | Claude through Cloudflare's AI Gateway to Anthropic's API, one model as a server setting; open models on Workers AI as the cheaper option the evals may pick later |
 | Accounting engine | hledger, one pinned version                                                                                                                                        |
 | App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                                                              |
 | Sign-in           | Sign in with Apple only, no auth vendor: the Auth Worker checks Apple's token and issues our own JWT                                                               |
@@ -46,8 +46,8 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
                   | prompts         |       |           |
                   v                 |       |           |
             +---------------------+ | tool  |           |
-            | Bedrock (AWS, EU)   | | calls |           |
-            | Claude              | |       |           |
+            | CLAUDE (Anthropic)  | | calls |           |
+            | via AI Gateway      | |       |           |
             +---------------------+ |       |           |
 +-----------------------------------|-------|-----------|----------------------------------------+
 |                                   |       |           |                                        |
@@ -66,14 +66,15 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |  | current commit, tool-call queue,         | | ledgers, members, daily_runs                |  |
 |  | the container, save log                  | +---------------------------------------------+  |
 |  +------------------------------------------+                                                  |
-|        |                |              |                                                       |
-|        v                v              v                                                       |
-| +---------------+ +--------------+ +-------------+                                             |
-| | SANDBOX       | | CHECKER      | | R2          |                                             |
-| | one container | | same image,  | | bundle and  |                                             |
-| | per ledger,   | | no AI code,  | | pages, one  |                                             |
-| | no internet   | | hledger, git | | per ledger  |                                             |
-| +---------------+ +--------------+ +-------------+                                             |
+|        |                |                                                                      |
+|        v                v                                                                      |
+| +---------------+ +-------------+                                                              |
+| | SANDBOX       | | R2          |                                                              |
+| | one container | | bundle and  |                                                              |
+| | per ledger,   | | pages, one  |                                                              |
+| | no internet,  | | per ledger  |                                                              |
+| | hledger, git  | +-------------+                                                              |
+| +---------------+                                                                              |
 +-- Cloudflare, EU jurisdiction; one image: Cloudflare sandbox + git, hledger, ledger CLI -------+
 ```
 
@@ -97,7 +98,7 @@ members         ledger_id · user_id · role                             -- owne
 daily_runs      user_id · day · count                                  -- hidden daily cap, from public launch
 ```
 
-A git bundle is the whole repo, history included, in one file. It stays a few MB for years because uploads never go into git. The user ID is always our own, never Apple's, and user and ledger are separate IDs, so Google sign-in and shared ledgers need no data migration. Chats and traces live in LangSmith in the Netherlands; the model runs on Bedrock in the EU; everything else stays in Cloudflare's EU jurisdiction.
+A git bundle is the whole repo, history included, in one file. It stays a few MB for years because uploads never go into git. The user ID is always our own, never Apple's, and user and ledger are separate IDs, so Google sign-in and shared ledgers need no data migration. Chats and traces live in LangSmith in the Netherlands, and everything else is stored in Cloudflare's EU jurisdiction. Model calls go to Anthropic, whose processing may happen outside the EU; the privacy policy says so, and an EU-only route can replace it later as a server setting.
 
 ### Chat history
 
@@ -110,7 +111,7 @@ Summarization is off, so a thread always keeps every message. When a chat nears 
 What happens when a user sends a photo of a receipt and asks the agent to record it. Time runs from top to bottom, and each arrow is one message between two parts of the system. r41 and r42 are versions of the user's books.
 
 ```
-iPhone           Agent server          Sandbox              Ledger               Bedrock
+iPhone           Agent server          Sandbox              Ledger               Claude
   |                   |                   |                      |                   |
   | 1 "log receipt"   |                   |                      |                   |
   |   + photo ------->|                   |                      |                   |
@@ -123,7 +124,7 @@ iPhone           Agent server          Sandbox              Ledger              
   |                   |                   |   hledger check,     |                   |
   |                   |                   |   git commit         |                   |
   |                   |                   |<-- 7 read the repo --|                   |
-  |                   |                   |                      | 8 checker checks, |
+  |                   |                   |                      | 8 check pages,    |
   |                   |                   |                      |   save r42 to R2  |
   |                   |<- 9 "saved r42" -------------------------|                   |
   |                   |-- 10 tool result ------------------------------------------->|
@@ -132,13 +133,13 @@ iPhone           Agent server          Sandbox              Ledger              
 ```
 
 1. The user sends a photo of a receipt with a short message.
-2. The agent server sends the chat and the photo to Claude on Bedrock.
+2. The agent server sends the chat and the photo to Claude, through AI Gateway.
 3. Claude answers with a tool call: add this transaction.
 4. The agent server asks the API Worker to run that tool, and the API Worker passes it to the ledger's Durable Object.
 5. The ledger's sandbox is asleep, so the Ledger starts it and copies the books into it (version r41).
 6. In the sandbox, the tool writes the journal entry. The agent then calls `commit_and_push`, as on the desktop, which checks the ledger with hledger and commits it with git.
 7. The Ledger reads the packed repo out of the sandbox. The sandbox can't send anything itself: it has no internet.
-8. The checker, a second container that never runs model code, checks the repo again and computes the pages. The Ledger writes the new bundle (r42) and its pages to R2. This is the only moment the books change.
+8. The sandbox has already computed the pages; the Ledger checks their shape and size and writes the new bundle (r42) and its pages to R2. This is the only moment the books change.
 9. The Ledger tells the agent server the save worked.
 10. The agent server gives the tool's result back to Claude.
 11. Claude writes the final reply.
@@ -154,7 +155,7 @@ The phone sees each step as it happens, so the user watches the progress. When t
 | ------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth Worker   | the phone: Apple's token, a refresh token, or our JWT                                            | sign-in, refresh, logout, account deletion, the public keys (JWKS)          | the private signing key; D1 `users`, `identities`, `refresh_tokens`, `ledgers`, `members`; creates and deletes Ledger objects; a LangSmith key to delete threads |
 | API Worker    | the phone with our JWT; the agent server with a service secret                                   | pages, tools and saves, the check before a run                              | Ledger objects; D1 `members`, `daily_runs`; the service secret; Auth's public keys                                                                               |
-| Ledger object | the API and Auth Workers                                                                         | the current commit, tool calls and saves one at a time, the sandbox, pages  | R2, the sandbox and checker containers, D1 `members`                                                                                                             |
+| Ledger object | the API and Auth Workers                                                                         | the current commit, tool calls and saves one at a time, the sandbox, pages  | R2, the sandbox container, D1 `members`                                                                                                                          |
 
 Only the Ledger writes books to R2. Before a run, the agent server's custom auth asks the API Worker whether the user may run: D1 has the membership and, from the public launch, the daily count; the plan joins this check with payments. On every tool call the Ledger checks `members` in D1 that the user belongs to it, and only owners and editors can save.
 
@@ -168,19 +169,23 @@ Only the Ledger writes books to R2. Before a run, the agent server's custom auth
 
 **Saving.** The Ledger saves; the sandbox never writes to R2. Tools and the prompt stay as on the desktop: writes land in the working copy at once, and the agent calls `commit_and_push` after a batch of related changes and at the end of a turn.
 
-1. `commit_and_push` asks the API Worker to save. The Ledger runs `git add -A`, `git commit` and `git bundle create books.bundle --all` in the sandbox and reads the bundle out with `readFile`.
-2. The checker (started if asleep) runs two checks. The last saved commit must be an ancestor of the new `main`. And `hledger check --strict` must pass. The sandbox already ran the same check, but it runs model-written code, so a container that never does checks again.
-3. The checker runs the page commands on the new bundle.
+1. `commit_and_push` asks the API Worker to save. In the sandbox, the Ledger runs `git add -A` and `git commit` with git hooks turned off (`core.hooksPath=/dev/null`), so a planted hook can't change what is committed.
+2. Still in the sandbox, it checks that the last saved commit is an ancestor of the new `main` and that `hledger check --strict` passes, runs the page commands, and packs the repo with `git bundle create books.bundle --all`.
+3. It reads the bundle and the pages out with `readFile` and checks the pages: valid JSON, the expected shape, and a size limit.
 4. The Ledger keeps the current bundle as `books.prev.bundle`, then writes the new bundle and its pages to R2 and records the new commit. Writing the bundle is the save.
 5. The Ledger also saves on its own at the end of every run and before stopping an idle sandbox, so nothing stays unsaved when the agent forgets. If the container dies with unsaved changes, those changes are lost and the agent redoes them.
 
 With one working copy there are no stale copies, so saves never conflict. As on the desktop, a commit includes every change not yet saved, whichever chat made it. Commits carry the chat and run IDs of the save, so "undo the last change" reverts that commit with `git revert`. History and restores go through git: `git revert`, or a new commit that brings back an older state. The ancestry check keeps history from being rewritten, and `books.prev.bundle` covers a bad write.
 
+These checks run in the sandbox, as on the desktop. A model tricked into misusing `execute` (the desktop's `bash`) could get around them, but only on its own ledger, the same risk the desktop accepts; `books.prev.bundle` rolls one bad save back. A checker, a second container that never runs model code and checks every save again, comes with shared ledgers, where one person's agent could hurt the books of others.
+
+**The model.** The agent server calls Claude at Cloudflare's AI Gateway instead of at Anthropic directly: the gateway holds the Anthropic key, needs its own gateway token, and passes each call on. It gives one place for model keys, spend and rate limits, and lets the model or the provider change as a server setting. Gateway logging stays off, because prompts carry users' books.
+
 **Documents.** Photos and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Files never reach the sandbox, and only the chat history keeps them.
 
 **Skills.** Skills are instructions only: `SKILL.md` files in the books repo. The built-in ones ship with the app, and users can create their own in chat.
 
-**Data changes.** D1 changes are numbered SQL files applied with `wrangler d1 migrations` on deploy. The Ledger's own small SQLite migrates itself: numbered steps run in its constructor inside `blockConcurrencyWhile`, before it handles any request, so the code only ever sees the current shape. An idle Ledger migrates when it next wakes, even months later, so shipped steps are never edited or removed; tests run them with `@cloudflare/vitest-pool-workers` over real SQLite. A change that must reach every Ledger at once walks the `ledgers` table and wakes each one. New, renamed or deleted object classes are declared in the wrangler config. Changes go in two releases, add first and remove later, so a rollback still works. Changes to the books themselves reuse the desktop workspace migrations, run by the checker.
+**Data changes.** D1 changes are numbered SQL files applied with `wrangler d1 migrations` on deploy. The Ledger's own small SQLite migrates itself: numbered steps run in its constructor inside `blockConcurrencyWhile`, before it handles any request, so the code only ever sees the current shape. An idle Ledger migrates when it next wakes, even months later, so shipped steps are never edited or removed; tests run them with `@cloudflare/vitest-pool-workers` over real SQLite. A change that must reach every Ledger at once walks the `ledgers` table and wakes each one. New, renamed or deleted object classes are declared in the wrangler config. Changes go in two releases, add first and remove later, so a rollback still works. Changes to the books themselves reuse the desktop workspace migrations, run in the sandbox.
 
 ## Auth
 
@@ -205,7 +210,7 @@ Two rules carry most of the security: the model never picks the user or the ledg
 
 ## Pages
 
-Pages are computed on every save by the checker and stored in R2 next to the bundle. To serve a page, the API Worker checks the token, the Ledger checks membership and returns the latest pages, and the API Worker filters Transactions by date range. Pages always show the latest save, and no page ever starts a container.
+Pages are computed on every save in the sandbox, checked by the Ledger, and stored in R2 next to the bundle. To serve a page, the API Worker checks the token, the Ledger checks membership and returns the latest pages, and the API Worker filters Transactions by date range. Pages always show the latest save, and no page ever starts a container.
 
 | Page                 | hledger command                                         |
 | -------------------- | ------------------------------------------------------- |
@@ -228,7 +233,7 @@ Left out of the beta to keep it small, and planned like this:
 - The check before a run also requires an active plan.
 - Family Sharing on the subscription comes with shared ledgers.
 
-**Export.** The beta has none; data requests are handled by hand until then. At the public launch the API Worker returns the current bundle as a git repo, or a zip made with `git archive` in a container.
+**Export.** The beta has none; data requests are handled by hand until then. At the public launch the API Worker returns the current bundle as a git repo, or a zip made with `git archive` in the sandbox.
 
 ## Infrastructure as code
 
@@ -236,10 +241,10 @@ Everything on Cloudflare is declared in wrangler config in the repo, one `wrangl
 
 | Piece       | What it declares                                                                                                                                                                                                                |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API Worker  | routes; the Ledger object class; the R2 bucket; the D1 database and its migrations; the container image (Cloudflare's sandbox image plus our tools, for the sandbox and checker, internet off); the service secret              |
+| API Worker  | routes; the Ledger object class; the R2 bucket; the D1 database and its migrations; the container image (Cloudflare's sandbox image plus our tools, internet off); the service secret                                           |
 | Auth Worker | routes; a binding to the Ledger class; the D1 database; the private signing key as a secret                                                                                                                                     |
 | Storage     | the R2 bucket and D1 database in the EU jurisdiction                                                                                                                                                                            |
-| AWS         | Bedrock model access, a Bedrock API key for LangSmith limited to the chosen model, and a budget alarm                                                                                                                           |
+| AI Gateway  | one gateway with the Anthropic key, logging off, a gateway token for the agent server, and rate limits                                                                                                                          |
 
 ## Costs and unit economics
 
@@ -251,43 +256,40 @@ Everything on Cloudflare is declared in wrangler config in the repo, one `wrangl
 | RevenueCat, Expo, Sentry, PostHog          | $0                              | $0–50                                 |
 | **Total**                                  | **≈ $45–50**                    | **≈ $450–550** + model + sandbox time |
 
-The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; model prices are each model's EU route, 10–20% above its global or US price: Claude, Nova, Qwen and Kimi on Bedrock, GPT on OpenAI's EU API, Gemini on Vertex's EU endpoint. Qwen and Kimi have no prompt caching on Bedrock, so they pay full price for the whole context.
+The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; Claude is at Anthropic's list prices, and the open models at Workers AI's.
 
 ```
-                               ||   Sonnet 5.5   Sonnet 5.5    Haiku 4.5  GPT-6.1 Sol   GPT-6 Luna Gemini Flash  Nova 2 Lite     Qwen3 VL    Kimi K2.5
-                               ||        $9.99       $12.99        $9.99        $9.99        $9.99        $9.99        $9.99        $9.99        $9.99
-===============================++=====================================================================================================================
-income:subscription            ||         9.99        12.99         9.99         9.99         9.99         9.99         9.99         9.99         9.99
--------------------------------++---------------------------------------------------------------------------------------------------------------------
-expenses:tax:vat               ||         1.67         2.17         1.67         1.67         1.67         1.67         1.67         1.67         1.67
-expenses:store:commission      ||         1.25         1.62         1.25         1.25         1.25         1.25         1.25         1.25         1.25
-expenses:llm:tokens            ||         7.52         7.52         3.76         7.13         0.38         2.48         1.57         3.87         4.49
-expenses:sandbox               ||         0.06         0.06         0.06         0.06         0.06         0.06         0.06         0.06         0.06
-expenses:revenuecat            ||         0.09         0.12         0.09         0.09         0.09         0.09         0.09         0.09         0.09
-expenses:platform:shared       ||         0.24         0.24         0.24         0.24         0.24         0.24         0.24         0.24         0.24
-expenses:storage               ||         0.01         0.01         0.01         0.01         0.01         0.01         0.01         0.01         0.01
--------------------------------++---------------------------------------------------------------------------------------------------------------------
-                               ||        10.84        11.74         7.08        10.45         3.70         5.80         4.89         7.19         7.81
-===============================++=====================================================================================================================
-Net                            ||        -0.85         1.25         2.91        -0.46         6.29         4.19         5.10         2.80         2.18
-Margin (of revenue after VAT)  ||         -10%          12%          35%          -6%          76%          50%          61%          34%          26%
+                               ||     Sonnet 5.5     Sonnet 5.5      Haiku 4.5  GLM-5.3-Flash      Kimi K2.6
+                               ||          $9.99         $12.99          $9.99          $9.99          $9.99
+===============================++===========================================================================
+income:subscription            ||           9.99          12.99           9.99           9.99           9.99
+-------------------------------++---------------------------------------------------------------------------
+expenses:tax:vat               ||           1.67           2.17           1.67           1.67           1.67
+expenses:store:commission      ||           1.25           1.62           1.25           1.25           1.25
+expenses:llm:tokens            ||           6.84           6.84           3.42           0.46           2.94
+expenses:sandbox               ||           0.06           0.06           0.06           0.06           0.06
+expenses:revenuecat            ||           0.09           0.12           0.09           0.09           0.09
+expenses:platform:shared       ||           0.24           0.24           0.24           0.24           0.24
+expenses:storage               ||           0.01           0.01           0.01           0.01           0.01
+-------------------------------++---------------------------------------------------------------------------
+                               ||          10.16          11.06           6.74           3.78           6.26
+===============================++===========================================================================
+Net                            ||          -0.17           1.93           3.25           6.21           3.73
+Margin (of revenue after VAT)  ||            -2%            18%            39%            75%            45%
 ```
 
-The alternatives, all with image input for receipts:
+- **Haiku 4.5** is due to retire in mid-October 2026; Haiku 5.5 is announced without a price yet, so the Haiku column stands in for it.
+- **GLM-5.3-Flash and Kimi K2.6** are open models on Cloudflare's Workers AI, both able to read images, with published cache prices. They are the cheaper option for later, if they pass the evals; Workers AI can't yet keep processing in the EU.
+- **An EU-only route** costs about 10% more for Claude (Bedrock's or Vertex's EU endpoints), or moves to an EU host for open models (Mistral's EU endpoint, Scaleway, OVHcloud).
+- Every column assumes the same token counts and calls per message. Tokenizers differ, and the open models' tool calling is unproven, so the evals decide.
 
-- **GPT-6.1 Sol and GPT-6 Luna** run in the EU only through OpenAI's API (`eu.api.openai.com`), which needs sales approval, and images there need enhanced zero data retention. On Bedrock, GPT models are global only.
-- **Gemini Flash** is Gemini 3.8 Flash on Vertex's EU endpoint, at an introductory price that doubles on 1 January 2027 (tokens $4.95, margin 21%).
-- **Nova 2 Lite** is on Bedrock's EU profile, **Qwen3 VL** (235B) in Ireland, and **Kimi K2.5** in Stockholm.
-- **Left out:** Sonnet 5 on the EU profile costs the same as the Sonnet 5.5 column. Opus 5.5 ($14.26 of tokens) and GPT-6 Astra ($37.62) lose money at these prices. Text-only models (gpt-oss, DeepSeek, MiniMax, GLM) can't read receipt photos. Haiku 5.5 has no price yet.
-- Every column assumes the same token counts and calls per message. Tokenizers differ, and the cheaper models' tool calling is unproven, so the evals decide.
-
-Sonnet 5.5 may do better than its column: reports say it needs up to 30% fewer tokens per task, which would lift its margin at $9.99 to about 17%. It may also do worse: its newer tokenizer turns the same text into about 30% more tokens than Haiku 4.5's. The evals should measure real token counts.
+Sonnet 5.5 may do better than its column: reports say it needs up to 30% fewer tokens per task, which would lift its margin at $9.99 to about 23%. It may also do worse: its newer tokenizer turns the same text into about 30% more tokens than Haiku 4.5's. The evals should measure real token counts.
 
 The sandbox, platform and storage lines were estimated for AWS; Cloudflare's list prices for containers are lower, so they are an upper bound until the spike measures real usage.
 
 Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model, and the price.
 
-TestFlight and the invite-only beta run with no usage limit, under a fair-use clause. Before the public launch, add a hidden daily cap of about 200 messages per user and the Bedrock budget alarm.
+TestFlight and the invite-only beta run with no usage limit, under a fair-use clause. Before the public launch, add a hidden daily cap of about 200 messages per user and a spend limit on the Anthropic account.
 
 ## Scope
 
@@ -325,6 +327,9 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 - Different models for different tasks
 - A monthly limit or per-dollar metering
 - A separate Cloudflare account for prod
+- An EU-only model route: Claude on Bedrock's or Vertex's EU endpoints, or an open model on an EU host
+- An open model on Workers AI (GLM-5.3-Flash, Kimi K2.6) if it passes the evals, with a text-extraction or page-image step for PDFs
+- A checker container that never runs model code and checks every save again (with shared ledgers)
 - The agent loop in a Durable Object (Cloudflare Agents SDK) instead of LangSmith, which would also remove the service secret and run tokens
 
 **Dropped:** provider, model and Ollama settings.
@@ -332,12 +337,12 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 ## Risks and things to verify
 
 - **Switching from pi to deepagents is the biggest risk.** The prompt was tuned on pi, so build the eval set and record pi's baseline first.
-- **Cloudflare's new container setup and Sandbox SDK 1.0 are previews.** The `durable_object` scheduling policy launched on 30 September 2026, Sandbox SDK 1.0 is on its `@next` line, and the older Container and Sandbox classes get updates only until 31 December 2026. Build on the new API, pin the SDK and its image to the same version, and prove it in the Phase 0 spike, including how the checker runs as a second container.
+- **Cloudflare's new container setup and Sandbox SDK 1.0 are previews.** The `durable_object` scheduling policy launched on 30 September 2026, Sandbox SDK 1.0 is on its `@next` line, and the older Container and Sandbox classes get updates only until 31 December 2026. Build on the new API, pin the SDK and its image to the same version, and prove it in the Phase 0 spike.
 - **Confirm with Cloudflare** that containers under the new setup, R2 and D1 all run in the EU jurisdiction (D1 holds all user records); container prices and limits; the largest file `readFile` and `writeFile` handle; and point-in-time recovery for Durable Object storage.
-- **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, and Bedrock's size limit for PDFs.
+- **Confirm with Anthropic and Cloudflare** Anthropic's data retention for API calls (ask for zero retention), the PDF size limit, that AI Gateway passes PDFs and images through unchanged with logging off, and Haiku 5.5's release and price.
 - **Confirm with LangSmith** that the Serverless deployment is enough for the beta and runs in the EU. Dedicated, for launch, is a new deployment.
-- **Pin versions.** deepagents ships almost weekly. hledger is pinned in the one image the sandbox and checker share; it's GPL, which is fine on servers but rules it out inside the iOS app. Pin the Workers compatibility date.
-- **Every save starts or wakes the checker.** Measure save time in the spike; keep the checker warm while a ledger has active chats if it's slow.
+- **Pin versions.** deepagents ships almost weekly. hledger is pinned in the sandbox image; it's GPL, which is fine on servers but rules it out inside the iOS app. Pin the Workers compatibility date.
+- **Run `execute` as a user that can't change our ledger program or hledger,** if the Sandbox SDK allows a separate user; check in the spike.
 - **Deploys restart Durable Objects,** and a request in flight can fail. Make tool calls and saves safe to retry.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`). Budget a few days and test with statements shared from real bank apps.
 - **assistant-ui React Native with the LangGraph runtime is undocumented.** Prototype it first, using `expo/fetch` for streaming.
@@ -348,21 +353,21 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 ## Launch checklist
 
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that revokes the Apple token and reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
-- **Privacy:** policy and terms; processor agreements with Cloudflare, AWS, LangSmith, RevenueCat, Sentry, PostHog; a DPIA; check where RevenueCat keeps data; privacy label.
-- **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
-- **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Cloudflare usage notifications, the Bedrock budget alarm, and a switch that pauses new runs.
+- **Privacy:** policy and terms; processor agreements with Cloudflare, Anthropic, LangSmith, RevenueCat, Sentry, PostHog; a DPIA; check where RevenueCat keeps data; privacy label.
+- **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run; git hooks off on saves; page data checked before it is stored.
+- **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Cloudflare usage notifications, a spend limit on the Anthropic account, and a switch that pauses new runs.
 - **Operations:** a tested restore, from git history and from the spare bundle; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger GPL).
 
 ## Build order
 
-| Phase                 | Time        | Work                                                                                                                                                                                                                                                         | Done when                                                                                                                       |
-| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; Cloudflare dev environment; a spike: one Ledger object with a sandbox and the checker in the EU jurisdiction; pick one model on Bedrock | Ledger program tests pass, `wrangler deploy` works in dev, the spike's first-tool and save times and the baseline numbers exist |
-| 1 · Cloud agent       | ≈ 3–4 weeks | API Worker and Ledger object (tools, saves with checks, pages); Auth Worker and the D1 tables; sandbox image, connector; deepagents graph on LangSmith with ledger tools                                                                                     | Evals match pi, concurrent saves never lose a change, cross-user tests pass                                                     |
-| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, delete account                                                                                                                                                                         | You keep your own books on the phone for two weeks                                                                              |
-| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, payments and export as planned above, the daily cap in D1, consent screen, privacy label, legal entity, App Review, prod environment                                                                                         | Live, first renewal goes through                                                                                                |
+| Phase                 | Time        | Work                                                                                                                                                                                                                                                                                                                | Done when                                                                                                                       |
+| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; Cloudflare dev environment; a spike: one Ledger object with a sandbox in the EU jurisdiction; run the evals on Sonnet and Haiku, with GLM-5.3-Flash and Kimi K2.6 on Workers AI for comparison | Ledger program tests pass, `wrangler deploy` works in dev, the spike's first-tool and save times and the baseline numbers exist |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API Worker and Ledger object (tools, saves with checks, pages); Auth Worker and the D1 tables; sandbox image, connector; deepagents graph on LangSmith with ledger tools                                                                                                                                            | Evals match pi, concurrent saves never lose a change, cross-user tests pass                                                     |
+| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, delete account                                                                                                                                                                                                                                | You keep your own books on the phone for two weeks                                                                              |
+| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, payments and export as planned above, the daily cap in D1, consent screen, privacy label, legal entity, App Review, prod environment                                                                                                                                                | Live, first renewal goes through                                                                                                |
 
 ## Decisions for you
 
-1. **Sonnet 5.5 or Haiku 4.5?** One model for everything at launch. With EU VAT, Sonnet 5.5 loses money at $9.99; Haiku 4.5 (35%) or $12.99 (12%) fixes it, if it passes the evals against the pi baseline.
+1. **Sonnet 5.5 or Haiku?** One Claude model for everything at launch. With EU VAT, Sonnet 5.5 loses a little at $9.99 (−2%); Haiku (39%) or $12.99 (18%) fixes it, if Haiku passes the evals against the pi baseline. Haiku 4.5 retires in mid-October 2026, so this means Haiku 5.5 once it ships.
 2. **Which legal entity publishes the app?** Apple and every processor agreement need a company.
