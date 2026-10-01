@@ -4,27 +4,27 @@ How to turn the desktop agent into a paid, closed-source iPhone app on Cloudflar
 
 ## The short version
 
-Keep the ledger logic, the prompt and hledger. Store the books as git in R2, give each ledger one Durable Object that owns it and runs its saves one at a time, run every tool in a sandbox per chat, serve pages computed at save time, and keep it all in Cloudflare's EU jurisdiction. The model stays on Bedrock in the EU.
+Keep the ledger logic, the prompt and hledger. Store the books as git in R2, give each ledger one Durable Object that owns it and runs its tool calls one at a time, run every tool in one sandbox per ledger shared by its chats (like the desktop's workspace folder), serve pages computed at save time, and keep it all in Cloudflare's EU jurisdiction. The model stays on Bedrock in the EU.
 
-| Area              | Pick                                                                                                                               |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Cloud             | Cloudflare (Workers, Durable Objects, Containers, R2, D1) in the EU jurisdiction, defined in wrangler config; AWS only for Bedrock |
-| Books             | A git repo per ledger, one bundle file per version in R2; the ledger's Durable Object points to the current one                    |
-| Server            | Two Workers: API (tools, saves, pages, webhooks) and Auth (sign-in and tokens)                                                     |
-| State             | One Durable Object per ledger; D1 for users, sign-in, members, plans and limits                                                    |
-| Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                           |
-| Sandboxes         | Cloudflare Containers owned by the ledger's Durable Object: one per chat, plus a checker from the same image                       |
-| Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering  |
-| Accounting engine | hledger, one pinned version                                                                                                        |
-| App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                              |
-| Sign-in           | Sign in with Apple only, no auth vendor: the Auth Worker checks Apple's token and issues our own JWT                               |
-| Payments          | RevenueCat on StoreKit 2                                                                                                           |
+| Area              | Pick                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Cloud             | Cloudflare (Workers, Durable Objects, Containers, R2, D1) in the EU jurisdiction, defined in wrangler config; AWS only for Bedrock  |
+| Books             | A git repo per ledger, one bundle file per version in R2; the ledger's Durable Object points to the current one                     |
+| Server            | Two Workers: API (tools, saves, pages, webhooks) and Auth (sign-in and tokens)                                                      |
+| State             | One Durable Object per ledger; D1 for users, sign-in, members, plans and limits                                                     |
+| Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                            |
+| Sandboxes         | Cloudflare Containers owned by the ledger's Durable Object: one per ledger, shared by its chats, plus a checker from the same image |
+| Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering   |
+| Accounting engine | hledger, one pinned version                                                                                                         |
+| App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                               |
+| Sign-in           | Sign in with Apple only, no auth vendor: the Auth Worker checks Apple's token and issues our own JWT                                |
+| Payments          | RevenueCat on StoreKit 2                                                                                                            |
 
 This repo is a closed fork; the open-source desktop app stays in its own repo. Keep the Apache-2.0 license and notice for the forked code.
 
 ## Architecture
 
-The books are git, so the agent works on real files exactly as on the Mac, and history and undo are plain git. Each chat gets a throwaway sandbox with a clone; the sandbox never holds the only copy, and pages never need a sandbox awake. One Durable Object per ledger coordinates everything live about that ledger, so saves run one at a time without locks or conditional writes; plain records live in D1 tables.
+The books are git, so the agent works on real files exactly as on the Mac, and history and undo are plain git. Each ledger gets one throwaway sandbox with a clone, shared by all its chats the way every chat on the Mac shares the workspace folder; the sandbox never holds the only copy, and pages never need a sandbox awake. One Durable Object per ledger coordinates everything live about that ledger, so tool calls and saves run one at a time without locks or conditional writes; plain records live in D1 tables.
 
 ```
 +-----------------+     +-----------------------------------+ token +---------------+
@@ -62,17 +62,17 @@ The books are git, so the agent works on real files exactly as on the Mac, and h
 |                   v                            v                    v                          |
 |  +------------------------------------------+ +---------------------------------------------+  |
 |  | LEDGER (Durable Object, one per ledger)  | | D1 (SQLite)                                 |  |
-|  | current version, save queue,             | | users, identities, refresh_tokens,          |  |
-|  | sandboxes, cached pages, save log        | | ledgers, members, plans, daily_runs,        |  |
+|  | current version, tool-call queue,        | | users, identities, refresh_tokens,          |  |
+|  | the container, cached pages, save log    | | ledgers, members, plans, daily_runs,        |  |
 |  +------------------------------------------+ | webhook_events                              |  |
 |        |                |              |      +---------------------------------------------+  |
 |        v                v              v                                                       |
-| +--------------+ +--------------+ +-----------+                                                |
-| | SANDBOX      | | CHECKER      | | R2        |                                                |
-| | container,   | | same image,  | | bundle,   |                                                |
-| | one per chat | | no AI code,  | | pages per |                                                |
-| | no internet  | | hledger, git | | version   |                                                |
-| +--------------+ +--------------+ +-----------+                                                |
+| +---------------+ +--------------+ +-----------+                                               |
+| | SANDBOX       | | CHECKER      | | R2        |                                               |
+| | one container | | same image,  | | bundle,   |                                               |
+| | per ledger,   | | no AI code,  | | pages per |                                               |
+| | no internet   | | hledger, git | | version   |                                               |
+| +---------------+ +--------------+ +-----------+                                               |
 +-- Cloudflare, EU jurisdiction; one container image (git, hledger, ledger CLI) -----------------+
 ```
 
@@ -85,7 +85,7 @@ ledgers/<ledger_id>/versions/<n>/pages/   -- Transactions, Net worth and pickers
                                           -- versions older than 30 days are deleted, never the current one
 
 -- Ledger Durable Object, one per ledger, with its own SQLite
-current version · save queue · running sandboxes · save log
+current version · tool-call queue · the container · save log
 
 -- D1 "a24" (EU jurisdiction)
 users           user_id · created_at                                   -- our own ID, never a provider's
@@ -136,8 +136,8 @@ iPhone           Agent server          Sandbox              Ledger              
 2. The agent server sends the chat and the photo to Claude on Bedrock.
 3. Claude answers with a tool call: add this transaction.
 4. The agent server asks the API Worker to run that tool, and the API Worker passes it to the ledger's Durable Object.
-5. It's the chat's first tool, so the Ledger starts a sandbox and copies the books into it (version r41).
-6. In the sandbox, the tool writes the journal entry, checks the ledger with hledger, and commits it with git.
+5. The ledger's sandbox is asleep, so the Ledger starts it and copies the books into it (version r41).
+6. In the sandbox, the tool writes the journal entry. The agent then calls `commit_and_push`, as on the desktop, which checks the ledger with hledger and commits it with git.
 7. The Ledger reads the packed repo out of the sandbox. The sandbox can't send anything itself: it has no internet.
 8. The checker, a second container that never runs model code, checks the repo again and computes the pages. The Ledger writes version r42 to R2 and points to it. This is the only moment the books change.
 9. The Ledger tells the agent server the save worked.
@@ -149,33 +149,33 @@ The phone sees each step as it happens, so the user watches the progress. When t
 
 ## How it works
 
-**Workers, the Ledger and D1.** Two Workers are the only doors in. Records live in D1, one SQLite database with normal tables. Live work on a ledger goes through its Durable Object: one small program per ledger with its own SQLite, which Cloudflare runs as exactly one copy, handles requests in order, and puts to sleep when idle. It exists because a ledger needs a save queue, running sandboxes and timers, which a table can't hold. The Ledger class lives in the API Worker; the Auth Worker reaches it through a binding.
+**Workers, the Ledger and D1.** Two Workers are the only doors in. Records live in D1, one SQLite database with normal tables. Live work on a ledger goes through its Durable Object: one small program per ledger with its own SQLite, which Cloudflare runs as exactly one copy, handles requests in order, and puts to sleep when idle. It exists because a ledger needs a queue for tool calls, a running container and timers, which a table can't hold. The Ledger class lives in the API Worker; the Auth Worker reaches it through a binding.
 
-| Part          | Called by                                                                                        | Does                                                                | Holds or reaches                                                                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth Worker   | the phone: Apple's token, a refresh token, or our JWT                                            | sign-in, refresh, logout, account deletion, the public keys (JWKS)  | the private signing key; D1 `users`, `identities`, `refresh_tokens`, `ledgers`, `members`; creates and deletes Ledger objects; a LangSmith key to delete threads |
-| API Worker    | the phone with our JWT; the agent server with a service secret; RevenueCat with a webhook secret | pages, export, tools and saves, the check before a run, webhooks    | Ledger objects; D1 `members`, `plans`, `daily_runs`, `webhook_events`; the service and webhook secrets; Auth's public keys                                       |
-| Ledger object | the API and Auth Workers                                                                         | the current version, saves one at a time, the chat sandboxes, pages | R2, the sandbox and checker containers, D1 `members`                                                                                                             |
+| Part          | Called by                                                                                        | Does                                                                        | Holds or reaches                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth Worker   | the phone: Apple's token, a refresh token, or our JWT                                            | sign-in, refresh, logout, account deletion, the public keys (JWKS)          | the private signing key; D1 `users`, `identities`, `refresh_tokens`, `ledgers`, `members`; creates and deletes Ledger objects; a LangSmith key to delete threads |
+| API Worker    | the phone with our JWT; the agent server with a service secret; RevenueCat with a webhook secret | pages, export, tools and saves, the check before a run, webhooks            | Ledger objects; D1 `members`, `plans`, `daily_runs`, `webhook_events`; the service and webhook secrets; Auth's public keys                                       |
+| Ledger object | the API and Auth Workers                                                                         | the current version, tool calls and saves one at a time, the sandbox, pages | R2, the sandbox and checker containers, D1 `members`                                                                                                             |
 
 Only the Ledger writes books to R2. Before a run, the agent server's custom auth asks the API Worker whether the user may run: D1 has the plan (from launch), the daily count and the membership. On every tool call the Ledger checks `members` in D1 that the user belongs to it, and only owners and editors can save.
 
-**Sign-in.** The app signs in with `expo-apple-authentication`. The Auth Worker checks Apple's identity token against Apple's public keys and exchanges the authorization code for Apple's refresh token. It finds the user in `identities`, where `(provider, sub)` is unique, so two sign-ins at the same moment still create one user. A new user also gets rows in `users`, `ledgers` and `members` (as owner), and a Ledger object. Auth then issues a one-hour JWT and a refresh token (see Auth); the agent server's custom auth and the API Worker verify that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), cancels the refresh tokens, stops the sandboxes, deletes the ledgers the user owns with their R2 files and objects, their threads, and their rows.
+**Sign-in.** The app signs in with `expo-apple-authentication`. The Auth Worker checks Apple's identity token against Apple's public keys and exchanges the authorization code for Apple's refresh token. It finds the user in `identities`, where `(provider, sub)` is unique, so two sign-ins at the same moment still create one user. A new user also gets rows in `users`, `ledgers` and `members` (as owner), and a Ledger object. Auth then issues a one-hour JWT and a refresh token (see Auth); the agent server's custom auth and the API Worker verify that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), cancels the refresh tokens, stops the sandbox, deletes the ledgers the user owns with their R2 files and objects, their threads, and their rows.
 
 **Identity.** The user ID comes only from our verified JWT, never from the request or the model. Every request names a ledger, and the Ledger serves it only if `members` lists that user for it; every storage path is built from that ledger ID. Cross-user tests in CI check that one user can't reach another's ledger. Each user has one ledger at first.
 
-**The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the Ledger starts a container for that chat from our image: hledger, git and the ledger program, with internet off. Cloudflare's median start is about 0.65 seconds; with copying the current bundle in and `git clone`, the first tool waits about 1–2 seconds. Later tools reuse the container; the Ledger stops it after 10 idle minutes. The sandbox is only a working copy, it holds no credentials, and a change counts only once the Ledger has saved it.
+**The sandbox.** Opening a chat starts nothing. On the first tool call while the ledger's sandbox is asleep, the Ledger starts it from our image: hledger, git and the ledger program, with internet off. Cloudflare's median start is about 0.65 seconds; with copying the current bundle in and `git clone`, that tool waits about 1–2 seconds. All the ledger's chats share this one working copy, as every chat on the Mac shares the workspace folder: a change one chat writes is visible to the others at once, and the Ledger runs their tool calls one at a time. Later tools reuse the container; after 10 idle minutes the Ledger saves anything unsaved and stops it. The sandbox is only a working copy, it holds no credentials, and a change counts only once the Ledger has saved it.
 
-**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three calls to the API Worker: run a command, upload a file, download a file. The API Worker forwards each to the Ledger, which runs it in the chat's container. Ledger tools are thin wrappers around the ledger program.
+**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three calls to the API Worker: run a command, upload a file, download a file. The API Worker forwards each to the Ledger, which runs it in the ledger's sandbox. Ledger tools are thin wrappers around the ledger program.
 
-**Saving.** The Ledger saves; the sandbox never writes to R2. Saves for one ledger wait in the Ledger's queue and run one at a time.
+**Saving.** The Ledger saves; the sandbox never writes to R2. Tools and the prompt stay as on the desktop: writes land in the working copy at once, and the agent calls `commit_and_push` after a batch of related changes and at the end of a turn.
 
-1. `commit_and_push` asks the API Worker to save. The Ledger runs `git commit` and `git bundle create books.bundle --all` in the sandbox and reads the bundle out.
+1. `commit_and_push` asks the API Worker to save. The Ledger runs `git add -A`, `git commit` and `git bundle create books.bundle --all` in the sandbox and reads the bundle out.
 2. The checker (started if asleep) runs two checks. The current version's commit must be an ancestor of the new `main`. And `hledger check --strict` must pass. The sandbox already ran the same check, but it runs model-written code, so a container that never does checks again.
 3. The checker runs the page commands on the new version.
 4. The Ledger writes the bundle and the pages to R2 as version r42, then moves its pointer to r42. Moving the pointer is the save.
-5. If another chat saved since this sandbox copied the books, the ancestry check fails and the save returns "the books changed in another chat". The Ledger copies the latest books into the sandbox, and the agent redoes its change.
+5. The Ledger also saves on its own at the end of every run and before stopping an idle sandbox, so nothing stays unsaved when the agent forgets. If the container dies with unsaved changes, those changes are lost and the agent redoes them.
 
-Commits carry the chat and run IDs, so "undo the last change" reverts exactly that run with `git revert`. A daily alarm in the Ledger deletes versions older than 30 days, never the current one; restoring an older version is moving the pointer back.
+With one working copy there are no stale copies, so saves never conflict. As on the desktop, a commit includes every change not yet saved, whichever chat made it. Commits carry the chat and run IDs of the save, so "undo the last change" reverts that commit with `git revert`. A daily alarm in the Ledger deletes versions older than 30 days, never the current one; restoring an older version is moving the pointer back.
 
 **Documents.** Photos and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Files never reach the sandbox, and only the chat history keeps them.
 
@@ -307,7 +307,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 **Later, in the tech, when needed:**
 
 - Starting the sandbox when a chat opens
-- Automatic rebase for parallel saves
+- Saving after every write, so each commit belongs to one chat (for shared ledgers)
 - A path allowlist on saves
 - A `pdftotext` path for cheaper statements
 - Different models for different tasks
