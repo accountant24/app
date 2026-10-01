@@ -8,7 +8,7 @@ Keep the agent, the ledger logic, the prompt and hledger, and run them the way t
 
 | Area | Pick |
 | --- | --- |
-| Cloud | Cloudflare (Workers, Durable Objects, Containers, Artifacts, R2, D1, AI Gateway), storage in the EU jurisdiction, defined in wrangler config |
+| Cloud | Cloudflare (Workers, Durable Objects, Containers, Artifacts, R2, D1, AI Gateway), storage in the EU jurisdiction, defined in TypeScript (`cloudflare.config.ts`, `cf` CLI) |
 | Books | The books repo: one git repo per set of books in Cloudflare Artifacts; the sandbox clones and pushes it, and a daily fork keeps a snapshot |
 | Server | One Worker (the worker): sign-in, the chat connection, uploads and pages |
 | State | The bookkeeper, one Durable Object per set of books, with its chats and page data; the directory (D1) for users, sessions, members and limits |
@@ -180,7 +180,7 @@ The save checks run in the sandbox, as on the desktop, and a tricked model could
 
 **Calls outside chat.** Model calls that don't need the agent, such as chat names, dashboard widgets and short insights, run in the bookkeeper: it calls Claude through AI Gateway with page data in the prompt and a JSON schema for the answer, checks the result, and stores it next to the page data under a hash of its inputs, so a widget calls the model only when its inputs change, not when it is viewed. Each such call names its own model, usually the cheapest that passes, and counts against the same caps. Work that has to dig into the books, such as a monthly review or budget alerts, runs as a pi session without a chat, started by the bookkeeper after a save or on an alarm, with its result stored the same way.
 
-**Data changes.** Directory changes are numbered SQL files applied with `wrangler d1 migrations` on deploy. The bookkeeper's own small SQLite migrates itself: numbered steps run in its constructor inside `blockConcurrencyWhile`, before it handles any request, so the code only ever sees the current shape. An idle bookkeeper migrates when it next wakes, even months later, so shipped steps are never edited or removed; tests run them with `@cloudflare/vitest-pool-workers` over real SQLite. A change that must reach every bookkeeper at once walks the `books` table and wakes each one. New, renamed or deleted object classes are declared in the wrangler config. Changes go in two releases, add first and remove later, so a rollback still works. Changes to the books themselves are workspace migrations, run in the sandbox by the desktop's migration runner.
+**Data changes.** Directory changes are numbered SQL files applied on deploy. The bookkeeper's own small SQLite migrates itself: numbered steps run in its constructor inside `blockConcurrencyWhile`, before it handles any request, so the code only ever sees the current shape. An idle bookkeeper migrates when it next wakes, even months later, so shipped steps are never edited or removed; tests run them with `@cloudflare/vitest-pool-workers` over real SQLite. A change that must reach every bookkeeper at once walks the `books` table and wakes each one. New, renamed or deleted object classes are declared in `cloudflare.config.ts`. Changes go in two releases, add first and remove later, so a rollback still works. Changes to the books themselves are workspace migrations, run in the sandbox by the desktop's migration runner.
 
 ### The image
 
@@ -245,13 +245,17 @@ Left out of the beta to keep it small, and planned like this:
 
 ## Infrastructure as code
 
-Everything on Cloudflare is declared in wrangler config in the repo, one `wrangler.jsonc` with dev and prod environments. GitHub Actions deploys with `wrangler deploy` and a scoped API token. There is no network to set up.
+Everything on Cloudflare is defined in TypeScript in the repo, on Cloudflare's new `cf` CLI. There is no network to set up. It comes in three layers:
 
-| Piece | What it declares |
-| --- | --- |
-| `worker` | routes; the `Bookkeeper` object class; the `books-repo` Artifacts namespace; the `uploads` R2 bucket; the `directory` D1 database and its migrations; the `sandbox` container image; the AI Gateway token as a secret |
-| Storage | the `books-repo` namespace, the `uploads` bucket and the `directory` database in the EU jurisdiction |
-| `ai-gateway` | one AI Gateway with the Anthropic key, logging off, a gateway token for the bookkeeper, and rate limits |
+| Layer | Where | What it defines |
+| --- | --- | --- |
+| Project | `cloudflare.config.ts`, deployed with `cf deploy` on every release | the worker and its routes; the `Bookkeeper` object class and its sandbox container image; bindings to the `directory` database, the `uploads` bucket and the `books-repo` namespace; the model and gateway settings. Dev and prod come from one function of the mode, not repeated blocks |
+| Code | the `Bookkeeper` class | the EU jurisdiction of every bookkeeper (`jurisdiction("eu")`, in one helper); the outbound rules |
+| Account | `infra/bootstrap.ts`, run once per environment and safe to run again | the `directory` database, the `uploads` bucket and the `books-repo` namespace in the EU jurisdiction; one AI Gateway with the Anthropic key, logging off, a gateway token for the bookkeeper, and rate limits; the secrets; usage notifications |
+
+`cloudflare.config.ts` only refers to resources, it doesn't create them, and it has no EU setting, so the account layer creates them with their jurisdiction. GitHub Actions runs the tests, applies the directory's migrations and runs `cf deploy` with a scoped API token: dev on every merge, prod on a tag. A rollback restores code, never data.
+
+`cf` and `cloudflare.config.ts` are in open beta, and Wrangler gets 18 months of maintenance after the beta ends. Until `cf` covers them, the directory's migrations, single secrets and live logs go through Wrangler (`wrangler d1 migrations apply`, `wrangler secret put`, `wrangler tail`). If the Phase 0 spike finds the bookkeeper's container or its SQLite class unsupported in `cloudflare.config.ts`, the project starts on `wrangler.jsonc` and moves with `cf migrate` later.
 
 ## Costs and unit economics
 
@@ -348,7 +352,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 - **Confirm with Cloudflare** that containers under the new setup, Artifacts, R2 and D1 all run in the EU jurisdiction (the directory holds all user records); container prices and limits; point-in-time recovery for Durable Object storage; and, for Artifacts, beta access on our account, that a sandbox outbound rule can reach a repo and AI Gateway with injected tokens, and whether force pushes can be refused.
 - **Confirm with Anthropic and Cloudflare** Anthropic's data retention for API calls (ask for zero retention), that AI Gateway passes images through unchanged with logging off, and Haiku 5.5's release and price.
 - **Chats in the bookkeeper's SQLite.** A row holds at most 2 MB, so the mobile app shrinks photos before sending, and a session entry larger than that fails loudly. Check in the spike.
-- **Pin versions.** Pi, hledger and poppler are pinned in the sandbox image; hledger is GPL, which is fine on servers but rules it out inside the iOS app. Pin the Workers compatibility date.
+- **Pin versions.** Pi, hledger and poppler are pinned in the sandbox image; hledger is GPL, which is fine on servers but rules it out inside the iOS app. Pin the Workers compatibility date and the `cf` version; its config format may change before the beta ends.
 - **Check that the Sandbox SDK lets `bash` run as a separate user** that can't change the agent host, our extension, the prompt or hledger.
 - **Deploys restart Durable Objects,** and a run in flight can fail. Make saves safe to retry, and let the phone resend a lost turn.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`). Budget a few days and test with statements shared from real bank apps.
@@ -368,7 +372,7 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 
 | Phase | Time | Work | Done when |
 | --- | --- | --- | --- |
-| 0 · Groundwork | ≈ 2 weeks | Eval set and the desktop's baseline; move the agent host out of the desktop package into its own, then delete desktop, website, docs, demos from the fork; Cloudflare dev environment; a spike: one bookkeeper with a sandbox in the EU jurisdiction running the agent host, cloning from and pushing to an Artifacts repo and reaching AI Gateway through the outbound rule; run the evals on Sonnet and Haiku, with GLM-5.3-Flash and Kimi K2.6 on Workers AI for comparison | the agent host and extension tests pass, `wrangler deploy` works in dev, the spike's first-reply and save times and the baseline numbers exist |
+| 0 · Groundwork | ≈ 2 weeks | Eval set and the desktop's baseline; move the agent host out of the desktop package into its own, then delete desktop, website, docs, demos from the fork; Cloudflare dev environment from `cloudflare.config.ts` and the bootstrap script; a spike: one bookkeeper with a sandbox in the EU jurisdiction running the agent host, cloning from and pushing to an Artifacts repo and reaching AI Gateway through the outbound rule; run the evals on Sonnet and Haiku, with GLM-5.3-Flash and Kimi K2.6 on Workers AI for comparison | the agent host and extension tests pass, `cf deploy` works in dev with the container and the bookkeeper's SQLite class, the spike's first-reply and save times and the baseline numbers exist |
 | 1 · Cloud agent | ≈ 3 weeks | worker and bookkeeper (chat relay and replay, chats, saves with checks, pages, uploads); sign-in and the directory tables; sandbox image with the agent host's cloud entry | Evals match the desktop, concurrent chats never lose a change, cross-user tests pass |
 | 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, delete account | You keep your own books on the phone for two weeks |
 | 3 · Launch | ≈ 2–3 weeks | payments and export as planned above, the daily cap in the directory, consent screen, privacy label, legal entity, App Review, prod environment | Live, first renewal goes through |
