@@ -1,102 +1,104 @@
 # Accountant24 Mobile Blueprint
 
-How to turn the desktop agent into a paid, closed-source iPhone app on AWS, with the model, compute and storage included.
+How to turn the desktop agent into a paid, closed-source iPhone app on Cloudflare, with the model (on AWS Bedrock), compute and storage included.
 
 ## The short version
 
-Keep the ledger logic, the prompt and hledger. Store the books as git in S3, run every tool in a sandbox per chat, read pages straight from the books, and run it all in one EU region of AWS.
+Keep the ledger logic, the prompt and hledger. Store the books as git in R2, give each ledger one Durable Object that owns it and runs its saves one at a time, run every tool in a sandbox per chat, serve pages computed at save time, and keep it all in Cloudflare's EU jurisdiction. The model stays on Bedrock in the EU.
 
-| Area              | Pick                                                                                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cloud             | AWS, Ireland (eu-west-1), defined in CDK                                                                                                                           |
-| Books             | A git repo per ledger, one bundle file in a versioned S3 bucket, replaced with a conditional write                                                                 |
-| Server            | The API service: four stateless Lambda functions: Agent API and App API from one container image with git and hledger, Auth and Webhooks on the plain Node runtime |
-| Accounts          | DynamoDB: users, sign-in methods, ledgers and members from the beta; plans and the daily cap from the public launch                                                |
-| Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                                                           |
-| Sandboxes         | AgentCore Runtime, one session per chat, with a connector we write                                                                                                 |
-| Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering                                  |
-| Accounting engine | hledger, one pinned version                                                                                                                                        |
-| App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                                                              |
-| Sign-in           | Sign in with Apple only, no auth vendor: the Auth function checks Apple's token and issues our own JWT                                                             |
-| Payments          | RevenueCat on StoreKit 2                                                                                                                                           |
+| Area              | Pick                                                                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Cloud             | Cloudflare (Workers, Durable Objects, Containers, R2, D1) in the EU jurisdiction, defined in wrangler config; AWS only for Bedrock |
+| Books             | A git repo per ledger, one bundle file per version in R2; the ledger's Durable Object points to the current one                    |
+| Server            | Two Workers: API (tools, saves, pages, webhooks) and Auth (sign-in and tokens)                                                     |
+| State             | One Durable Object per ledger; D1 for users, sign-in, members, plans and limits                                                    |
+| Agent             | deepagents (TypeScript) on LangSmith, EU: Serverless for the beta, Dedicated from launch                                           |
+| Sandboxes         | Cloudflare Containers owned by the ledger's Durable Object: one per chat, plus a checker from the same image                       |
+| Model             | Claude on Bedrock (EU inference profile), one model as a server setting; Anthropic's API directly if EU residency stops mattering  |
+| Accounting engine | hledger, one pinned version                                                                                                        |
+| App               | Expo, assistant-ui (React Native + LangGraph runtime)                                                                              |
+| Sign-in           | Sign in with Apple only, no auth vendor: the Auth Worker checks Apple's token and issues our own JWT                               |
+| Payments          | RevenueCat on StoreKit 2                                                                                                           |
 
 This repo is a closed fork; the open-source desktop app stays in its own repo. Keep the Apache-2.0 license and notice for the forked code.
 
 ## Architecture
 
-The books are git, so the agent works on real files exactly as on the Mac, and history and undo are plain git. Each chat gets a throwaway sandbox with a clone; the sandbox never holds the only copy, and pages never need a sandbox awake.
+The books are git, so the agent works on real files exactly as on the Mac, and history and undo are plain git. Each chat gets a throwaway sandbox with a clone; the sandbox never holds the only copy, and pages never need a sandbox awake. One Durable Object per ledger coordinates everything live about that ledger, so saves run one at a time without locks or conditional writes; plain records live in D1 tables.
 
 ```
-+------------------+ token +--------------------------------+                                     +--------------------+
-| Sign in with     | ----> | iOS APP (Expo, React Native)   |                                     | RevenueCat         |
-| Apple            |       | chat with tool steps           |                                     | StoreKit 2         |
-+------------------+       | Transactions, Net worth        |                                     +--------------------+
-                           | export                         |                                                |
-                           | photos, Files, share sheet     |                                                |
-                           | paywall                        |                                                |
-                           +--------------------------------+                                                |
-                                | chat                   |                                                   |
-                                v                        |                                                   |
-   +---------------------------------+                   |                                                   |
-   | AGENT SERVER, LangSmith, EU     |                   | to Auth: sign-in, refresh,                        |
-   | custom auth: our JWT            |                   |   logout, delete account                          |
-   | deepagents: system.md, skills,  |                   |                                                   |
-   |   memory.md                     |                   | to App API: pages, export,                        |
-   | ledger tools: thin wrappers     |                   |   invites                                         |
-   | chats, runs, rejoin, traces     |                   |                                                   |
-   +---------------------------------+                   +----------------------------+                      | webhook
-         |                    |                          |                            |                      |
- prompts |         tool calls |                          |                            |                      |
-+--------|--------------------|--------------------------|----------------------------|----------------------|----------+
-|        v                    v                          v                            v                      v          |
-| +---------------------+  +-----------------------+  +---------------------+  +-------------------+  +---------------+ |
-| | Bedrock, EU profile |  | AGENT API (Lambda)    |  | AUTH (Lambda, Node) |  | APP API (Lambda)  |  | WEBHOOKS      | |
-| | Claude Sonnet 5.5   |  | runs tools in the     |  | Apple token to      |  | pages: hledger    |  | Lambda, Node  | |
-| | or Haiku 4.5        |  |   sandbox             |  |   our JWT           |  | export, invites   |  | RevenueCat,   | |
-| +---------------------+  | saves: ancestor +     |  | refresh, logout,    |  |                   |  | from launch   | |
-|                          |   hledger check       |  | account deletion    |  |                   |  |               | |
-|                          | run check: plan, cap  |  | publishes JWKS      |  |                   |  |               | |
-|                          +-----------------------+  +---------------------+  +-------------------+  +---------------+ |
-|                             | tools   ^ bundle |               |                      |                    |          |
-|                             v         v        |               |                      |                    |          |
-|                 +--------------------------+   |               |                      |                    |          |
-|                 | SANDBOX (AgentCore)      |   |               |                      |                    |          |
-|                 | one microVM per chat     |   |               |                      |                    |          |
-|                 | clone of the books       |   |               |                      |                    |          |
-|                 | hledger, git, ledger CLI |   |               |                      |                    |          |
-|                 | no internet, no keys     |   |               |                      |                    |          |
-|                 | stops after 10 idle min  |   +---------------+----------------------+-----+              |          |
-|                 +--------------------------+          |                                     |              |          |
-|                                                       v                                     v              v          |
-|                                              +--------------------+               +---------------------------------+ |
-|                                              | S3, versioned      |               | DynamoDB                        | |
-|                                              | books.bundle       |               | users, identities, ledgers,     | |
-|                                              | per ledger         |               | members, refresh_tokens;        | |
-|                                              |                    |               | later: plans, daily_runs        | |
-|                                              +--------------------+               +---------------------------------+ |
-+-- AWS, eu-west-1 (Ireland), in CDK; Agent and App API: one image (Node, git, hledger); Auth, Webhooks: plain Node ----+
++-----------------+     +-----------------------------------+ token +---------------+
+| RevenueCat      |     | iOS APP (Expo, React Native)      | <---- | Sign in with  |
+| StoreKit 2      |     | chat with tool steps              |       | Apple         |
++-----------------+     | Transactions, Net worth, export   |       +---------------+
+         |              | photos, Files, share sheet        |
+         | webhook      | paywall                           |
+         |              +-----------------------------------+
+         |                  |               |           |
+         |                  | chat          |           |
+         |                  v               |           |
+         |    +--------------------------+  | pages,    | sign-in, refresh,
+         |    | AGENT SERVER             |  | export,   | logout, delete
+         |    | LangSmith, EU            |  | invites   |
+         |    | deepagents, our JWT      |  |           |
+         |    | chats, runs, traces      |  |           |
+         |    +--------------------------+  |           |
+         |        | prompts         |       |           |
+         |        v                 |       |           |
+         |  +---------------------+ | tool  |           |
+         |  | Bedrock (AWS, EU)   | | calls |           |
+         |  | Claude              | |       |           |
+         |  +---------------------+ |       |           |
++--------|--------------------------|-------|-----------|----------------------------------------+
+|        |                          |       |           |                                        |
+|        v                          v       v           v                                        |
+|  +-----------------------------------------------+  +----------------------------+             |
+|  | API WORKER                                    |  | AUTH WORKER                |             |
+|  | tools, saves, pages, export, invites,         |  | sign-in, refresh, logout,  |             |
+|  | webhooks, the check before a run              |  | account deletion, JWKS     |             |
+|  +----------------|----------------------------|-+  +---------------|------------+             |
+|                   |                            |                    |                          |
+|                   |                            |                    |                          |
+|                   v                            v                    v                          |
+|  +------------------------------------------+ +---------------------------------------------+  |
+|  | LEDGER (Durable Object, one per ledger)  | | D1 (SQLite)                                 |  |
+|  | current version, save queue,             | | users, identities, refresh_tokens,          |  |
+|  | sandboxes, cached pages, save log        | | ledgers, members, plans, daily_runs,        |  |
+|  +------------------------------------------+ | webhook_events                              |  |
+|        |                |              |      +---------------------------------------------+  |
+|        v                v              v                                                       |
+| +--------------+ +--------------+ +-----------+                                                |
+| | SANDBOX      | | CHECKER      | | R2        |                                                |
+| | container,   | | same image,  | | bundle,   |                                                |
+| | one per chat | | no AI code,  | | pages per |                                                |
+| | no internet  | | hledger, git | | version   |                                                |
+| +--------------+ +--------------+ +-----------+                                                |
++-- Cloudflare, EU jurisdiction; one container image (git, hledger, ledger CLI) -----------------+
 ```
 
 ### Storage
 
 ```
--- S3 bucket "a24-books" (eu-west-1, versioning on)
-ledgers/<ledger_id>/books.bundle   -- the whole git repo at the latest commit
-                                   -- metadata: commit=<sha>; replaced only with If-Match
-                                   -- older versions expire 30 days after they are replaced
+-- R2 bucket "a24-books" (EU jurisdiction)
+ledgers/<ledger_id>/versions/<n>.bundle   -- the whole git repo at version n; written once, never changed
+ledgers/<ledger_id>/versions/<n>/pages/   -- Transactions, Net worth and pickers as JSON for version n
+                                          -- versions older than 30 days are deleted, never the current one
 
--- DynamoDB, on-demand
+-- Ledger Durable Object, one per ledger, with its own SQLite
+current version · save queue · running sandboxes · save log
+
+-- D1 "a24" (EU jurisdiction)
 users           user_id · created_at                                   -- our own ID, never a provider's
-identities      provider#sub · user_id · refresh_token                 -- one row per sign-in method: apple now, google later
+identities      provider · sub · user_id · refresh_token               -- unique (provider, sub); apple now, google later
+refresh_tokens  token_hash · user_id · family_id · used · expires_at   -- hashes only; each works once
 ledgers         ledger_id · owner_user_id · created_at                 -- one per user at first; shared ledgers later
 members         ledger_id · user_id · role                             -- owner, editor, viewer; the owner's row at first
 plans           user_id · plan · renews_at                             -- from RevenueCat, from public launch
 daily_runs      user_id · day · count                                  -- hidden daily cap, from public launch
-refresh_tokens  token_hash · user_id · family_id · used · expires_at   -- hashes only; each works once
 webhook_events  event_id · received_at                                 -- RevenueCat events already handled, from public launch
 ```
 
-A git bundle is the whole repo, history included, in one file. It stays a few MB for years because uploads never go into git. Chats and traces live in LangSmith in the Netherlands; everything else stays in Ireland.
+A git bundle is the whole repo, history included, in one file. It stays a few MB for years because uploads never go into git. The user ID is always our own, never Apple's, and user and ledger are separate IDs, so Google sign-in and shared ledgers need no data migration. Chats and traces live in LangSmith in the Netherlands; the model runs on Bedrock in the EU; everything else stays in Cloudflare's EU jurisdiction.
 
 ### Chat history
 
@@ -109,7 +111,7 @@ Summarization is off, so a thread always keeps every message. When a chat nears 
 What happens when a user sends a photo of a receipt and asks the agent to record it. Time runs from top to bottom, and each arrow is one message between two parts of the system. r41 and r42 are versions of the user's books.
 
 ```
-iPhone           Agent server          Sandbox              Agent API            Bedrock
+iPhone           Agent server          Sandbox              Ledger               Bedrock
   |                   |                   |                      |                   |
   | 1 "log receipt"   |                   |                      |                   |
   |   + photo ------->|                   |                      |                   |
@@ -122,8 +124,8 @@ iPhone           Agent server          Sandbox              Agent API           
   |                   |                   |   hledger check,     |                   |
   |                   |                   |   git commit         |                   |
   |                   |                   |<-- 7 read the repo --|                   |
-  |                   |                   |                      | 8 check again,    |
-  |                   |                   |                      |   save r42 to S3  |
+  |                   |                   |                      | 8 checker checks, |
+  |                   |                   |                      |   save r42 to R2  |
   |                   |<- 9 "saved r42" -------------------------|                   |
   |                   |-- 10 tool result ------------------------------------------->|
   |                   |<- 11 final reply --------------------------------------------|
@@ -133,12 +135,12 @@ iPhone           Agent server          Sandbox              Agent API           
 1. The user sends a photo of a receipt with a short message.
 2. The agent server sends the chat and the photo to Claude on Bedrock.
 3. Claude answers with a tool call: add this transaction.
-4. The agent server asks the Agent API to run that tool.
-5. It's the chat's first tool, so the Agent API starts a sandbox and copies the user's books into it (version r41).
+4. The agent server asks the API Worker to run that tool, and the API Worker passes it to the ledger's Durable Object.
+5. It's the chat's first tool, so the Ledger starts a sandbox and copies the books into it (version r41).
 6. In the sandbox, the tool writes the journal entry, checks the ledger with hledger, and commits it with git.
-7. The Agent API reads the packed repo out of the sandbox. The sandbox can't send anything itself: the Agent API runs a command there that prints the file, and reads the output.
-8. The Agent API checks it again and saves it to S3 as version r42. This is the only moment the books change.
-9. The Agent API tells the agent server the save worked.
+7. The Ledger reads the packed repo out of the sandbox. The sandbox can't send anything itself: it has no internet.
+8. The checker, a second container that never runs model code, checks the repo again and computes the pages. The Ledger writes version r42 to R2 and points to it. This is the only moment the books change.
+9. The Ledger tells the agent server the save worked.
 10. The agent server gives the tool's result back to Claude.
 11. Claude writes the final reply.
 12. The phone shows the reply.
@@ -147,38 +149,39 @@ The phone sees each step as it happens, so the user watches the progress. When t
 
 ## How it works
 
-**The API service.** Four stateless Lambda functions from one TypeScript codebase. The Agent API and the App API need git and hledger, so they share one container image with a different entry point each; Auth and Webhooks need neither, so they run on Lambda's plain Node runtime as small bundles, which start faster and get runtime patches from AWS. They are split by caller, so each gets only the access it needs, and each has its own function URL, timeout and concurrency limit, so a busy agent can't slow pages or sign-in, and the code that reads users' files never holds the signing key. Each request works in its own temporary folder.
+**Workers, the Ledger and D1.** Two Workers are the only doors in. Records live in D1, one SQLite database with normal tables. Live work on a ledger goes through its Durable Object: one small program per ledger with its own SQLite, which Cloudflare runs as exactly one copy, handles requests in order, and puts to sleep when idle. It exists because a ledger needs a save queue, running sandboxes and timers, which a table can't hold. The Ledger class lives in the API Worker; the Auth Worker reaches it through a binding.
 
-| Function  | Called by                                             | Does                                                               | Access                                                                                                                                                                                 |
-| --------- | ----------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth      | the phone: Apple's token, a refresh token, or our JWT | sign-in, refresh, logout, account deletion, the public keys (JWKS) | DynamoDB `users`, `identities`, `refresh_tokens`, `ledgers`, `members` (read and write); the private signing key; deleting the user's own ledgers in S3 and their threads in LangSmith |
-| App API   | the phone, with our JWT                               | pages, export, invites                                             | DynamoDB `ledgers`, `members` (read and write), `plans` (read); books in S3 (read)                                                                                                     |
-| Agent API | the agent server, with a service token                | commands and files in the sandbox, saves, the check before a run   | AgentCore; books in S3 (read, conditional write); DynamoDB `members`, `ledgers`, `plans` (read), `daily_runs` (read and write)                                                         |
-| Webhooks  | RevenueCat, with its webhook secret                   | subscription changes                                               | DynamoDB `plans`, `webhook_events` (write)                                                                                                                                             |
+| Part          | Called by                                                                                        | Does                                                                | Holds or reaches                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth Worker   | the phone: Apple's token, a refresh token, or our JWT                                            | sign-in, refresh, logout, account deletion, the public keys (JWKS)  | the private signing key; D1 `users`, `identities`, `refresh_tokens`, `ledgers`, `members`; creates and deletes Ledger objects; a LangSmith key to delete threads |
+| API Worker    | the phone with our JWT; the agent server with a service secret; RevenueCat with a webhook secret | pages, export, tools and saves, the check before a run, webhooks    | Ledger objects; D1 `members`, `plans`, `daily_runs`, `webhook_events`; the service and webhook secrets; Auth's public keys                                       |
+| Ledger object | the API and Auth Workers                                                                         | the current version, saves one at a time, the chat sandboxes, pages | R2, the sandbox and checker containers, D1 `members`                                                                                                             |
 
-Only the Agent API writes books to S3. On every call it checks `members`: the user must belong to the ledger, and only owners and editors can save. Before a run starts, the agent server's custom auth asks the Agent API whether the user may run (a plan, from launch, and room under the daily cap). Only Auth holds the private signing key and `identities`, where the Apple refresh tokens live. The other functions and the agent server fetch the public keys from Auth's `/.well-known/jwks.json`, cache them, and check tokens themselves, refetching when a token names a key they don't know; nobody calls Auth to check a token.
+Only the Ledger writes books to R2. Before a run, the agent server's custom auth asks the API Worker whether the user may run: D1 has the plan (from launch), the daily count and the membership. On every tool call the Ledger checks `members` in D1 that the user belongs to it, and only owners and editors can save.
 
-**Sign-in.** The app signs in with `expo-apple-authentication`. The Auth function checks Apple's identity token against Apple's public keys, exchanges the authorization code for a refresh token, stores it in `identities` against our own `user_id` (a new user also gets a `ledgers` row and an owner `members` row), and issues a one-hour JWT and a refresh token (see Auth); the agent server's custom auth verifies that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), cancels the refresh tokens, then deletes the ledgers they own, their threads and their rows.
+**Sign-in.** The app signs in with `expo-apple-authentication`. The Auth Worker checks Apple's identity token against Apple's public keys and exchanges the authorization code for Apple's refresh token. It finds the user in `identities`, where `(provider, sub)` is unique, so two sign-ins at the same moment still create one user. A new user also gets rows in `users`, `ledgers` and `members` (as owner), and a Ledger object. Auth then issues a one-hour JWT and a refresh token (see Auth); the agent server's custom auth and the API Worker verify that JWT. Deleting the account revokes the Apple token (App Store rule 5.1.1(v)), cancels the refresh tokens, stops the sandboxes, deletes the ledgers the user owns with their R2 files and objects, their threads, and their rows.
 
-**Identity.** The user ID comes only from our verified JWT, never from the request or the model. Every request names a ledger, and the server serves it only if `members` lists that user for it; every storage path is built from that ledger ID. Cross-user tests in CI check that one user can't reach another's ledger. Each user has one ledger at first, but user and ledger stay separate IDs so shared ledgers need no migration.
+**Identity.** The user ID comes only from our verified JWT, never from the request or the model. Every request names a ledger, and the Ledger serves it only if `members` lists that user for it; every storage path is built from that ledger ID. Cross-user tests in CI check that one user can't reach another's ledger. Each user has one ledger at first.
 
-**The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the Agent API starts a session on the new AgentCore Runtime (GA in Ireland since September 2026, starts in about 2 seconds) with our image: hledger, git and the ledger program. It copies the user's `books.bundle` in and runs `git clone`, so the first tool waits about 2–3 seconds. Later tools reuse the session until it stops after 10 idle minutes. The sandbox is only a working copy. It has no internet and no credentials, and a change counts only once the Agent API has saved it.
+**The sandbox.** Opening a chat starts nothing. On the agent's first tool call, the Ledger starts a container for that chat from our image: hledger, git and the ledger program, with internet off. Cloudflare's median start is about 0.65 seconds; with copying the current bundle in and `git clone`, the first tool waits about 1–2 seconds. Later tools reuse the container; the Ledger stops it after 10 idle minutes. The sandbox is only a working copy, it holds no credentials, and a change counts only once the Ledger has saved it.
 
-**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three calls to the Agent API: run a command, upload a file, download a file. The Agent API runs them with `InvokeAgentRuntimeCommand` under its own AWS role, and retries a command that gets a 409 because the session is still starting or stopping. Ledger tools are thin wrappers around the ledger program.
+**Tools.** The agent loop runs on LangSmith, and every tool runs in the sandbox. Our deepagents connector turns the file tools and `execute` into three calls to the API Worker: run a command, upload a file, download a file. The API Worker forwards each to the Ledger, which runs it in the chat's container. Ledger tools are thin wrappers around the ledger program.
 
-**Saving.** The Agent API saves; the sandbox never writes to S3.
+**Saving.** The Ledger saves; the sandbox never writes to R2. Saves for one ledger wait in the Ledger's queue and run one at a time.
 
-1. `commit_and_push` asks the Agent API to save. The Agent API runs `git commit` and `git bundle create books.bundle --all` in the sandbox.
-2. It reads the bundle out with a second command that prints the file, and clones it into a temporary folder. Copying books in works the same way in reverse: the file goes in with a command.
-3. It runs two checks. The last saved commit, stored as metadata on the S3 object, must be an ancestor of the new `main`. And `hledger check --strict` must pass. The sandbox already ran the same check, but it runs model-written code, so the server checks again.
-4. It uploads the file to S3 with `If-Match` on the version the sandbox cloned, so the write fails if another chat saved first. S3 versioning keeps the previous bundle.
-5. If the write fails, the save returns "the books changed in another chat". The Agent API copies the latest books into the sandbox, and the agent redoes its change.
+1. `commit_and_push` asks the API Worker to save. The Ledger runs `git commit` and `git bundle create books.bundle --all` in the sandbox and reads the bundle out.
+2. The checker (started if asleep) runs two checks. The current version's commit must be an ancestor of the new `main`. And `hledger check --strict` must pass. The sandbox already ran the same check, but it runs model-written code, so a container that never does checks again.
+3. The checker runs the page commands on the new version.
+4. The Ledger writes the bundle and the pages to R2 as version r42, then moves its pointer to r42. Moving the pointer is the save.
+5. If another chat saved since this sandbox copied the books, the ancestry check fails and the save returns "the books changed in another chat". The Ledger copies the latest books into the sandbox, and the agent redoes its change.
 
-Commits carry the chat and run IDs, so "undo the last change" reverts exactly that run with `git revert`.
+Commits carry the chat and run IDs, so "undo the last change" reverts exactly that run with `git revert`. A daily alarm in the Ledger deletes versions older than 30 days, never the current one; restoring an older version is moving the pointer back.
 
 **Documents.** Photos and PDFs go straight to Claude in the message; Claude reads PDFs natively. CSV and other text files go in as plain text. Files never reach the sandbox, and only the chat history keeps them.
 
 **Skills.** Skills are instructions only: `SKILL.md` files in the books repo. The built-in ones ship with the app, and users can create their own in chat.
+
+**Data changes.** D1 changes are numbered SQL files applied with `wrangler d1 migrations` on deploy. The Ledger's own small SQLite migrates itself: numbered steps run in its constructor inside `blockConcurrencyWhile`, before it handles any request, so the code only ever sees the current shape. An idle Ledger migrates when it next wakes, even months later, so shipped steps are never edited or removed; tests run them with `@cloudflare/vitest-pool-workers` over real SQLite. A change that must reach every Ledger at once walks the `ledgers` table and wakes each one. New, renamed or deleted object classes are declared in the wrangler config. Changes go in two releases, add first and remove later, so a rollback still works. Changes to the books themselves reuse the desktop workspace migrations, run by the checker.
 
 ## Auth
 
@@ -187,55 +190,54 @@ Two rules carry most of the security: the model never picks the user or the ledg
 **From the start:**
 
 - **Apple sign-in.** The app sends Apple the hash of a one-time nonce and sends Auth the nonce itself. Auth checks Apple's signature against Apple's public keys, the nonce, the issuer, our bundle ID as the audience, and the expiry.
-- **Our tokens.** A login JWT that lasts one hour, and an opaque refresh token that lasts 90 days and works once. A JWT can't be taken back, so it stays short; the refresh token is checked against `refresh_tokens` on every use, so logout, deletion or a stolen phone cancels it. The app keeps the JWT in memory and the refresh token in the Keychain (`expo-secure-store`, this device only). A refresh token used twice cancels all of that user's refresh tokens.
-- **One signing key pair (ES256).** Auth signs with the private key from Secrets Manager; everyone else gets only the public key from Auth's JWKS, so they can check tokens but never make them. Every key has a `kid` from day one.
+- **Our tokens.** A login JWT that lasts one hour, and an opaque refresh token that lasts 90 days and works once. A JWT can't be taken back, so it stays short; the refresh token is checked against `refresh_tokens` on every use (`UPDATE ... WHERE used = 0`, so exactly one request wins), so logout, deletion or a stolen phone cancels it. The app keeps the JWT in memory and the refresh token in the Keychain (`expo-secure-store`, this device only). A refresh token used twice cancels all of that user's refresh tokens.
+- **One signing key pair (ES256).** Auth signs with the private key, kept as a secret of the Auth Worker only. Everyone else gets only the public key from Auth's JWKS (the API Worker through a service binding, LangSmith over HTTPS), caches it, and refetches when a token names a key it doesn't know, so they can check tokens but never make them. Every key has a `kid` from day one.
 - **Audience.** Each JWT names the one service it's for, and every service rejects the others'.
 - **The model never picks the user or the ledger.** Tools take them from the user the agent server's custom auth verified (`langgraph_auth_user`), never from tool arguments, so a document that tricks the model still can't reach another ledger.
-- **Agent server to Agent API.** A long random service secret, kept in Secrets Manager and LangSmith's secrets, sent as a header.
+- **Agent server to API Worker.** A long random service secret, kept as a Worker secret and in LangSmith's secrets, sent as a header.
 - **No secrets in logs or traces.** Tokens never go into graph state, tool arguments or the sandbox, and LangSmith hides them from traces.
 - **Webhooks, from the public launch.** RevenueCat sends a secret header, and the webhook skips events already in `webhook_events`.
 
 **Later, before the public launch or shared ledgers:**
 
-- **A run token.** Before a run, the Agent API checks the user's JWT, plan, cap and membership, and returns a JWT bound to that user, ledger and chat for about an hour. Tool calls carry it, and the Agent API takes the user and ledger only from it, so a leaked service secret alone opens nothing.
+- **A run token.** Before a run, the API Worker checks the user's JWT, plan, cap and membership, and returns a JWT bound to that user, ledger and chat for about an hour. Tool calls carry it, and the Ledger takes the user and ledger only from it, so a leaked service secret alone opens nothing.
 - **Signed requests** from the agent server, with a timestamp, instead of the fixed secret, and a check against LangSmith's EU outbound IPs.
-- **The signing key in AWS KMS,** and a routine for rotating it.
+- **A routine for rotating the signing key.**
 - **Apple's server-to-server notifications,** to catch users who disconnect the app from their Apple ID.
 - **RevenueCat's signature check,** and reading the subscription from RevenueCat's API after each event.
 
 ## Pages
 
-To serve a page, the App API checks the token and the user's membership, downloads the ledger's `books.bundle` into a temporary folder, runs hledger, and parses the output with `ledger-json.ts`. There is no cache, so pages always show the latest save.
+Pages are computed once per version, when the checker saves it, and stored in R2 next to the bundle. To serve a page, the API Worker checks the token, the Ledger checks membership and returns the pages of its current version, and the API Worker filters Transactions by date range. Pages always show the latest save, and no page ever starts a container.
 
 | Page                 | hledger command                                         |
 | -------------------- | ------------------------------------------------------- |
-| Transactions         | `hledger print -O json`, limited by date range          |
+| Transactions         | `hledger print -O json`                                 |
 | Net worth            | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
 | Mentions, pickers    | `hledger accounts`, `payees`, `tags`                    |
 
-Pages refetch when the chat reports a save and when the app returns to the foreground.
+Export returns the current bundle as a git repo, or a zip the checker makes with `git archive`. Pages refetch when the chat reports a save and when the app returns to the foreground.
 
 ## Infrastructure as code
 
-One CDK app in TypeScript and one AWS account with dev and prod stacks. GitHub Actions deploys over OIDC.
+Everything on Cloudflare is declared in wrangler config in the repo, one `wrangler.jsonc` per Worker, with dev and prod environments. GitHub Actions deploys with `wrangler deploy` and a scoped API token. There is no network to set up.
 
-| Stack   | What it creates                                                                                                                                                                                                                                                                     |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Network | VPC with private subnets for the sandboxes only; no NAT gateway, no endpoints (the API runs outside the VPC)                                                                                                                                                                        |
-| Data    | Versioned books bucket with the 30-day rule and AWS default encryption (kept on stack delete); DynamoDB tables from the beta                                                                                                                                                        |
-| Sandbox | Sandbox image in ECR, AgentCore Runtime (new runtime version, stable `aws-cdk-lib` constructs) in private subnets with no network access                                                                                                                                            |
-| API     | Agent API and App API from one container image in ECR; Auth and Webhooks as Node functions bundled with esbuild; each with its own function URL, role, timeout and concurrency limit; the JWT signing key in Secrets Manager, readable by Auth only; the AWS Budgets alarm on spend |
+| Piece       | What it declares                                                                                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API Worker  | routes; the Ledger object class; the R2 bucket; the D1 database and its migrations; the container image (sandbox and checker, `durable_object` scheduling, internet off); the service and webhook secrets                       |
+| Auth Worker | routes; a binding to the Ledger class; the D1 database; the private signing key as a secret                                                                                                                                     |
+| Storage     | the R2 bucket and D1 database in the EU jurisdiction                                                                                                                                                                            |
+| AWS         | Bedrock model access, a Bedrock API key for LangSmith limited to the chosen model, and a budget alarm                                                                                                                           |
 
 ## Costs and unit economics
 
-|                                          | Before launch                   | At launch                             |
-| ---------------------------------------- | ------------------------------- | ------------------------------------- |
-| LangSmith (agent server)                 | $39 (Serverless, beta included) | ≈ $430 (Dedicated)                    |
-| AWS base (Lambda, logs)                  | ≈ $0–5                          | ≈ $20–60                              |
-| S3, DynamoDB                             | ≈ $1                            | ≈ $5–20 at 10k users                  |
-| Sandboxes (AgentCore, per second of use) | usage                           | ≈ $500–1,500 at 10k users             |
-| RevenueCat, Expo, Sentry, PostHog        | $0                              | $0–50                                 |
-| **Total**                                | **≈ $40–50**                    | **≈ $450–550** + model + sandbox time |
+|                                            | Before launch                   | At launch                             |
+| ------------------------------------------ | ------------------------------- | ------------------------------------- |
+| LangSmith (agent server)                   | $39 (Serverless, beta included) | ≈ $430 (Dedicated)                    |
+| Cloudflare (Workers Paid, objects, R2, D1) | ≈ $5                            | ≈ $20–60                              |
+| Sandboxes (Containers, per use)            | usage                           | measure in the spike                  |
+| RevenueCat, Expo, Sentry, PostHog          | $0                              | $0–50                                 |
+| **Total**                                  | **≈ $45–50**                    | **≈ $450–550** + model + sandbox time |
 
 The unit economics below are per subscriber per month. They assume 80 messages with 3 model calls each, 20k tokens of context per call with 75% served from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; model prices are each model's EU route, 10–20% above its global or US price: Claude, Nova, Qwen and Kimi on Bedrock, GPT on OpenAI's EU API, Gemini on Vertex's EU endpoint. Qwen and Kimi have no prompt caching on Bedrock, so they pay full price for the whole context.
 
@@ -269,6 +271,8 @@ The alternatives, all with image input for receipts:
 
 Sonnet 5.5 may do better than its column: reports say it needs up to 30% fewer tokens per task, which would lift its margin at $9.99 to about 17%. It may also do worse: its newer tokenizer turns the same text into about 30% more tokens than Haiku 4.5's. The evals should measure real token counts.
 
+The sandbox, platform and storage lines were estimated for AWS; Cloudflare's list prices for containers are lower, so they are an upper bound until the spike measures real usage.
+
 Tokens are about 80% of all costs. The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model, and the price.
 
 TestFlight and the invite-only beta run with no usage limit, under a fair-use clause. Before the public launch, add a hidden daily cap of about 200 messages per user and the Bedrock budget alarm.
@@ -297,53 +301,54 @@ TestFlight and the invite-only beta run with no usage limit, under a fair-use cl
 - App help pages
 - Shared ledgers: invite links that add a `members` row, roles, Family Sharing on the subscription
 - Widgets and Siri
-- Live page updates across devices
+- Live page updates across devices, pushed by the Ledger over WebSockets
 - Long chats with summarization, plus a separate `ui_messages` display copy
 
 **Later, in the tech, when needed:**
 
-- Page caching keyed by commit
 - Starting the sandbox when a chat opens
 - Automatic rebase for parallel saves
 - A path allowlist on saves
 - A `pdftotext` path for cheaper statements
 - Different models for different tasks
 - A monthly limit or per-dollar metering
-- AWS credentials scoped to one user per request
-- A separate prod account and our own KMS key
-- Agent hosting on AgentCore instead of LangSmith
+- A separate Cloudflare account for prod
+- The agent loop in a Durable Object (Cloudflare Agents SDK) instead of LangSmith, which would also remove the service secret and run tokens
 
 **Dropped:** provider, model and Ollama settings.
 
 ## Risks and things to verify
 
 - **Switching from pi to deepagents is the biggest risk.** The prompt was tuned on pi, so build the eval set and record pi's baseline first.
-- **Pin versions.** deepagents ships almost weekly. hledger must be the same version in both images; it's GPL, which is fine on servers but rules it out inside the iOS app. Pin the new AgentCore runtime version.
+- **Cloudflare's new container setup is a public beta.** The `durable_object` scheduling policy launched on 30 September 2026, and the older Container and Sandbox classes get updates only until 31 December 2026. Build on the new API, and prove it in the Phase 0 spike.
+- **Confirm with Cloudflare** that containers under the new setup, R2 and D1 all run in the EU jurisdiction (D1 holds all user records); container prices and limits; how files move in and out of a container and how large they may be; and point-in-time recovery for Durable Object storage.
+- **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, and Bedrock's size limit for PDFs.
 - **Confirm with LangSmith** that the Serverless deployment is enough for the beta and runs in the EU. Dedicated, for launch, is a new deployment.
-- **Confirm with AWS** that Sonnet 5.5 and Haiku 4.5 are on the EU profile from Ireland, AgentCore's prices and session quota (fallback: Daytona), AgentCore's size limits on command input and output, since bundles travel through them (fallback: read in chunks, or serve upload and download from the sandbox's `/invocations` endpoint), and Bedrock's size limit for PDFs.
-- **Lambda cold starts may slow pages.** Measure them; add provisioned concurrency, or fall back to Fargate behind a load balancer.
+- **Pin versions.** deepagents ships almost weekly. hledger is pinned in the one image the sandbox and checker share; it's GPL, which is fine on servers but rules it out inside the iOS app. Pin the Workers compatibility date.
+- **Every save starts or wakes the checker.** Measure save time in the spike; keep the checker warm while a ledger has active chats if it's slow.
+- **Deploys restart Durable Objects,** and a request in flight can fail. Make tool calls and saves safe to retry.
 - **Receiving shared files needs an iOS share extension** (`expo-share-intent`). Budget a few days and test with statements shared from real bank apps.
 - **assistant-ui React Native with the LangGraph runtime is undocumented.** Prototype it first, using `expo/fetch` for streaming.
 - **LangSmith traces are full copies of users' books.** Sample them, keep retention short, and keep the workspace to one person.
 - **Statements are the priciest messages.** A 10-page PDF is about 20–30k input tokens, so cap pages and size per upload.
-- **Measure hledger on a ten-year ledger**, and page Transactions by date range.
+- **Measure hledger on a ten-year ledger**, including the size of the Transactions page JSON.
 
 ## Launch checklist
 
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that revokes the Apple token and reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
-- **Privacy:** policy and terms; processor agreements with AWS, LangSmith, RevenueCat, Sentry, PostHog; a DPIA; check where RevenueCat keeps data; privacy label.
+- **Privacy:** policy and terms; processor agreements with Cloudflare, AWS, LangSmith, RevenueCat, Sentry, PostHog; a DPIA; check where RevenueCat keeps data; privacy label.
 - **Security:** cross-user tests in CI that must fail; logs with IDs only, never content; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger and git run.
-- **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Budgets alarms and a switch that pauses new runs.
-- **Operations:** a tested restore from an older S3 version; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger GPL).
+- **Cost control:** hidden daily cap per user, cap on model calls per run, cache-friendly prompt order (context block last), Cloudflare usage notifications, the Bedrock budget alarm, and a switch that pauses new runs.
+- **Operations:** a tested restore by moving a ledger back to an older version; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger GPL).
 
 ## Build order
 
-| Phase                 | Time        | Work                                                                                                                                                                                      | Done when                                                                    |
-| --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; AWS account and CDK Network and Data stacks; pick one model on Bedrock | Ledger program tests pass, `cdk deploy` works in dev, baseline numbers exist |
-| 1 · Cloud agent       | ≈ 3–4 weeks | Agent API (tools, saves with checks), Auth (sign-in, refresh), App API (pages); sandbox image, AgentCore, connector; deepagents graph on LangSmith with ledger tools                                                 | Evals match pi, concurrent saves never lose a change, cross-user tests pass  |
-| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, export, delete account                                                                                                         | You keep your own books on the phone for two weeks                           |
-| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, DynamoDB with plans and the daily cap, RevenueCat and its webhook, paywall, consent screen, privacy label, legal entity, App Review, prod stacks                                                                                      | Live, first renewal goes through                                             |
+| Phase                 | Time        | Work                                                                                                                                                                                                                                                         | Done when                                                                                                                       |
+| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| 0 · Groundwork        | ≈ 2 weeks   | Eval set and pi baseline; delete desktop, website, docs, demos from the fork; ledger code as a command-line program; Cloudflare dev environment; a spike: one Ledger object with a sandbox and the checker in the EU jurisdiction; pick one model on Bedrock | Ledger program tests pass, `wrangler deploy` works in dev, the spike's first-tool and save times and the baseline numbers exist |
+| 1 · Cloud agent       | ≈ 3–4 weeks | API Worker and Ledger object (tools, saves with checks, pages); Auth Worker and the D1 tables; sandbox image, connector; deepagents graph on LangSmith with ledger tools                                                                                     | Evals match pi, concurrent saves never lose a change, cross-user tests pass                                                     |
+| 2 · App on TestFlight | ≈ 4–6 weeks | Sign in, chat, attachments, share extension, Transactions, Net worth, export, delete account                                                                                                                                                                 | You keep your own books on the phone for two weeks                                                                              |
+| 3 · Launch            | ≈ 2–3 weeks | Dedicated LangSmith deployment, plans and the daily cap in D1, RevenueCat and its webhook, paywall, consent screen, privacy label, legal entity, App Review, prod environment                                                                                | Live, first renewal goes through                                                                                                |
 
 ## Decisions for you
 
