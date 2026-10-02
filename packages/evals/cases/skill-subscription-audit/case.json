@@ -1,0 +1,20 @@
+{
+  "id": "skill-subscription-audit",
+  "tags": [
+    "query",
+    "skill"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "/skill:accountant24-skills:subscription-audit"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "streamflix",
+      "cloudbox"
+    ]
+  }
+}

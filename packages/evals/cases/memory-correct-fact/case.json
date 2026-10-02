@@ -1,0 +1,22 @@
+{
+  "id": "memory-correct-fact",
+  "tags": [
+    "memory"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Correction: Sparkle Cleaning comes every week now, not every second Thursday."
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "memory": [
+      "sparkle[^\\n]*(every week|weekly)"
+    ],
+    "memoryReplaces": [
+      "sparkle"
+    ],
+    "memoryMaxAdded": 0
+  }
+}

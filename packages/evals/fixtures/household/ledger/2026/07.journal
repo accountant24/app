@@ -1,0 +1,189 @@
+2026-07-01 * Brightwave GmbH | salary
+    ; original_payee_name: BRIGHTWAVE GMBH GEHALT
+    ; related_file: files/2026/08/20260801090412.pdf
+    Income:Salary                                                   -3850.00 EUR
+    Assets:Bank:Lumen                                                3850.00 EUR
+
+2026-07-01 * BVG | monthly ticket
+    ; original_payee_name: BVG ABO MONATSKARTE
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -58.00 EUR
+    Expenses:Transport                                               58.00 EUR
+
+2026-07-01 * Hausverwaltung Ostpark | rent
+    Assets:Bank:Stadtbank                                           -1250.00 EUR
+    Expenses:Housing                                                 1250.00 EUR
+
+2026-07-01 * Opening Balance
+    Liabilities:Credit Card:Stadtbank Visa                          -320.50 EUR
+    Equity:Opening Balances                                         -6879.50 EUR
+    Equity:Opening Balances                                         -12500.00 UAH
+    Assets:Bank:Lumen                                                1200.00 EUR
+    Assets:Bank:Stadtbank                                            2850.00 EUR
+    Assets:Bank:Dnipro Bank                                          12500.00 UAH
+    Assets:Cash:Wallet                                               120.00 EUR
+    Assets:Cash:Home                                                 400.00 EUR
+    Assets:Investments:Tradeview                                     150.00 EUR
+    Assets:Investments:Tradeview                                     20.0000 VWCE @@ 2480.00 EUR
+
+2026-07-02 * Internal Transfer | my share of rent and bills
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -1000.00 EUR
+    Assets:Bank:Stadtbank                                            1000.00 EUR
+
+2026-07-03 * Internal Transfer | top-up UAH account
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -95.00 EUR
+    Assets:Bank:Dnipro Bank                                          4150.00 UAH @@ 95.00 EUR
+
+2026-07-03 * NetzPlus | internet
+    Assets:Bank:Stadtbank                                           -39.99 EUR
+    Expenses:Utilities                                               39.99 EUR
+
+2026-07-04 * Frischmarkt
+    ; original_payee_name: FRISCHMARKT FIL.112 BERLIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -64.20 EUR
+    Expenses:Food                                                    64.20 EUR
+
+2026-07-05 * Internal Transfer | savings plan
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -200.00 EUR
+    Assets:Investments:Tradeview                                     200.00 EUR
+
+2026-07-05 * Stromwerk Berlin | electricity
+    Assets:Bank:Stadtbank                                           -85.00 EUR
+    Expenses:Utilities                                               85.00 EUR
+
+2026-07-06 * Tradeview | savings plan buy
+    Assets:Investments:Tradeview                                    -189.60 EUR
+    Assets:Investments:Tradeview                                     1.5000 VWCE @@ 189.60 EUR
+
+2026-07-07 * Internal Transfer | ATM
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -100.00 EUR
+    Assets:Cash:Wallet                                               100.00 EUR
+
+2026-07-08 * Bio Corner
+    ; original_payee_name: BIO CORNER FRIEDRICHSHAIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -23.40 EUR
+    Expenses:Food                                                    23.40 EUR
+
+2026-07-09 * Kaffeebar Ost
+    ; original_payee_name: KAFFEEBAR OST
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -4.20 EUR
+    Expenses:Food                                                    4.20 EUR
+
+2026-07-10 * StreamFlix
+    ; original_payee_name: STREAMFLIX.COM
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -12.99 EUR
+    Expenses:Subscriptions                                           12.99 EUR
+
+2026-07-11 * Frischmarkt
+    ; original_payee_name: FRISCHMARKT FIL.112 BERLIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -51.85 EUR
+    Expenses:Food                                                    51.85 EUR
+
+2026-07-12 * Olena Marchenko | for mom
+    Assets:Bank:Dnipro Bank                                         -4000.00 UAH
+    Expenses:Gifts & Donations                                       4000.00 UAH
+
+2026-07-13 * Trattoria Sole | dinner
+    ; original_payee_name: TRATTORIA SOLE SRL
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -46.80 EUR
+    Expenses:Food                                                    46.80 EUR
+
+2026-07-14 * Wochenmarkt
+    Assets:Cash:Wallet                                              -18.50 EUR
+    Expenses:Food                                                    18.50 EUR
+
+2026-07-15 * CloudBox
+    ; original_payee_name: CLOUDBOX STORAGE
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -2.99 EUR
+    Expenses:Subscriptions                                           2.99 EUR
+
+2026-07-16 * Buchhandlung Seitenweise
+    ; original_payee_name: BUCHHANDLUNG SEITENWEISE
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -24.90 EUR
+    Expenses:Education                                               24.90 EUR
+
+2026-07-16 * Kaffeebar Ost
+    ; original_payee_name: KAFFEEBAR OST
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -7.80 EUR
+    Expenses:Food                                                    7.80 EUR
+
+2026-07-18 * Frischmarkt
+    ; original_payee_name: FRISCHMARKT FIL.112 BERLIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -72.40 EUR
+    Expenses:Food                                                    72.40 EUR
+
+2026-07-18 * Lviv Mobile | phone plan
+    Assets:Bank:Dnipro Bank                                         -250.00 UAH
+    Expenses:Utilities                                               250.00 UAH
+
+2026-07-19 * Apotheke am Park
+    Liabilities:Credit Card:Stadtbank Visa                          -23.80 EUR
+    Expenses:Health                                                  23.80 EUR
+
+2026-07-20 * Internal Transfer | PayPal top-up for Secondhand Loop
+    ; link: secondhand-loop-2026-07-20
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -35.00 EUR
+    Assets:PayPal                                                    35.00 EUR
+
+2026-07-20 * Secondhand Loop | jacket
+    ; link: secondhand-loop-2026-07-20
+    Assets:PayPal                                                   -35.00 EUR
+    Expenses:Shopping                                                35.00 EUR
+
+2026-07-21 * Spaeti Eck
+    Assets:Cash:Wallet                                              -6.40 EUR
+    Expenses:Food                                                    6.40 EUR
+
+2026-07-22 * Bio Corner
+    ; original_payee_name: BIO CORNER FRIEDRICHSHAIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -31.10 EUR
+    Expenses:Food                                                    31.10 EUR
+
+2026-07-23 * Kaffeebar Ost
+    ; original_payee_name: KAFFEEBAR OST
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -3.90 EUR
+    Expenses:Food                                                    3.90 EUR
+
+2026-07-25 * Frischmarkt
+    ; original_payee_name: FRISCHMARKT FIL.112 BERLIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -58.90 EUR
+    Expenses:Food                                                    58.90 EUR
+
+2026-07-27 * Pho Lan | dinner
+    ; original_payee_name: PHO LAN BERLIN
+    ; related_file: files/2026/08/20260801090412.pdf
+    Assets:Bank:Lumen                                               -28.60 EUR
+    Expenses:Food                                                    28.60 EUR
+
+2026-07-28 * Internal Transfer | card bill
+    Assets:Bank:Stadtbank                                           -344.30 EUR
+    Liabilities:Credit Card:Stadtbank Visa                           344.30 EUR
+
+2026-07-31 * Balance Assertion
+    Assets:Bank:Lumen                                                0.00 EUR = 3127.97 EUR
+
+P 2026-07-31 VWCE 126.40 EUR
+P 2026-07-31 UAH 0.0229 EUR

@@ -1,0 +1,78 @@
+{
+  "id": "recategorize-merchant",
+  "tags": [
+    "edit",
+    "memory"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Apotheke am Park should be Personal Care, not Health. Fix the existing ones and keep it that way from now on."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-07-19",
+        "description": "apotheke",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "amount": -23.8,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Personal Care",
+            "amount": 23.8,
+            "commodity": "EUR"
+          }
+        ]
+      },
+      {
+        "date": "2026-08-19",
+        "description": "apotheke",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "amount": -23.8,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Personal Care",
+            "amount": 23.8,
+            "commodity": "EUR"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-19",
+        "description": "apotheke",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "amount": -23.8,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Personal Care",
+            "amount": 23.8,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "absent": [
+      {
+        "date": null,
+        "description": "apotheke",
+        "postings": [
+          {
+            "account": "Expenses:Health"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 0
+  }
+}

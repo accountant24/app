@@ -1,0 +1,41 @@
+{
+  "id": "receipt-krakow-dinner",
+  "tags": [
+    "receipt",
+    "image",
+    "trip"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Dinner in Kraków, paid with my Lumen card. It came to 11.62 EUR on the card.",
+      "attachments": [
+        "receipt.png"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-29",
+        "description": "lip",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -11.62,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Travel*",
+            "amount": 11.62,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "trip": "krakow-2026"
+        }
+      }
+    ],
+    "countDelta": 1
+  }
+}

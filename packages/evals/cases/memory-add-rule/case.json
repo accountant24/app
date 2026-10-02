@@ -1,0 +1,20 @@
+{
+  "id": "memory-add-rule",
+  "tags": [
+    "memory"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Remember this: my employer reimburses my BVG monthly ticket, so book those reimbursements against Transport."
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "memory": [
+      "bvg",
+      "transport"
+    ],
+    "memoryMaxAdded": 2
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "id": "payee-rename",
+  "tags": [
+    "edit",
+    "payees"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Rename the payee Spaeti Eck to Späti Eck everywhere, and keep the old spelling as original_payee_name."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-07-21",
+        "description": "^Späti Eck",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -6.4,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 6.4,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "original_payee_name": "spaeti eck"
+        }
+      },
+      {
+        "date": "2026-08-21",
+        "description": "^Späti Eck",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -6.4,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 6.4,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "original_payee_name": "spaeti eck"
+        }
+      },
+      {
+        "date": "2026-09-21",
+        "description": "^Späti Eck",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -6.4,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 6.4,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "original_payee_name": "spaeti eck"
+        }
+      }
+    ],
+    "absent": [
+      {
+        "date": null,
+        "description": "^spaeti",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 0
+  }
+}

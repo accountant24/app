@@ -1,0 +1,15 @@
+{
+  "name": "@accountant24/evals",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "End-state evals for the Accountant24 bookkeeping agent.",
+  "scripts": {
+    "evals": "tsx src/run.ts",
+    "evals:skills": "sh scripts/fetch-skills.sh",
+    "evals:report": "sh scripts/report.sh"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.1"
+  }
+}

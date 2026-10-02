@@ -1,0 +1,18 @@
+{
+  "id": "query-food-august",
+  "tags": [
+    "query"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "How much did I spend on food in August 2026?"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "417[.,]40"
+    ]
+  }
+}

@@ -1,0 +1,217 @@
+{
+  "id": "statement-lumen-sept-handentered",
+  "tags": [
+    "import",
+    "pdf",
+    "statement",
+    "duplicate"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Here's my Lumen statement for September. Add whatever is missing.",
+      "attachments": [
+        "lumen-2026-09.pdf"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-15",
+        "description": "cloudbox",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -2.99,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Subscriptions",
+            "amount": 2.99,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-16",
+        "description": "kaffeebar",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -7.6,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 7.6,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-18",
+        "description": "frischmarkt",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -70.8,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 70.8,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-19",
+        "description": "seitenweise",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -18.5,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Education",
+            "amount": 18.5,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-23",
+        "description": "kaffeebar",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -5.1,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 5.1,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-25",
+        "description": "frischmarkt",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -59.15,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 59.15,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-26",
+        "description": "kaffeebar",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -3.9,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 3.9,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-27",
+        "description": "pho lan",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -28.6,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 28.6,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-22",
+        "description": "bio corner",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -33.45,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 33.45,
+            "commodity": "EUR"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-30",
+        "description": "^Balance Assertion",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": 0
+          }
+        ]
+      }
+    ],
+    "countDelta": 9,
+    "balances": [
+      {
+        "account": "Assets:Bank:Lumen",
+        "amount": 6416.27,
+        "commodity": "EUR",
+        "date": "2026-09-30"
+      }
+    ]
+  }
+}

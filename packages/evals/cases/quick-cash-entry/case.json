@@ -1,0 +1,34 @@
+{
+  "id": "quick-cash-entry",
+  "tags": [
+    "entry",
+    "cash"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Spent 14.80 at the Wochenmarkt this morning, cash."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "description": "wochenmarkt",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -14.8,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 14.8,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}
