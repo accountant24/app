@@ -17,7 +17,8 @@
         "postings": [
           {
             "account": "Assets:Bank:Prairie Joint",
-            "amount": 0
+            "amount": 0,
+            "commodity": "USD"
           }
         ]
       }

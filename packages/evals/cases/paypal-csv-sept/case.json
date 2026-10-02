@@ -32,7 +32,8 @@
           }
         ],
         "tags": {
-          "link": true
+          "link": true,
+          "related_file": "^files/"
         }
       },
       {
@@ -51,14 +52,27 @@
           }
         ],
         "tags": {
-          "link": true
+          "link": true,
+          "related_file": "^files/",
+          "original_payee_name": true
         }
+      },
+      {
+        "date": [
+          "2026-09-20",
+          "2026-09-30"
+        ],
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:PayPal",
+            "amount": 0,
+            "commodity": "USD"
+          }
+        ]
       }
     ],
-    "countDelta": [
-      2,
-      3
-    ],
+    "countDelta": 3,
     "balances": [
       {
         "account": "Assets:PayPal",

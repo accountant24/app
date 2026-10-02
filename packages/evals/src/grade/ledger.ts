@@ -86,7 +86,7 @@ function hasTags(want: Record<string, string | true>, txn: Transaction): boolean
 }
 
 export function transactionMatches(pattern: TransactionPattern, txn: Transaction, today: string): boolean {
-  if (pattern.date && txn.date !== resolveDate(pattern.date, today)) return false;
+  if (pattern.date && ![pattern.date].flat().some((d) => txn.date === resolveDate(d, today))) return false;
   if (pattern.payee && !new RegExp(pattern.payee).test(txn.payee)) return false;
   if (pattern.description && !new RegExp(pattern.description, "i").test(txn.description)) return false;
   if (pattern.tags && !hasTags(pattern.tags, txn)) return false;
@@ -122,5 +122,5 @@ export function describePattern(p: TransactionPattern): string {
     .join(", ");
   const payee = p.payee ? ` payee /${p.payee}/` : "";
   const description = p.description ? ` description /${p.description}/i` : "";
-  return `${p.date ?? "any date"}${payee}${description} [${postings}]`;
+  return `${p.date ? [p.date].flat().join(" or ") : "any date"}${payee}${description} [${postings}]`;
 }
