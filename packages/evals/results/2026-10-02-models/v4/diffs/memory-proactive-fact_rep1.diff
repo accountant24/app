@@ -1,0 +1,23 @@
+diff --git a/memory.md b/memory.md
+index 7384273..7bf4c70 100644
+--- a/memory.md
++++ b/memory.md
+@@ -10,6 +10,7 @@
+ 
+ ## Arrangements
+ - Sparkle Cleaning: a visit every other Thursday; each payment ($165) covers 3 visits and is made on the first visit it covers.
++- Salary: $5,200 per month starting 2026-10-01.
+ 
+ ## Trips
+ - Toronto, 2026-09-28 to 2026-10-01: tag trip spending with `trip: toronto-2026`.
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..f646200
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "openai",
++  "defaultModel": "gpt-5.6-terra"
++}
+\ No newline at end of file
