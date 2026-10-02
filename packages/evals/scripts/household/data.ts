@@ -8,7 +8,12 @@
 // fixture ledger holds what Alex had recorded by mid-September; the rest only
 // exists in the documents the cases attach (see gen-documents.ts).
 
-export type Posting = { account: string; amount: number; commodity: string; cost?: { total: number; commodity: string } };
+export type Posting = {
+  account: string;
+  amount: number;
+  commodity: string;
+  cost?: { total: number; commodity: string };
+};
 
 export type Tx = {
   date: string;
@@ -47,7 +52,14 @@ const usd = (account: string, amount: number): Posting => ({ account, amount, co
 const cad = (account: string, amount: number): Posting => ({ account, amount, commodity: "CAD" });
 
 /** A two-posting expense (or income, with a negative amount), paid from `from`. */
-function spend(date: string, payee: string, category: string, amount: number, from: string, extra: Partial<Tx> = {}): Tx {
+function spend(
+  date: string,
+  payee: string,
+  category: string,
+  amount: number,
+  from: string,
+  extra: Partial<Tx> = {},
+): Tx {
   const commodity = from === CAD_ACCOUNT ? "CAD" : "USD";
   return {
     date,
@@ -91,7 +103,11 @@ const GROCERIES: Record<string, number[]> = {
   "2026-09": [67.45, 52.3, 70.8, 59.15],
 };
 const COOP: Record<string, number[]> = { "2026-07": [23.4, 31.1], "2026-08": [27.9, 19.6], "2026-09": [25.2, 33.45] };
-const COFFEE: Record<string, number[]> = { "2026-07": [4.2, 7.8, 3.9], "2026-08": [4.6, 8.4, 4.2], "2026-09": [4.4, 7.6, 5.1] };
+const COFFEE: Record<string, number[]> = {
+  "2026-07": [4.2, 7.8, 3.9],
+  "2026-08": [4.6, 8.4, 4.2],
+  "2026-09": [4.4, 7.6, 5.1],
+};
 export const VTI_PRICE: Record<string, number> = { "2026-07": 286.4, "2026-08": 291.1, "2026-09": 294.8 };
 export const CAD_PRICE: Record<string, number> = { "2026-07": 0.731, "2026-08": 0.728, "2026-09": 0.734 };
 
@@ -116,7 +132,9 @@ export function world(): Tx[] {
 
   for (const m of months) {
     txs.push(spend(day(m, 1), "Brightwave Inc.", "Income:Salary", -4850, CHECKING, { description: "salary" }));
-    txs.push(spend(day(m, 1), "Oakridge Property Management", "Expenses:Housing", 1850, JOINT, { description: "rent" }));
+    txs.push(
+      spend(day(m, 1), "Oakridge Property Management", "Expenses:Housing", 1850, JOINT, { description: "rent" }),
+    );
     txs.push(spend(day(m, 1), "City Transit", "Expenses:Transport", 75, CHECKING, { description: "monthly pass" }));
     txs.push(transfer(day(m, 2), CHECKING, JOINT, 1700, { description: "my share of rent and bills" }));
     txs.push(spend(day(m, 3), "Lakeside Fiber", "Expenses:Utilities", 59.99, JOINT, { description: "internet" }));
@@ -135,10 +153,17 @@ export function world(): Tx[] {
     txs.push(transfer(day(m, 7), CHECKING, WALLET, 100, { description: "ATM" }));
     txs.push(spend(day(m, 10), "StreamFlix", "Expenses:Subscriptions", 15.49, CHECKING));
     txs.push(spend(day(m, 15), "CloudBox", "Expenses:Subscriptions", 2.99, CHECKING));
-    [4, 11, 18, 25].forEach((d, i) => txs.push(spend(day(m, d), "Green Basket Market", "Expenses:Food", GROCERIES[m][i], CHECKING)));
-    [8, 22].forEach((d, i) => txs.push(spend(day(m, d), "Harvest Co-op", "Expenses:Food", COOP[m][i], CHECKING)));
-    [9, 16, 23].forEach((d, i) => txs.push(spend(day(m, d), "Daily Grind Coffee", "Expenses:Food", COFFEE[m][i], CHECKING)));
-    txs.push(spend(day(m, 13), "Luigi's Trattoria", "Expenses:Food", m === "2026-08" ? 52.4 : 46.8, CHECKING, { description: "dinner" }));
+    for (const [i, d] of [4, 11, 18, 25].entries())
+      txs.push(spend(day(m, d), "Green Basket Market", "Expenses:Food", GROCERIES[m][i], CHECKING));
+    for (const [i, d] of [8, 22].entries())
+      txs.push(spend(day(m, d), "Harvest Co-op", "Expenses:Food", COOP[m][i], CHECKING));
+    for (const [i, d] of [9, 16, 23].entries())
+      txs.push(spend(day(m, d), "Daily Grind Coffee", "Expenses:Food", COFFEE[m][i], CHECKING));
+    txs.push(
+      spend(day(m, 13), "Luigi's Trattoria", "Expenses:Food", m === "2026-08" ? 52.4 : 46.8, CHECKING, {
+        description: "dinner",
+      }),
+    );
     txs.push(spend(day(m, 27), "Pho Saigon", "Expenses:Food", 28.6, CHECKING, { description: "dinner" }));
     txs.push(spend(day(m, 14), "Farmers Market", "Expenses:Food", 18.5, WALLET));
     txs.push(spend(day(m, 21), "Corner Deli", "Expenses:Food", 6.4, WALLET));
@@ -153,8 +178,12 @@ export function world(): Tx[] {
         usd(CHECKING, -292),
       ],
     });
-    txs.push(spend(day(m, 12), "Linda Morgan", "Expenses:Gifts & Donations", 300, CAD_ACCOUNT, { description: "for mom" }));
-    txs.push(spend(day(m, 18), "Northern Mobile", "Expenses:Utilities", 45, CAD_ACCOUNT, { description: "phone plan" }));
+    txs.push(
+      spend(day(m, 12), "Linda Morgan", "Expenses:Gifts & Donations", 300, CAD_ACCOUNT, { description: "for mom" }),
+    );
+    txs.push(
+      spend(day(m, 18), "Northern Mobile", "Expenses:Utilities", 45, CAD_ACCOUNT, { description: "phone plan" }),
+    );
   }
 
   // One-offs.
@@ -162,18 +191,33 @@ export function world(): Tx[] {
   txs.push(...paypalPurchase("2026-07-20", "Thrift Loop", "Expenses:Shopping", 35, "jacket"));
   txs.push(spend("2026-07-28", "Internal Transfer", CARD, 344.3, JOINT, { description: "card payment" }));
   txs.push(...paypalPurchase("2026-08-09", "Game Vault", "Expenses:Entertainment", 59.99, "board game"));
-  txs.push(spend("2026-08-20", "Sparkle Cleaning", "Expenses:Household Help", 165, CHECKING, { description: "3 visits prepaid" }));
+  txs.push(
+    spend("2026-08-20", "Sparkle Cleaning", "Expenses:Household Help", 165, CHECKING, {
+      description: "3 visits prepaid",
+    }),
+  );
   txs.push(spend("2026-08-22", "Volt Electronics", "Expenses:Shopping", 349, CARD, { description: "headphones" }));
   txs.push(spend("2026-08-28", "Internal Transfer", CARD, 372.8, JOINT, { description: "card payment" }));
-  txs.push(spend("2026-09-02", "Harbourfront Hotel", "Expenses:Travel", 412, CHECKING, { description: "Toronto, 3 nights", tags: { trip: "toronto-2026" } }));
+  txs.push(
+    spend("2026-09-02", "Harbourfront Hotel", "Expenses:Travel", 412, CHECKING, {
+      description: "Toronto, 3 nights",
+      tags: { trip: "toronto-2026" },
+    }),
+  );
   txs.push(spend("2026-09-12", "Starlight Cinema", "Expenses:Entertainment", 21, CHECKING));
   txs.push(spend("2026-09-28", "Internal Transfer", CARD, 23.8, JOINT, { description: "card payment" }));
 
   // After the last update: only in the September documents.
   txs.push(spend("2026-09-19", "Chapter One Books", "Expenses:Education", 18.5, CHECKING));
   txs.push(spend("2026-09-26", "Daily Grind Coffee", "Expenses:Food", 3.9, CHECKING));
-  txs.push(spend("2026-09-06", "Maple Books Online", "Expenses:Education", 64.99, CAD_ACCOUNT, { description: "books for mom" }));
-  txs.push(spend("2026-09-21", "Maple Trust", "Expenses:Financial", 4.95, CAD_ACCOUNT, { description: "monthly account fee" }));
+  txs.push(
+    spend("2026-09-06", "Maple Books Online", "Expenses:Education", 64.99, CAD_ACCOUNT, {
+      description: "books for mom",
+    }),
+  );
+  txs.push(
+    spend("2026-09-21", "Maple Trust", "Expenses:Financial", 4.95, CAD_ACCOUNT, { description: "monthly account fee" }),
+  );
 
   for (const t of txs) annotate(t);
   return txs.sort((a, b) => a.date.localeCompare(b.date) || a.payee.localeCompare(b.payee));
@@ -193,7 +237,11 @@ function annotate(t: Tx): void {
   const cadPosting = t.postings.find((p) => p.account === CAD_ACCOUNT);
   if (checking && t.payee !== "Opening Balance") {
     const raw = RAW[t.payee] ?? t.payee.toUpperCase();
-    t.bank = { source: "harbor", rawPayee: raw, rawDescription: checking.amount > 0 ? "DIRECT DEPOSIT" : "DEBIT CARD PURCHASE" };
+    t.bank = {
+      source: "harbor",
+      rawPayee: raw,
+      rawDescription: checking.amount > 0 ? "DIRECT DEPOSIT" : "DEBIT CARD PURCHASE",
+    };
     if (t.payee === "Internal Transfer") t.bank.rawDescription = t.description?.toUpperCase() ?? "TRANSFER";
     if (t.date > HARBOR_RECORDED_THROUGH) t.unrecorded = true;
     else {
@@ -211,6 +259,7 @@ function annotate(t: Tx): void {
 export function balance(txs: Tx[], account: string, commodity: string, date: string): number {
   let sum = 0;
   for (const t of txs)
-    if (t.date <= date) for (const p of t.postings) if (p.account === account && p.commodity === commodity) sum += p.amount;
+    if (t.date <= date)
+      for (const p of t.postings) if (p.account === account && p.commodity === commodity) sum += p.amount;
   return Math.round(sum * 100) / 100;
 }

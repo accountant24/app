@@ -25,7 +25,15 @@ type Row = {
   latency_s: number;
   grade: Record<(typeof METRICS)[number], number>;
 };
-type Variant = { id: string; model: string; thinking: string; stamp?: Stamp; runs: string[]; rows: Row[]; errors: number };
+type Variant = {
+  id: string;
+  model: string;
+  thinking: string;
+  stamp?: Stamp;
+  runs: string[];
+  rows: Row[];
+  errors: number;
+};
 
 const pct = (n: number) => `${Math.round(100 * n)}%`;
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -41,7 +49,12 @@ function readVariants(dir: string): Variant[] {
     .sort((a, b) => (a === "baseline" ? -1 : b === "baseline" ? 1 : Number(a.slice(1)) - Number(b.slice(1))))
     .map((id) => {
       const info = JSON.parse(readFileSync(join(dir, id, "variant.json"), "utf8"));
-      const lines = (p: string) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter((l) => l.trim()) : []);
+      const lines = (p: string) =>
+        existsSync(p)
+          ? readFileSync(p, "utf8")
+              .split("\n")
+              .filter((l) => l.trim())
+          : [];
       return {
         id,
         ...info,
@@ -52,7 +65,11 @@ function readVariants(dir: string): Variant[] {
 }
 
 function table(header: string[], rows: string[][]): string {
-  return [`| ${header.join(" | ")} |`, `|${header.map(() => "---").join("|")}|`, ...rows.map((r) => `| ${r.join(" | ")} |`)].join("\n");
+  return [
+    `| ${header.join(" | ")} |`,
+    `|${header.map(() => "---").join("|")}|`,
+    ...rows.map((r) => `| ${r.join(" | ")} |`),
+  ].join("\n");
 }
 
 function main(): void {
@@ -71,7 +88,8 @@ function main(): void {
     if (!v.stamp) warnings.push(`${short(v.model)} has no stamp; it predates stamping.`);
     else if (ref) {
       const diff = stampDiff(ref, v.stamp);
-      if (diff.length) warnings.push(`${short(v.model)} ran against a different ${diff.join(", ")} than ${short(variants[0].model)}.`);
+      if (diff.length)
+        warnings.push(`${short(v.model)} ran against a different ${diff.join(", ")} than ${short(variants[0].model)}.`);
     }
   }
 
@@ -80,7 +98,8 @@ function main(): void {
     const rs = ok(v).filter((r) => r.prompt_id === id);
     return rs.length ? mean(rs.map((r) => r.grade.pass)) : undefined;
   };
-  const groupRate = (v: Variant, ids: string[]) => mean(ids.map((id) => caseRate(v, id)).filter((x): x is number => x !== undefined));
+  const groupRate = (v: Variant, ids: string[]) =>
+    mean(ids.map((id) => caseRate(v, id)).filter((x): x is number => x !== undefined));
 
   const overall = table(
     ["", ...cols],
@@ -98,7 +117,9 @@ function main(): void {
     for (const id of cases.keys()) for (const k of key(id)) groups.set(k, [...(groups.get(k) ?? []), id]);
     return table(
       ["", "cases", ...cols],
-      [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([k, ids]) => [k, String(ids.length), ...variants.map((v) => pct(groupRate(v, ids)))]),
+      [...groups]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, ids]) => [k, String(ids.length), ...variants.map((v) => pct(groupRate(v, ids)))]),
     );
   };
 
@@ -118,7 +139,14 @@ function main(): void {
 
   const stamps = table(
     ["", "cases", "harness", "agent", "pi", "run on"],
-    variants.map((v) => [short(v.model), v.stamp?.cases ?? "–", v.stamp?.harness ?? "–", v.stamp?.agent ?? "–", v.stamp?.pi ?? "–", v.runs.join(", ")]),
+    variants.map((v) => [
+      short(v.model),
+      v.stamp?.cases ?? "–",
+      v.stamp?.harness ?? "–",
+      v.stamp?.agent ?? "–",
+      v.stamp?.pi ?? "–",
+      v.runs.join(", "),
+    ]),
   );
 
   const md = `# Eval comparison: ${set}

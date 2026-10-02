@@ -100,11 +100,26 @@ function main(): void {
   writeFileSync(join(OUT, "ledger", "accounts.journal"), accounts);
   writeFileSync(
     join(OUT, "ledger", "commodities.journal"),
-    ["; Commodity declarations", "commodity 1,000.00 USD", "commodity 1,000.00 CAD", "commodity 1,000.0000 VTI", ""].join("\n"),
+    [
+      "; Commodity declarations",
+      "commodity 1,000.00 USD",
+      "commodity 1,000.00 CAD",
+      "commodity 1,000.0000 VTI",
+      "",
+    ].join("\n"),
   );
   writeFileSync(
     join(OUT, "ledger", "main.journal"),
-    ["; Accountant24", "", "include commodities.journal", "include accounts.journal", "include 2026/07.journal", "include 2026/08.journal", "include 2026/09.journal", ""].join("\n"),
+    [
+      "; Accountant24",
+      "",
+      "include commodities.journal",
+      "include accounts.journal",
+      "include 2026/07.journal",
+      "include 2026/08.journal",
+      "include 2026/09.journal",
+      "",
+    ].join("\n"),
   );
 
   // Balance checkpoints Alex added after each Harbor import.
@@ -116,12 +131,18 @@ function main(): void {
   ];
   const priceDates: Record<string, string> = { "07": "2026-07-31", "08": "2026-08-31", "09": HARBOR_RECORDED_THROUGH };
   for (const month of ["07", "08", "09"]) {
-    const entries: [string, string][] = recorded.filter((t) => t.date.slice(5, 7) === month).map((t) => [t.date, formatTx(t)]);
+    const entries: [string, string][] = recorded
+      .filter((t) => t.date.slice(5, 7) === month)
+      .map((t) => [t.date, formatTx(t)]);
     for (const [date, account] of checkpoints)
-      if (date.slice(5, 7) === month) entries.push([date, assertion(date, account, balance(recorded, account, "USD", date))]);
+      if (date.slice(5, 7) === month)
+        entries.push([date, assertion(date, account, balance(recorded, account, "USD", date))]);
     entries.sort(([a], [b]) => a.localeCompare(b));
     const date = priceDates[month];
-    const prices = [`P ${date} VTI ${VTI_PRICE[`2026-${month}`].toFixed(2)} USD`, `P ${date} CAD ${CAD_PRICE[`2026-${month}`]} USD`];
+    const prices = [
+      `P ${date} VTI ${VTI_PRICE[`2026-${month}`].toFixed(2)} USD`,
+      `P ${date} CAD ${CAD_PRICE[`2026-${month}`]} USD`,
+    ];
     const body = [...entries.map(([, text]) => text), prices.join("\n")].join("\n\n");
     writeFileSync(join(OUT, "ledger", "2026", `${month}.journal`), `${body}\n`);
   }
@@ -137,7 +158,10 @@ function main(): void {
   // undo-last-commit: the latest commit logged a dinner that never happened.
   const undo = join(CASES, "undo-last-commit", "commit", "ledger", "2026");
   mkdirSync(undo, { recursive: true });
-  writeFileSync(join(undo, "09.journal"), `${september}\n${expense("2026-09-29", "Luigi's Trattoria", 46.8, "dinner")}\n`);
+  writeFileSync(
+    join(undo, "09.journal"),
+    `${september}\n${expense("2026-09-29", "Luigi's Trattoria", 46.8, "dinner")}\n`,
+  );
 
   console.log(`household: ${recorded.length} recorded of ${all.length} transactions -> ${OUT}`);
 }

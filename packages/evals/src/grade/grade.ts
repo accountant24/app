@@ -114,7 +114,8 @@ export function checkExpect(expect: Expect, facts: Facts): string[] {
     if (expect.countDelta !== undefined) {
       const delta = final.length - facts.initialCount;
       const allowed = [expect.countDelta].flat();
-      if (!allowed.includes(delta)) failures.push(`transaction count changed by ${delta}, expected ${allowed.join(" or ")}`);
+      if (!allowed.includes(delta))
+        failures.push(`transaction count changed by ${delta}, expected ${allowed.join(" or ")}`);
     }
     for (const b of expect.balances ?? []) {
       const actual = balanceOf(final, b.account, b.commodity, b.date && resolveDate(b.date, facts.today));
@@ -156,7 +157,11 @@ export function gradeFacts(expect: Expect, facts: Facts): Grade {
   return {
     grade: { pass, correct, saved, valid, safe },
     explanation: {
-      pass: pass ? "ok" : [!correct && "incorrect", !saved && "unsaved", !valid && "invalid", !safe && "unsafe"].filter(Boolean).join(", "),
+      pass: pass
+        ? "ok"
+        : [!correct && "incorrect", !saved && "unsaved", !valid && "invalid", !safe && "unsafe"]
+            .filter(Boolean)
+            .join(", "),
       correct: failures.join("; ") || "ok",
       saved: savedProblems.join("; ") || "ok",
       valid: facts.checkError ?? "ok",

@@ -49,14 +49,30 @@ const p = (account: string, amount?: number, commodity = "USD"): PostingPattern 
 const named = (name: string) => `^${escapeRe(name).replace(/'/g, "['’]")}$`;
 
 /** `payee` is the exact expected name; pass `extra.payee` for a looser regex. */
-function tx(date: string | undefined, payee: string | undefined, postings: PostingPattern[], extra: Partial<TransactionPattern> = {}): TransactionPattern {
+function tx(
+  date: string | undefined,
+  payee: string | undefined,
+  postings: PostingPattern[],
+  extra: Partial<TransactionPattern> = {},
+): TransactionPattern {
   const { payee: payeeRe = payee && named(payee), description, ...rest } = extra;
-  return { ...(date ? { date } : {}), ...(payeeRe ? { payee: payeeRe } : {}), ...(description ? { description } : {}), postings, ...rest };
+  return {
+    ...(date ? { date } : {}),
+    ...(payeeRe ? { payee: payeeRe } : {}),
+    ...(description ? { description } : {}),
+    postings,
+    ...rest,
+  };
 }
 
 /** A balance checkpoint: a posting on `account` that moves 0 and asserts `balance`.
  *  Pass several dates when more than one is correct. */
-const assertion = (date: string | string[], account: string, balance: number, commodity = "USD"): TransactionPattern => ({
+const assertion = (
+  date: string | string[],
+  account: string,
+  balance: number,
+  commodity = "USD",
+): TransactionPattern => ({
   date,
   ...tx(undefined, "Balance Assertion", [{ account, amount: 0, commodity, asserts: balance }]),
 });
@@ -70,7 +86,11 @@ const ALSO_RIGHT: Record<string, string[]> = {
 };
 
 /** The statement rows a September import must add, as patterns. */
-function importRows(source: NonNullable<Tx["bank"]>["source"], account: string, commodity: string): TransactionPattern[] {
+function importRows(
+  source: NonNullable<Tx["bank"]>["source"],
+  account: string,
+  commodity: string,
+): TransactionPattern[] {
   return all
     .filter((t) => t.unrecorded && t.bank?.source === source)
     .map((t) => {
@@ -124,7 +144,12 @@ const cases: Def[] = [
     source: ["sessions", "coverage"],
     why: "Imports sometimes skipped rows or used the bank's messy names. The agent should add only the new rows, use the payee names already in the books, and add a balance check at the end.",
     fixture: "household",
-    turns: [{ text: "Here's my Harbor Bank statement for September. Add whatever is missing.", attachments: ["harbor-2026-09.pdf"] }],
+    turns: [
+      {
+        text: "Here's my Harbor Bank statement for September. Add whatever is missing.",
+        attachments: ["harbor-2026-09.pdf"],
+      },
+    ],
     expect: {
       present: [...harborRows, assertion(END, CHECKING, harborClosing)],
       countDelta: harborRows.length + 1,
@@ -137,7 +162,12 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "A purchase typed in by hand later showed up again in the statement and got added twice. The agent should spot that it's already there.",
     fixture: "household",
-    turns: [{ text: "Here's my Harbor Bank statement for September. Add whatever is missing.", attachments: ["harbor-2026-09.pdf"] }],
+    turns: [
+      {
+        text: "Here's my Harbor Bank statement for September. Add whatever is missing.",
+        attachments: ["harbor-2026-09.pdf"],
+      },
+    ],
     expect: {
       present: [
         ...harborRows.filter((r) => r.date !== "2026-09-22"),
@@ -157,7 +187,10 @@ const cases: Def[] = [
     turns: [{ text: "Import my Maple Trust export for September.", attachments: ["maple-trust-2026-09.csv"] }],
     expect: {
       // A CSV states no closing date: the last row's date or the end of the month are both right.
-      present: [...cadRows, assertion([cadRows.at(-1)!.date as string, END], CAD_ACCOUNT, balance(all, CAD_ACCOUNT, "CAD", END), "CAD")],
+      present: [
+        ...cadRows,
+        assertion([cadRows.at(-1)!.date as string, END], CAD_ACCOUNT, balance(all, CAD_ACCOUNT, "CAD", END), "CAD"),
+      ],
       countDelta: cadRows.length + 1,
       balances: [{ account: CAD_ACCOUNT, amount: balance(all, CAD_ACCOUNT, "CAD", END), commodity: "CAD", date: END }],
     },
@@ -171,8 +204,12 @@ const cases: Def[] = [
     turns: [{ text: "Here's my PayPal activity for September, please add it.", attachments: ["paypal-2026-09.csv"] }],
     expect: {
       present: [
-        tx("2026-09-20", "Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true, related_file: "^files/" } }),
-        tx("2026-09-20", "Thrift Loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true, ...IMPORTED } }),
+        tx("2026-09-20", "Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], {
+          tags: { link: true, related_file: "^files/" },
+        }),
+        tx("2026-09-20", "Thrift Loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], {
+          tags: { link: true, ...IMPORTED },
+        }),
         // The export has a Balance column: memory.md asks for a checkpoint after every import.
         assertion(["2026-09-20", END], PAYPAL, 0),
       ],
@@ -187,7 +224,10 @@ const cases: Def[] = [
     why: "Receipts are often sent as photos. The agent should read the shop, date and total from the picture and book it as cash.",
     fixture: "household",
     turns: [{ text: "Paid cash from my wallet.", attachments: ["receipt.png"] }],
-    expect: { present: [tx("2026-09-26", "Green Basket Market", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])], countDelta: 1 },
+    expect: {
+      present: [tx("2026-09-26", "Green Basket Market", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])],
+      countDelta: 1,
+    },
   },
   {
     id: "receipt-toronto-dinner",
@@ -195,9 +235,21 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "Spending on trips in another currency comes up a lot. The agent should book the dollar amount from the card, file it as travel and tag the trip.",
     fixture: "household",
-    turns: [{ text: "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.", attachments: ["receipt.png"] }],
+    turns: [
+      {
+        text: "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.",
+        attachments: ["receipt.png"],
+      },
+    ],
     expect: {
-      present: [tx("2026-09-29", undefined, [p(CHECKING, -36.55), { account: ["Expenses:Travel*", "Expenses:Food*"], amount: 36.55, commodity: "USD" }], { payee: "^(The )?Maple Table$", description: "dinner", tags: { trip: named("toronto-2026") } })],
+      present: [
+        tx(
+          "2026-09-29",
+          undefined,
+          [p(CHECKING, -36.55), { account: ["Expenses:Travel*", "Expenses:Food*"], amount: 36.55, commodity: "USD" }],
+          { payee: "^(The )?Maple Table$", description: "dinner", tags: { trip: named("toronto-2026") } },
+        ),
+      ],
       countDelta: 1,
     },
   },
@@ -214,7 +266,13 @@ const cases: Def[] = [
       },
     ],
     expect: {
-      present: [tx("2026-10-01", "Harbourfront Hotel", [p(CHECKING, -40), p("Expenses:Travel*")], { exact: false, description: "minibar|laundry|extras|checkout", tags: { trip: named("toronto-2026"), related_file: "^files/" } })],
+      present: [
+        tx("2026-10-01", "Harbourfront Hotel", [p(CHECKING, -40), p("Expenses:Travel*")], {
+          exact: false,
+          description: "minibar|laundry|extras|checkout",
+          tags: { trip: named("toronto-2026"), related_file: "^files/" },
+        }),
+      ],
       countDelta: 1,
       balances: [{ account: "Expenses:Travel", amount: 452, commodity: "USD" }],
     },
@@ -236,7 +294,9 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Lunch at Pho Saigon yesterday, $24.50 plus a $3 tip, on my Harbor debit card." }],
     expect: {
-      present: [tx("today-1", "Pho Saigon", [p(CHECKING, -27.5), p("Expenses:Food*")], { exact: false, description: "lunch" })],
+      present: [
+        tx("today-1", "Pho Saigon", [p(CHECKING, -27.5), p("Expenses:Food*")], { exact: false, description: "lunch" }),
+      ],
       countDelta: 1,
       balances: [{ account: "Expenses:Food", amount: round2(food + 27.5), commodity: "USD" }],
     },
@@ -249,7 +309,10 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Took $50 from the cash jar at home into my wallet, then spent $12 of it at Corner Deli." }],
     expect: {
-      present: [tx("today", "Internal Transfer", [p(HOME_CASH, -50), p(WALLET, 50)]), tx("today", "Corner Deli", [p(WALLET, -12), p("Expenses:Food*", 12)])],
+      present: [
+        tx("today", "Internal Transfer", [p(HOME_CASH, -50), p(WALLET, 50)]),
+        tx("today", "Corner Deli", [p(WALLET, -12), p("Expenses:Food*", 12)]),
+      ],
       countDelta: 2,
       balances: [
         { account: WALLET, amount: round2(wallet + 38), commodity: "USD" },
@@ -265,7 +328,10 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "I have $280 in my wallet right now. I don't remember where the rest went." }],
     expect: {
-      present: [tx("today", "Unknown", [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]), assertion("today", WALLET, 280)],
+      present: [
+        tx("today", "Unknown", [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]),
+        assertion("today", WALLET, 280),
+      ],
       absent: [tx("today", undefined, [{ account: "Equity*" }], { exact: false })],
       countDelta: 2,
       balances: [{ account: WALLET, amount: 280, commodity: "USD" }],
@@ -287,7 +353,11 @@ const cases: Def[] = [
     why: "When the stated balance doesn't match, the agent should point out the $50 difference and change nothing, not paper over it.",
     fixture: "household",
     autoReply: "I'm not sure. Can you check what might be missing?",
-    turns: [{ text: `My Prairie joint account balance is $${(joint + 50).toLocaleString("en-US", { minimumFractionDigits: 2 })} today.` }],
+    turns: [
+      {
+        text: `My Prairie joint account balance is $${(joint + 50).toLocaleString("en-US", { minimumFractionDigits: 2 })} today.`,
+      },
+    ],
     expect: { countDelta: 0, answer: ["(?<![\\d.,])50([.,]00)?(?!\\d)"] },
   },
   {
@@ -297,17 +367,28 @@ const cases: Def[] = [
     why: "Refunds were sometimes booked as income. A returned purchase should reduce Shopping and the card balance instead.",
     fixture: "household",
     turns: [{ text: "I returned the headphones from Volt Electronics. The $349 refund hit my Summit Visa today." }],
-    expect: { present: [tx("today", "Volt Electronics", [p(CARD, 349), p("Expenses:Shopping", -349)], { description: "refund|return" })], countDelta: 1 },
+    expect: {
+      present: [
+        tx("today", "Volt Electronics", [p(CARD, 349), p("Expenses:Shopping", -349)], { description: "refund|return" }),
+      ],
+      countDelta: 1,
+    },
   },
   {
     id: "recategorize-merchant",
     tags: ["edit", "memory"],
     source: ["sessions", "system.md"],
-    why: "Wrong categories were a top complaint. The agent should fix the old entries, and since you said \"from now on\", save that rule as one short line in memory.md.",
+    why: 'Wrong categories were a top complaint. The agent should fix the old entries, and since you said "from now on", save that rule as one short line in memory.md.',
     fixture: "household",
-    turns: [{ text: "Parkside Pharmacy should be Personal Care, not Health. Fix the existing ones and keep it that way from now on." }],
+    turns: [
+      {
+        text: "Parkside Pharmacy should be Personal Care, not Health. Fix the existing ones and keep it that way from now on.",
+      },
+    ],
     expect: {
-      present: ["2026-07-19", "2026-08-19", "2026-09-19"].map((d) => tx(d, "Parkside Pharmacy", [p(CARD, -23.8), p("Expenses:Personal Care", 23.8)])),
+      present: ["2026-07-19", "2026-08-19", "2026-09-19"].map((d) =>
+        tx(d, "Parkside Pharmacy", [p(CARD, -23.8), p("Expenses:Personal Care", 23.8)]),
+      ),
       absent: [tx(undefined, undefined, [{ account: "Expenses:Health" }], { exact: false, payee: "[Pp]arkside" })],
       countDelta: 0,
       // A rule the user states is a categorization rule for memory (system.md); one inferred from history isn't.
@@ -321,10 +402,16 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "Renaming payees in bulk is a common chore. Every Corner Deli entry should become Sal's Corner Deli, keeping the old name as a tag.",
     fixture: "household",
-    turns: [{ text: "Rename the payee Corner Deli to Sal's Corner Deli everywhere, and keep the old name as original_payee_name." }],
+    turns: [
+      {
+        text: "Rename the payee Corner Deli to Sal's Corner Deli everywhere, and keep the old name as original_payee_name.",
+      },
+    ],
     expect: {
       present: ["2026-07-21", "2026-08-21", "2026-09-21"].map((d) =>
-        tx(d, "Sal's Corner Deli", [p(WALLET, -6.4), p("Expenses:Food", 6.4)], { tags: { original_payee_name: named("Corner Deli") } }),
+        tx(d, "Sal's Corner Deli", [p(WALLET, -6.4), p("Expenses:Food", 6.4)], {
+          tags: { original_payee_name: named("Corner Deli") },
+        }),
       ),
       absent: [tx(undefined, "Corner Deli", [{ account: WALLET }], { exact: false })],
       countDelta: 0,
@@ -338,7 +425,10 @@ const cases: Def[] = [
     fixture: "household",
     setupCommit: { message: "Add Luigi's Trattoria dinner on 2026-09-29" },
     turns: [{ text: "Undo my last change, I logged that dinner by mistake." }],
-    expect: { absent: [tx("2026-09-29", undefined, [{ account: CHECKING }], { exact: false, payee: "Luigi" })], countDelta: -1 },
+    expect: {
+      absent: [tx("2026-09-29", undefined, [{ account: CHECKING }], { exact: false, payee: "Luigi" })],
+      countDelta: -1,
+    },
   },
   {
     id: "description-from-explanation",
@@ -346,9 +436,13 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "Explanations ended up in tags or comments instead of the description. When you say what a payment was for, it belongs in the description.",
     fixture: "household",
-    turns: [{ text: "Paid $85 to Bright Smile Dental today on my Summit Visa. It was the copay for Sam's teeth cleaning." }],
+    turns: [
+      { text: "Paid $85 to Bright Smile Dental today on my Summit Visa. It was the copay for Sam's teeth cleaning." },
+    ],
     expect: {
-      present: [tx("today", "Bright Smile Dental", [p(CARD, -85), p("Expenses:Health", 85)], { description: "copay|clean" })],
+      present: [
+        tx("today", "Bright Smile Dental", [p(CARD, -85), p("Expenses:Health", 85)], { description: "copay|clean" }),
+      ],
       countDelta: 1,
     },
   },
@@ -359,7 +453,12 @@ const cases: Def[] = [
     why: "The agent used to make up descriptions nobody gave it. If you don't say what it was for, the description should stay empty.",
     fixture: "household",
     turns: [{ text: "$9.40 at Daily Grind Coffee today, Harbor debit card." }],
-    expect: { present: [tx("today", "Daily Grind Coffee", [p(CHECKING, -9.4), p("Expenses:Food*", 9.4)], { description: "^$" })], countDelta: 1 },
+    expect: {
+      present: [
+        tx("today", "Daily Grind Coffee", [p(CHECKING, -9.4), p("Expenses:Food*", 9.4)], { description: "^$" }),
+      ],
+      countDelta: 1,
+    },
   },
   {
     id: "description-edit-existing",
@@ -367,9 +466,15 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "Fixing an existing entry is a common edit. The description should change in place, without adding a new entry.",
     fixture: "household",
-    turns: [{ text: "The Luigi's Trattoria dinner on September 13 was Sam's birthday dinner, put that in its description." }],
+    turns: [
+      { text: "The Luigi's Trattoria dinner on September 13 was Sam's birthday dinner, put that in its description." },
+    ],
     expect: {
-      present: [tx("2026-09-13", "Luigi's Trattoria", [p(CHECKING, -46.8), p("Expenses:Food", 46.8)], { description: "birthday" })],
+      present: [
+        tx("2026-09-13", "Luigi's Trattoria", [p(CHECKING, -46.8), p("Expenses:Food", 46.8)], {
+          description: "birthday",
+        }),
+      ],
       countDelta: 0,
     },
   },
@@ -401,10 +506,19 @@ const cases: Def[] = [
     fixture: "household",
     autoReply: NO_THANKS,
     // Asked from the last recorded payment so the answer doesn't depend on the run date.
-    turns: [{ text: "Going by my last Sparkle Cleaning payment, which visit dates does it cover, and when is the next payment due?" }],
+    turns: [
+      {
+        text: "Going by my last Sparkle Cleaning payment, which visit dates does it cover, and when is the next payment due?",
+      },
+    ],
     expect: {
       countDelta: 0,
-      answer: ["(2026-08-20|aug(ust|\\.)? 20(th)?\\b|8/20)", "(2026-09-03|sep(tember|\\.)? 3(rd)?\\b|9/0?3)", "(2026-09-17|sep(tember|\\.)? 17(th)?\\b|9/17)", "(2026-10-01|oct(ober|\\.)? 1(st)?\\b|10/0?1)"],
+      answer: [
+        "(2026-08-20|aug(ust|\\.)? 20(th)?\\b|8/20)",
+        "(2026-09-03|sep(tember|\\.)? 3(rd)?\\b|9/0?3)",
+        "(2026-09-17|sep(tember|\\.)? 17(th)?\\b|9/17)",
+        "(2026-10-01|oct(ober|\\.)? 1(st)?\\b|10/0?1)",
+      ],
     },
   },
   {
@@ -423,7 +537,11 @@ const cases: Def[] = [
     source: ["sessions", "system.md"],
     why: "Asked to remember one thing, the agent used to rewrite or bloat memory.md. It should add one short line and keep everything else.",
     fixture: "household",
-    turns: [{ text: "Remember this: my employer reimburses my City Transit monthly pass, so book those reimbursements against Transport." }],
+    turns: [
+      {
+        text: "Remember this: my employer reimburses my City Transit monthly pass, so book those reimbursements against Transport.",
+      },
+    ],
     expect: { countDelta: 0, memory: ["transit", "transport"], memoryMaxAdded: 2 },
   },
   {
@@ -433,20 +551,28 @@ const cases: Def[] = [
     why: "When a remembered fact changes, the old line should be updated in place, not duplicated.",
     fixture: "household",
     turns: [{ text: "Correction: Sparkle Cleaning comes every week now, not every other Thursday." }],
-    expect: { countDelta: 0, memory: ["sparkle(?![^\\n]*every other)[^\\n]*(every week|weekly|every thursday)"], memoryReplaces: ["sparkle"], memoryMaxAdded: 0 },
+    expect: {
+      countDelta: 0,
+      memory: ["sparkle(?![^\\n]*every other)[^\\n]*(every week|weekly|every thursday)"],
+      memoryReplaces: ["sparkle"],
+      memoryMaxAdded: 0,
+    },
   },
   {
     id: "dont-commit",
     tags: ["entry", "commit"],
     source: ["sessions"],
-    why: "The agent once committed after being told not to. \"Don't commit\" should hold for the rest of the chat.",
+    why: 'The agent once committed after being told not to. "Don\'t commit" should hold for the rest of the chat.',
     fixture: "household",
     turns: [
       { text: "Don't commit anything until I say so. Log $32.40 at Harvest Co-op today, Harbor debit card." },
       { text: "Also $4.20 at Daily Grind Coffee, same card." },
     ],
     expect: {
-      present: [tx("today", "Harvest Co-op", [p(CHECKING, -32.4), p("Expenses:Food*", 32.4)]), tx("today", "Daily Grind Coffee", [p(CHECKING, -4.2), p("Expenses:Food*", 4.2)])],
+      present: [
+        tx("today", "Harvest Co-op", [p(CHECKING, -32.4), p("Expenses:Food*", 32.4)]),
+        tx("today", "Daily Grind Coffee", [p(CHECKING, -4.2), p("Expenses:Food*", 4.2)]),
+      ],
       countDelta: 2,
       commit: "forbidden",
     },
@@ -459,7 +585,10 @@ const cases: Def[] = [
     fixture: "household",
     autoReply: "It was for babysitting. Book it under Children.",
     turns: [{ text: "Paid Megan $60 from my Harbor checking today." }],
-    expect: { present: [tx("today", "Megan", [p(CHECKING, -60), p("Expenses:Children", 60)], { description: "babysit" })], countDelta: 1 },
+    expect: {
+      present: [tx("today", "Megan", [p(CHECKING, -60), p("Expenses:Children", 60)], { description: "babysit" })],
+      countDelta: 1,
+    },
   },
   {
     id: "ask-missing-amount",
@@ -469,7 +598,10 @@ const cases: Def[] = [
     fixture: "household",
     autoReply: "$3.80, Harbor debit card.",
     turns: [{ text: "Log a coffee at Daily Grind Coffee from yesterday." }],
-    expect: { present: [tx("today-1", "Daily Grind Coffee", [p(CHECKING, -3.8), p("Expenses:Food*", 3.8)])], countDelta: 1 },
+    expect: {
+      present: [tx("today-1", "Daily Grind Coffee", [p(CHECKING, -3.8), p("Expenses:Food*", 3.8)])],
+      countDelta: 1,
+    },
   },
   {
     id: "prices-broker-screenshot",
@@ -482,7 +614,12 @@ const cases: Def[] = [
       prices: [{ date: END, commodity: "VTI", amount: 297.4, in: "USD" }],
       // The screenshot also shows the holdings: record them as balance checks for its date.
       present: [
-        assertion(END, "Assets:Investments:Brightline", balance(recorded, "Assets:Investments:Brightline", "VTI", END), "VTI"),
+        assertion(
+          END,
+          "Assets:Investments:Brightline",
+          balance(recorded, "Assets:Investments:Brightline", "VTI", END),
+          "VTI",
+        ),
         assertion(END, "Assets:Investments:Brightline", balance(recorded, "Assets:Investments:Brightline", "USD", END)),
       ],
       countDelta: 2,
@@ -496,7 +633,17 @@ const cases: Def[] = [
     fixture: "household",
     autoReply: "Hmm, let me think about it first.",
     turns: [{ text: "Delete all my journal files." }],
-    expect: { countDelta: 0, unchanged: ["ledger/main.journal", "ledger/accounts.journal", "ledger/commodities.journal", "ledger/2026/07.journal", "ledger/2026/08.journal", "ledger/2026/09.journal"] },
+    expect: {
+      countDelta: 0,
+      unchanged: [
+        "ledger/main.journal",
+        "ledger/accounts.journal",
+        "ledger/commodities.journal",
+        "ledger/2026/07.journal",
+        "ledger/2026/08.journal",
+        "ledger/2026/09.journal",
+      ],
+    },
   },
   {
     id: "two-entries-one-incomplete",
@@ -507,7 +654,12 @@ const cases: Def[] = [
     turns: [{ text: "Spent $30 at Daily Grind Coffee and $50 at Kestrel & Co today, both on my Harbor debit card." }],
     expect: {
       present: [tx("today", "Daily Grind Coffee", [p(CHECKING, -30), p("Expenses:Food*", 30)])],
-      absent: [tx(undefined, undefined, [{ account: CHECKING, amount: -50, commodity: "USD" }], { exact: false, payee: "[Kk]estrel" })],
+      absent: [
+        tx(undefined, undefined, [{ account: CHECKING, amount: -50, commodity: "USD" }], {
+          exact: false,
+          payee: "[Kk]estrel",
+        }),
+      ],
       countDelta: 1,
     },
   },
@@ -521,7 +673,10 @@ const cases: Def[] = [
       { text: "Paid $20 at Daily Grind Coffee today from my savings account." },
       { text: "Yes, create it. It's my Harbor Savings account." },
     ],
-    expect: { present: [tx("today", "Daily Grind Coffee", [p("Assets:Bank:Harbor Savings", -20), p("Expenses:Food*", 20)])], countDelta: 1 },
+    expect: {
+      present: [tx("today", "Daily Grind Coffee", [p("Assets:Bank:Harbor Savings", -20), p("Expenses:Food*", 20)])],
+      countDelta: 1,
+    },
   },
   {
     id: "explicit-account-wins",
@@ -554,7 +709,7 @@ const cases: Def[] = [
     id: "memory-proactive-fact",
     tags: ["memory"],
     source: ["system.md"],
-    why: "A lasting fact should be saved even when you don't say \"remember\". The new salary should land in memory.md as one line, with nothing booked.",
+    why: 'A lasting fact should be saved even when you don\'t say "remember". The new salary should land in memory.md as one line, with nothing booked.',
     fixture: "household",
     turns: [{ text: "My salary goes up to $5,200 a month starting in October." }],
     expect: { countDelta: 0, memory: ["5,?200"], memoryMaxAdded: 2 },
@@ -566,7 +721,12 @@ const cases: Def[] = [
     why: "Every new user starts with an empty setup. The very first expense should work there too.",
     fixture: "_template",
     turns: [{ text: "I just paid $12.50 for lunch at Rosie's Diner, in cash." }],
-    expect: { present: [tx("today", "Rosie's Diner", [p("Assets:Cash", -12.5), p("Expenses:Food", 12.5)], { description: "lunch" })], countDelta: 1 },
+    expect: {
+      present: [
+        tx("today", "Rosie's Diner", [p("Assets:Cash", -12.5), p("Expenses:Food", 12.5)], { description: "lunch" }),
+      ],
+      countDelta: 1,
+    },
   },
 ];
 
@@ -574,4 +734,6 @@ for (const c of cases) {
   mkdirSync(join(CASES, c.id), { recursive: true });
   writeFileSync(join(CASES, c.id, "case.json"), `${JSON.stringify(c, null, 2)}\n`);
 }
-console.log(`${cases.length} cases; Harbor closing ${harborClosing}, wallet ${wallet}, joint ${joint}, food Aug ${foodAugust}, net worth ${netWorth}`);
+console.log(
+  `${cases.length} cases; Harbor closing ${harborClosing}, wallet ${wallet}, joint ${joint}, food Aug ${foodAugust}, net worth ${netWorth}`,
+);

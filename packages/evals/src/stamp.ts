@@ -47,8 +47,17 @@ export function computeStamp(pkg: string, root: string): Stamp {
   return {
     cases: hashFiles([join(pkg, "cases"), join(pkg, "fixtures")], root),
     harness: hashFiles([join(pkg, "src")], root),
-    agent: hashFiles([join(resources, "system.md"), join(resources, "accountant24-extension.js"), join(pkg, ".cache", "skills", "skills")], root),
-    pi: existsSync(piPackage) ? (JSON.parse(readFileSync(piPackage, "utf8")) as { version: string }).version : "unknown",
+    agent: hashFiles(
+      [
+        join(resources, "system.md"),
+        join(resources, "accountant24-extension.js"),
+        join(pkg, ".cache", "skills", "skills"),
+      ],
+      root,
+    ),
+    pi: existsSync(piPackage)
+      ? (JSON.parse(readFileSync(piPackage, "utf8")) as { version: string }).version
+      : "unknown",
   };
 }
 
