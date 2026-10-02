@@ -1,0 +1,37 @@
+{
+  "id": "unknown-store",
+  "tags": [
+    "entry"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "When you say you don't remember the store, the payee should be Unknown, without asking you again.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Spent $40 on groceries today with my Harbor debit card, I don't remember the store."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Unknown$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -40,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 40,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}
