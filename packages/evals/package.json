@@ -7,7 +7,8 @@
   "scripts": {
     "evals": "tsx src/run.ts",
     "evals:skills": "sh scripts/fetch-skills.sh",
-    "evals:report": "sh scripts/report.sh"
+    "evals:generate": "tsx scripts/household/gen-ledger.ts && tsx scripts/household/gen-cases.ts && tsx scripts/household/gen-documents.ts && npm run evals:overview",
+    "evals:overview": "tsx scripts/overview.ts"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.84.1"
