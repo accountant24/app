@@ -14,7 +14,8 @@
     "present": [
       {
         "date": "today",
-        "description": "rosie",
+        "payee": "^Rosie['’]s Diner$",
+        "description": "lunch",
         "postings": [
           {
             "account": "Assets:Cash",

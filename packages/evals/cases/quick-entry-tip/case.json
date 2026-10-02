@@ -13,7 +13,8 @@
     "present": [
       {
         "date": "today-1",
-        "description": "pho saigon",
+        "payee": "^Pho Saigon$",
+        "description": "lunch",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",

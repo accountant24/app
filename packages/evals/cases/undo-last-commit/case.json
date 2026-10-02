@@ -18,7 +18,7 @@
     "absent": [
       {
         "date": "2026-09-29",
-        "description": "luigi",
+        "payee": "Luigi",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking"

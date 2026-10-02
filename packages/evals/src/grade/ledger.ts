@@ -5,7 +5,23 @@ import type { AccountPattern, PostingPattern, TransactionPattern } from "../case
 
 export type Amount = { commodity: string; quantity: number };
 export type Posting = { account: string; amounts: Amount[]; tags: [string, string][] };
-export type Transaction = { date: string; description: string; postings: Posting[]; tags: [string, string][] };
+export type Transaction = {
+  date: string;
+  /** Header text before the first ` | `, as hledger splits it. */
+  payee: string;
+  /** Header text after the first ` | `; empty when there is none. hledger
+   *  calls this the note; the agent's tools and the user call it the description. */
+  description: string;
+  postings: Posting[];
+  tags: [string, string][];
+};
+
+/** Split hledger's header text into payee and description on the first `|`, as hledger does. */
+export function splitHeader(header: string): { payee: string; description: string } {
+  const bar = header.indexOf("|");
+  if (bar === -1) return { payee: header.trim(), description: "" };
+  return { payee: header.slice(0, bar).trim(), description: header.slice(bar + 1).trim() };
+}
 
 type HledgerAmount = { acommodity: string; aquantity: { floatingPoint: number } };
 type HledgerPosting = { paccount: string; pamount: HledgerAmount[]; ptags?: [string, string][] };
@@ -21,7 +37,7 @@ export function parseTransactions(json: unknown): Transaction[] {
   if (!Array.isArray(json)) throw new Error("hledger print output is not a list");
   return (json as HledgerTransaction[]).map((t) => ({
     date: t.tdate,
-    description: t.tdescription,
+    ...splitHeader(t.tdescription),
     tags: t.ttags ?? [],
     postings: t.tpostings.map((p) => ({
       account: p.paccount,
@@ -65,12 +81,13 @@ export function postingMatches(pattern: PostingPattern, posting: Posting): boole
 function hasTags(want: Record<string, string | true>, txn: Transaction): boolean {
   const all = [...txn.tags, ...txn.postings.flatMap((p) => p.tags)];
   return Object.entries(want).every(([name, value]) =>
-    all.some(([n, v]) => n === name && (value === true || new RegExp(value, "i").test(v))),
+    all.some(([n, v]) => n === name && (value === true || new RegExp(value).test(v))),
   );
 }
 
 export function transactionMatches(pattern: TransactionPattern, txn: Transaction, today: string): boolean {
   if (pattern.date && txn.date !== resolveDate(pattern.date, today)) return false;
+  if (pattern.payee && !new RegExp(pattern.payee).test(txn.payee)) return false;
   if (pattern.description && !new RegExp(pattern.description, "i").test(txn.description)) return false;
   if (pattern.tags && !hasTags(pattern.tags, txn)) return false;
   if ((pattern.exact ?? true) && pattern.postings.length !== txn.postings.length) return false;
@@ -103,5 +120,7 @@ export function describePattern(p: TransactionPattern): string {
   const postings = p.postings
     .map((x) => `${[x.account].flat().join("|")}${x.amount === undefined ? "" : ` ${x.amount}`}${x.commodity ? ` ${x.commodity}` : ""}`)
     .join(", ");
-  return `${p.date ?? "any date"}${p.description ? ` /${p.description}/` : ""} [${postings}]`;
+  const payee = p.payee ? ` payee /${p.payee}/` : "";
+  const description = p.description ? ` description /${p.description}/i` : "";
+  return `${p.date ?? "any date"}${payee}${description} [${postings}]`;
 }

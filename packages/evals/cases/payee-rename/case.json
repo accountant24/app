@@ -14,7 +14,7 @@
     "present": [
       {
         "date": "2026-07-21",
-        "description": "^Sal's Corner Deli",
+        "payee": "^Sal['’]s Corner Deli$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
@@ -28,12 +28,12 @@
           }
         ],
         "tags": {
-          "original_payee_name": "^corner deli$"
+          "original_payee_name": "^Corner Deli$"
         }
       },
       {
         "date": "2026-08-21",
-        "description": "^Sal's Corner Deli",
+        "payee": "^Sal['’]s Corner Deli$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
@@ -47,12 +47,12 @@
           }
         ],
         "tags": {
-          "original_payee_name": "^corner deli$"
+          "original_payee_name": "^Corner Deli$"
         }
       },
       {
         "date": "2026-09-21",
-        "description": "^Sal's Corner Deli",
+        "payee": "^Sal['’]s Corner Deli$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
@@ -66,13 +66,13 @@
           }
         ],
         "tags": {
-          "original_payee_name": "^corner deli$"
+          "original_payee_name": "^Corner Deli$"
         }
       }
     ],
     "absent": [
       {
-        "description": "^corner deli",
+        "payee": "^Corner Deli$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet"

@@ -18,7 +18,8 @@
     "present": [
       {
         "date": "2026-09-29",
-        "description": "maple table",
+        "payee": "^(The )?Maple Table$",
+        "description": "dinner",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -32,7 +33,7 @@
           }
         ],
         "tags": {
-          "trip": "toronto-2026"
+          "trip": "^toronto-2026$"
         }
       }
     ],

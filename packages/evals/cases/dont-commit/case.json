@@ -17,7 +17,7 @@
     "present": [
       {
         "date": "today",
-        "description": "harvest",
+        "payee": "^Harvest Co-op$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -33,7 +33,7 @@
       },
       {
         "date": "today",
-        "description": "daily grind",
+        "payee": "^Daily Grind Coffee$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",

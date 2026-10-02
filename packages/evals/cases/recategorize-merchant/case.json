@@ -14,7 +14,7 @@
     "present": [
       {
         "date": "2026-07-19",
-        "description": "parkside",
+        "payee": "^Parkside Pharmacy$",
         "postings": [
           {
             "account": "Liabilities:Credit Card:Summit Visa",
@@ -30,7 +30,7 @@
       },
       {
         "date": "2026-08-19",
-        "description": "parkside",
+        "payee": "^Parkside Pharmacy$",
         "postings": [
           {
             "account": "Liabilities:Credit Card:Summit Visa",
@@ -46,7 +46,7 @@
       },
       {
         "date": "2026-09-19",
-        "description": "parkside",
+        "payee": "^Parkside Pharmacy$",
         "postings": [
           {
             "account": "Liabilities:Credit Card:Summit Visa",
@@ -63,7 +63,7 @@
     ],
     "absent": [
       {
-        "description": "parkside",
+        "payee": "[Pp]arkside",
         "postings": [
           {
             "account": "Expenses:Health"

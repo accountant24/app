@@ -1,29 +1,29 @@
 {
-  "id": "quick-cash-entry",
+  "id": "description-not-invented",
   "tags": [
-    "entry",
-    "cash"
+    "description"
   ],
   "fixture": "household",
   "turns": [
     {
-      "text": "Spent $14.80 at the farmers market this morning, cash."
+      "text": "$9.40 at Daily Grind Coffee today, Harbor debit card."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today",
-        "payee": "^Farmers Market$",
+        "payee": "^Daily Grind Coffee$",
+        "description": "^$",
         "postings": [
           {
-            "account": "Assets:Cash:Wallet",
-            "amount": -14.8,
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -9.4,
             "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
-            "amount": 14.8,
+            "amount": 9.4,
             "commodity": "USD"
           }
         ]

@@ -15,7 +15,7 @@
     "present": [
       {
         "date": "today",
-        "description": "^Internal Transfer",
+        "payee": "^Internal Transfer$",
         "postings": [
           {
             "account": "Assets:Cash:Home",
@@ -31,7 +31,7 @@
       },
       {
         "date": "today",
-        "description": "corner deli",
+        "payee": "^Corner Deli$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
