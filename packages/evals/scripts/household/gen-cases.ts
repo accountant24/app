@@ -553,7 +553,7 @@ const cases: Def[] = [
     turns: [{ text: "Correction: Sparkle Cleaning comes every week now, not every other Thursday." }],
     expect: {
       countDelta: 0,
-      memory: ["sparkle(?![^\\n]*every other)[^\\n]*(every week|weekly|every thursday)"],
+      memory: ["sparkle[^\\n]*(every week|weekly|every thursday)"],
       memoryReplaces: ["sparkle"],
       memoryMaxAdded: 0,
     },

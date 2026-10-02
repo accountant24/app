@@ -1,0 +1,24 @@
+diff --git a/memory.md b/memory.md
+index 7384273..94a5254 100644
+--- a/memory.md
++++ b/memory.md
+@@ -9,7 +9,7 @@
+ - After every bank statement import, add a balance assertion for that account on the statement's closing date.
+ 
+ ## Arrangements
+-- Sparkle Cleaning: a visit every other Thursday; each payment ($165) covers 3 visits and is made on the first visit it covers.
++- Sparkle Cleaning: a visit every week (since 2026-10-02); previously every other Thursday with $165 covering 3 visits.
+ 
+ ## Trips
+ - Toronto, 2026-09-28 to 2026-10-01: tag trip spending with `trip: toronto-2026`.
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..2083ea4
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/glm-5p3-flash"
++}
+\ No newline at end of file
