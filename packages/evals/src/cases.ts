@@ -62,7 +62,7 @@ export type Expect = {
   memoryMaxAdded?: number;
   /** Case-insensitive regexes for existing memory lines the agent may drop or rewrite (a correction). */
   memoryReplaces?: string[];
-  /** Case-insensitive regexes the agent's last reply must match (questions about the books). */
+  /** Case-insensitive regexes that something the agent said must match (questions about the books). */
   answer?: string[];
   /** Workspace paths (relative) that must be byte-identical to the fixture. */
   unchanged?: string[];

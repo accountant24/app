@@ -6,3 +6,4 @@ results/**/report.html
 results/**/state.json
 results/**/trajectory/
 results/**/progress.txt
+results/**/facts/

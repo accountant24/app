@@ -20,14 +20,16 @@ import {
 
 export type Facts = {
   today: string;
-  initial: Transaction[];
+  /** Transactions in the fixture before the run. */
+  initialCount: number;
   /** null when hledger could not read the final ledger at all. */
   final: Transaction[] | null;
   /** hledger's message when `check --strict` failed; undefined when it passed. */
   checkError?: string;
   initialMemory: string;
   memory: string;
-  lastReply: string;
+  /** Everything the agent said in the conversation (answers can come before a follow-up). */
+  replies: string;
   /** `P` directives in the final ledger, normalized. */
   prices: { date: string; commodity: string; amount: number; in: string }[];
   /** `expect.unchanged` paths whose bytes differ from the fixture. */
@@ -110,7 +112,7 @@ export function checkExpect(expect: Expect, facts: Facts): string[] {
       if (final.some((t) => transactionMatches(p, t, facts.today))) failures.push(`unexpected ${describePattern(p)}`);
     }
     if (expect.countDelta !== undefined) {
-      const delta = final.length - facts.initial.length;
+      const delta = final.length - facts.initialCount;
       const allowed = [expect.countDelta].flat();
       if (!allowed.includes(delta)) failures.push(`transaction count changed by ${delta}, expected ${allowed.join(" or ")}`);
     }
@@ -129,7 +131,7 @@ export function checkExpect(expect: Expect, facts: Facts): string[] {
   }
   failures.push(...checkMemory(expect, facts.initialMemory, facts.memory));
   for (const re of expect.answer ?? []) {
-    if (!new RegExp(re, "i").test(facts.lastReply)) failures.push(`reply lacks /${re}/`);
+    if (!new RegExp(re, "i").test(facts.replies)) failures.push(`replies lack /${re}/`);
   }
   for (const path of facts.changedPaths) failures.push(`${path} changed`);
   return failures;
