@@ -7,7 +7,7 @@
     "system.md",
     "sessions"
   ],
-  "why": "system.md says a stated balance gets verified and recorded with add_balance_assertions. When the books already agree, the only change is the checkpoint.",
+  "why": "When you tell the agent a balance and the books already agree, it should only record a balance check.",
   "fixture": "household",
   "turns": [
     {

@@ -7,7 +7,7 @@
     "sessions",
     "system.md"
   ],
-  "why": "memory.md overreach is the most repeated complaint in the sessions: rewriting or bloating the file when asked to add one fact. The new rule has to land as a short targeted addition, with every existing line kept.",
+  "why": "Asked to remember one thing, the agent used to rewrite or bloat memory.md. It should add one short line and keep everything else.",
   "fixture": "household",
   "turns": [
     {

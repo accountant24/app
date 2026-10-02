@@ -7,7 +7,7 @@
   "source": [
     "sessions"
   ],
-  "why": "In the sessions the agent committed after being told not to. An instruction not to commit has to hold across turns while the changes still land in the files.",
+  "why": "The agent once committed after being told not to. \"Don't commit\" should hold for the rest of the chat.",
   "fixture": "household",
   "turns": [
     {

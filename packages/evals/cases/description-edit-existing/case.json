@@ -6,7 +6,7 @@
   "source": [
     "sessions"
   ],
-  "why": "Correcting an existing entry is a common edit in the sessions. The dinner's description has to change in place, with no new transaction.",
+  "why": "Fixing an existing entry is a common edit. The description should change in place, without adding a new entry.",
   "fixture": "household",
   "turns": [
     {

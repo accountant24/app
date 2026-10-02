@@ -9,7 +9,7 @@
   "source": [
     "sessions"
   ],
-  "why": "In the sessions, an expense typed in by hand and later imported from the statement was booked twice. The agent has to recognize the hand-typed Harvest Co-op purchase and not add the statement's copy of it.",
+  "why": "A purchase typed in by hand later showed up again in the statement and got added twice. The agent should spot that it's already there.",
   "fixture": "household",
   "turns": [
     {

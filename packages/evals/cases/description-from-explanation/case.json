@@ -6,7 +6,7 @@
   "source": [
     "sessions"
   ],
-  "why": "The sessions show the user's explanation ending up in a tag or comment instead of the description. When the message says what a payment was for, that belongs in the description.",
+  "why": "Explanations ended up in tags or comments instead of the description. When you say what a payment was for, it belongs in the description.",
   "fixture": "household",
   "turns": [
     {

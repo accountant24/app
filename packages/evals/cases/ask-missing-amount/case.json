@@ -7,7 +7,7 @@
   "source": [
     "system.md"
   ],
-  "why": "system.md says never fabricate data. With no amount given, the agent has to ask instead of guessing, then book the amount it's told.",
+  "why": "No amount was given. The agent should ask instead of guessing, then book what you say.",
   "fixture": "household",
   "autoReply": "$3.80, Harbor debit card.",
   "turns": [

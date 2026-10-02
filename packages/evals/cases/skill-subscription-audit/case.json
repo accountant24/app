@@ -8,7 +8,7 @@
     "sessions",
     "coverage"
   ],
-  "why": "subscription-audit is the skill used most in the sessions, and skills loading under their plugin name is a path the port has to keep. The audit has to list the household's subscriptions.",
+  "why": "This is the most used skill, and skills must keep working after the move to mobile. It should list the subscriptions.",
   "fixture": "household",
   "turns": [
     {

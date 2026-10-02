@@ -7,7 +7,7 @@
   "source": [
     "sessions"
   ],
-  "why": "Quick entries in plain words are about a fifth of real use. The payee has to match the existing spelling (Farmers Market), dated today and paid from the wallet.",
+  "why": "Short messages like this are a big part of daily use. The agent should book it today, from the wallet, under the existing payee name.",
   "fixture": "household",
   "turns": [
     {

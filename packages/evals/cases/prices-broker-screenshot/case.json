@@ -8,7 +8,7 @@
     "sessions",
     "system.md"
   ],
-  "why": "The sessions include updating prices from broker screenshots, and system.md says stated prices go through add_prices. The VTI price on the screenshot has to be recorded for its date.",
+  "why": "Prices are often updated from broker screenshots. The VTI price should be recorded, plus balance checks for the 23 shares and the cash the screenshot shows.",
   "fixture": "household",
   "turns": [
     {
@@ -27,9 +27,32 @@
         "in": "USD"
       }
     ],
-    "countDelta": [
-      0,
-      1
-    ]
+    "present": [
+      {
+        "date": "2026-09-30",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Investments:Brightline",
+            "amount": 0,
+            "commodity": "VTI",
+            "asserts": 23
+          }
+        ]
+      },
+      {
+        "date": "2026-09-30",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Investments:Brightline",
+            "amount": 0,
+            "commodity": "USD",
+            "asserts": 177.7
+          }
+        ]
+      }
+    ],
+    "countDelta": 2
   }
 }

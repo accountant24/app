@@ -7,7 +7,7 @@
     "system.md",
     "sessions"
   ],
-  "why": "system.md says a corrected fact gets fixed in place, not added as a near duplicate. The cleaning schedule line has to change, and memory.md must not grow.",
+  "why": "When a remembered fact changes, the old line should be updated in place, not duplicated.",
   "fixture": "household",
   "turns": [
     {
