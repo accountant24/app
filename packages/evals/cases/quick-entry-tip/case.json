@@ -3,6 +3,10 @@
   "tags": [
     "entry"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The sessions show tips added to a meal in plain speech. The whole $27.50 has to leave checking, with or without the tip as its own posting, and the description has to say it was lunch.",
   "fixture": "household",
   "turns": [
     {

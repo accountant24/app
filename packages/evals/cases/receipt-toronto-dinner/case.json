@@ -5,6 +5,10 @@
     "image",
     "trip"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Spending while traveling, in a foreign currency, came up repeatedly in the sessions. The agent has to book the USD amount the card charged, file it under travel, and tag it with the trip memory.md describes for those dates.",
   "fixture": "household",
   "turns": [
     {

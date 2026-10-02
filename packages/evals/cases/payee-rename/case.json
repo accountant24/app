@@ -4,6 +4,10 @@
     "edit",
     "payees"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The sessions include batch payee renames that keep the old name as metadata. Every Corner Deli entry has to become Sal's Corner Deli, with the old name kept exactly in original_payee_name.",
   "fixture": "household",
   "turns": [
     {

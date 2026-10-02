@@ -4,6 +4,10 @@
     "entry",
     "ask"
   ],
+  "source": [
+    "system.md"
+  ],
+  "why": "system.md says to ask when a category is ambiguous or absent. Megan has no history, so the agent should ask, then book the answer it gets.",
   "fixture": "household",
   "autoReply": "It was for babysitting. Book it under Children.",
   "turns": [

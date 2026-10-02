@@ -4,6 +4,11 @@
     "edit",
     "memory"
   ],
+  "source": [
+    "sessions",
+    "system.md"
+  ],
+  "why": "Wrong categories and memory.md overreach are the two biggest complaints in the sessions. The past entries have to move to Personal Care, and memory.md must stay untouched, because system.md keeps payee-to-account mappings out of memory.",
   "fixture": "household",
   "turns": [
     {

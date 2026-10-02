@@ -6,6 +6,10 @@
     "trip",
     "duplicate"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The sessions include attaching a document to spending that was partly recorded already. The hotel's $412 prepayment is in the books, so only the extras paid at checkout are new, with the folio linked as the source.",
   "fixture": "household",
   "turns": [
     {

@@ -4,6 +4,10 @@
     "balance",
     "ask"
   ],
+  "source": [
+    "system.md"
+  ],
+  "why": "system.md says a discrepancy gets investigated before anything else. With a balance $50 off, the agent has to say so and touch nothing, not plug the gap to make the numbers match.",
   "fixture": "household",
   "autoReply": "I'm not sure. Can you check what might be missing?",
   "turns": [

@@ -5,6 +5,10 @@
     "cash",
     "transfer"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Moving cash between pools and then spending it is a pattern from the sessions. It takes two transactions: an Internal Transfer from the cash jar to the wallet, then the purchase from the wallet.",
   "fixture": "household",
   "turns": [
     {

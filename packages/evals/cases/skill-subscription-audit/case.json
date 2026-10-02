@@ -4,6 +4,11 @@
     "query",
     "skill"
   ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "subscription-audit is the skill used most in the sessions, and skills loading under their plugin name is a path the port has to keep. The audit has to list the household's subscriptions.",
   "fixture": "household",
   "turns": [
     {

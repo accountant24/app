@@ -5,6 +5,11 @@
     "pdf",
     "statement"
   ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "Statement imports are a sixth of real use, and the desktop sessions show imports that missed rows or lost the bank's spelling. The agent has to add only the rows after the last import, keep existing payee names, and close with a checkpoint on the statement's closing date.",
   "fixture": "household",
   "turns": [
     {

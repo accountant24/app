@@ -6,6 +6,11 @@
     "statement",
     "fx"
   ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "CSV exports and a second currency are common in the sessions. The top-up row is the other leg of a transfer already recorded from the checking side, and adding it again is the double-booked transfer the sessions complained about.",
   "fixture": "household",
   "turns": [
     {

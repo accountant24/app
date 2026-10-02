@@ -3,6 +3,11 @@
   "tags": [
     "balance"
   ],
+  "source": [
+    "system.md",
+    "sessions"
+  ],
+  "why": "system.md says a stated balance gets verified and recorded with add_balance_assertions. When the books already agree, the only change is the checkpoint.",
   "fixture": "household",
   "turns": [
     {

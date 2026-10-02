@@ -73,3 +73,5 @@ ul.expect{margin:0;padding-left:18px;display:grid;gap:8px}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 pre.wrapped{white-space:pre-wrap;overflow-wrap:anywhere}
+.why{margin:-4px 0 16px;color:var(--ink);max-width:none;font-size:14.5px;padding:8px 12px;background:var(--code-bg);border-radius:6px}
+.chip.src{background:var(--auto-soft);color:var(--auto)}

@@ -3,6 +3,10 @@
   "tags": [
     "description"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Correcting an existing entry is a common edit in the sessions. The dinner's description has to change in place, with no new transaction.",
   "fixture": "household",
   "turns": [
     {

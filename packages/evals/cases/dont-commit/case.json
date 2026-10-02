@@ -4,6 +4,10 @@
     "entry",
     "commit"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "In the sessions the agent committed after being told not to. An instruction not to commit has to hold across turns while the changes still land in the files.",
   "fixture": "household",
   "turns": [
     {

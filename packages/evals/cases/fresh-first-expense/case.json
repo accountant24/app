@@ -4,6 +4,10 @@
     "entry",
     "fresh"
   ],
+  "source": [
+    "coverage"
+  ],
+  "why": "Every new user starts from the stock template with an empty memory.md. The first expense has to work there, including declaring the currency the template doesn't have yet.",
   "fixture": "_template",
   "turns": [
     {
