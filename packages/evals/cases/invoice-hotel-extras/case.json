@@ -9,9 +9,9 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Here's the final invoice from the Kraków hotel. I paid the extras at checkout with my Lumen card.",
+      "text": "Here's the final bill from the Toronto hotel. I paid the extras at checkout with my Harbor debit card, it came to $40.00.",
       "attachments": [
-        "invoice-2026-10-0183.pdf"
+        "folio-2026-10-0183.pdf"
       ]
     }
   ],
@@ -19,12 +19,12 @@
     "present": [
       {
         "date": "2026-10-01",
-        "description": "wawel",
+        "description": "harbourfront",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -40,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Travel*"
@@ -32,7 +32,7 @@
         ],
         "exact": false,
         "tags": {
-          "trip": "krakow-2026",
+          "trip": "toronto-2026",
           "related_file": "^files/"
         }
       }
@@ -42,7 +42,7 @@
       {
         "account": "Expenses:Travel",
         "amount": 452,
-        "commodity": "EUR"
+        "commodity": "USD"
       }
     ]
   }

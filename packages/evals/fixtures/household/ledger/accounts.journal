@@ -13,19 +13,19 @@
 
 account Assets:Cash  ; physical cash
 account Assets:Cash:Wallet               ; Alex's wallet
-account Assets:Cash:Home                 ; cash box at home
-account Assets:Bank:Lumen                ; Alex's main account (neobank)
-account Assets:Bank:Stadtbank            ; joint account with Sam: rent and bills
-account Assets:Bank:Dnipro Bank          ; Alex's UAH account in Ukraine
+account Assets:Cash:Home                 ; cash jar at home
+account Assets:Bank:Harbor Checking      ; Alex's main checking account
+account Assets:Bank:Prairie Joint        ; joint account with Sam: rent and bills
+account Assets:Bank:Maple Trust          ; Alex's CAD account in Toronto
 account Assets:PayPal
-account Assets:Investments:Tradeview     ; broker: savings plan into VWCE
+account Assets:Investments:Brightline    ; brokerage: monthly investment into VTI
 
 ; ====================================================================
 ; LIABILITIES — things you owe (credit cards, loans, mortgages)
 ; ====================================================================
 
 account Liabilities:Loan  ; personal loans
-account Liabilities:Credit Card:Stadtbank Visa
+account Liabilities:Credit Card:Summit Visa
 
 ; ====================================================================
 ; EQUITY — technical balancing entries, not real money flows (opening balances, currency conversion)

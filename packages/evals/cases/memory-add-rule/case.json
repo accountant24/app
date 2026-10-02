@@ -6,13 +6,13 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Remember this: my employer reimburses my BVG monthly ticket, so book those reimbursements against Transport."
+      "text": "Remember this: my employer reimburses my City Transit monthly pass, so book those reimbursements against Transport."
     }
   ],
   "expect": {
     "countDelta": 0,
     "memory": [
-      "bvg",
+      "transit",
       "transport"
     ],
     "memoryMaxAdded": 2

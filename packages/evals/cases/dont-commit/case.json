@@ -7,43 +7,43 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Don't commit anything until I say so. Log 32.40 at Bio Corner today, Lumen card."
+      "text": "Don't commit anything until I say so. Log $32.40 at Harvest Co-op today, Harbor debit card."
     },
     {
-      "text": "Also 4.20 at Kaffeebar Ost, same card."
+      "text": "Also $4.20 at Daily Grind Coffee, same card."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today",
-        "description": "bio corner",
+        "description": "harvest",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -32.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 32.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       },
       {
         "date": "today",
-        "description": "kaffeebar",
+        "description": "daily grind",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -4.2,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 4.2,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }

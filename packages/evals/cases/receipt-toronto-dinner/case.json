@@ -1,5 +1,5 @@
 {
-  "id": "receipt-krakow-dinner",
+  "id": "receipt-toronto-dinner",
   "tags": [
     "receipt",
     "image",
@@ -8,7 +8,7 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Dinner in Kraków, paid with my Lumen card. It came to 11.62 EUR on the card.",
+      "text": "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.",
       "attachments": [
         "receipt.png"
       ]
@@ -18,21 +18,21 @@
     "present": [
       {
         "date": "2026-09-29",
-        "description": "lip",
+        "description": "maple table",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
-            "amount": -11.62,
-            "commodity": "EUR"
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -36.55,
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Travel*",
-            "amount": 11.62,
-            "commodity": "EUR"
+            "amount": 36.55,
+            "commodity": "USD"
           }
         ],
         "tags": {
-          "trip": "krakow-2026"
+          "trip": "toronto-2026"
         }
       }
     ],

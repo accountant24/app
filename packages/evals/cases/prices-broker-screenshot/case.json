@@ -17,9 +17,9 @@
     "prices": [
       {
         "date": "2026-09-30",
-        "commodity": "VWCE",
-        "amount": 133.2,
-        "in": "EUR"
+        "commodity": "VTI",
+        "amount": 297.4,
+        "in": "USD"
       }
     ],
     "countDelta": [

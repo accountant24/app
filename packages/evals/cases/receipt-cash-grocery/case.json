@@ -17,17 +17,17 @@
     "present": [
       {
         "date": "2026-09-29",
-        "description": "frischmarkt",
+        "description": "green basket",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
             "amount": -23.47,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 23.47,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }
