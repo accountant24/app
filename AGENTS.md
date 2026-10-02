@@ -167,6 +167,7 @@ Four tiers, all on Vitest (`npm test`); the first three run in CI on every PR.
 - Every case states `why` it exists (one or two sentences: the behavior it guards and where that came from) and its `source`: `sessions`, `system.md` or `coverage`. The loader rejects a case without them.
 - Expectations are unambiguous: when more than one outcome is correct, accept each explicitly; never hedge a case into accepting a wrong one.
 - Look at the cases with `npm run evals:overview -w @accountant24/evals` (the `a24-evals-overview` skill).
+- Results go into a dated run set (`results/<date>-<purpose>/`, one folder per model), stamped with what they ran against; start a new run set for each round of comparison. `npm run evals:compare -w @accountant24/evals -- <run set>` writes `comparison.md`. Scores and diffs are committed; transcripts and API keys never are.
 
 # Pull Requests
 
