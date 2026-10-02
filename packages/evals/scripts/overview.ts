@@ -55,6 +55,7 @@ function account(pattern: PostingPattern["account"]): string {
 
 function amount(p: PostingPattern): string {
   if (p.amount === undefined) return "";
+  if (p.asserts !== undefined) return `0, asserts balance = ${money(p.asserts)} ${p.commodity ?? ""}`.trim();
   if (p.amount === 0) return "0 (balance assertion)";
   return `${p.amount < 0 ? "−" : "+"}${money(Math.abs(p.amount))} ${p.commodity ?? ""}`.trim();
 }

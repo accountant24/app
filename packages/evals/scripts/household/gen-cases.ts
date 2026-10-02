@@ -52,10 +52,11 @@ function tx(date: string | undefined, payee: string | undefined, postings: Posti
   return { ...(date ? { date } : {}), ...(payeeRe ? { payee: payeeRe } : {}), ...(description ? { description } : {}), postings, ...rest };
 }
 
-/** A balance checkpoint on `account`; pass several dates when more than one is correct. */
-const assertion = (date: string | string[], account: string, commodity = "USD"): TransactionPattern => ({
+/** A balance checkpoint: a posting on `account` that moves 0 and asserts `balance`.
+ *  Pass several dates when more than one is correct. */
+const assertion = (date: string | string[], account: string, balance: number, commodity = "USD"): TransactionPattern => ({
   date,
-  ...tx(undefined, "Balance Assertion", [{ account, amount: 0, commodity }]),
+  ...tx(undefined, "Balance Assertion", [{ account, amount: 0, commodity, asserts: balance }]),
 });
 /** Every imported row links its source document and keeps the bank's payee spelling (system.md). */
 const IMPORTED = { related_file: "^files/", original_payee_name: true as const };
@@ -113,7 +114,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Here's my Harbor Bank statement for September. Add whatever is missing.", attachments: ["harbor-2026-09.pdf"] }],
     expect: {
-      present: [...harborRows, assertion(END, CHECKING)],
+      present: [...harborRows, assertion(END, CHECKING, harborClosing)],
       countDelta: harborRows.length + 1,
       balances: [{ account: CHECKING, amount: harborClosing, commodity: "USD", date: END }],
     },
@@ -127,7 +128,7 @@ const cases: Def[] = [
       present: [
         ...harborRows.filter((r) => r.date !== "2026-09-22"),
         tx("2026-09-22", "Harvest Co-op", [p(CHECKING, -33.45), p("Expenses:Food*", 33.45)]),
-        assertion(END, CHECKING),
+        assertion(END, CHECKING, harborClosing),
       ],
       countDelta: harborRows.length,
       balances: [{ account: CHECKING, amount: harborClosing, commodity: "USD", date: END }],
@@ -140,7 +141,7 @@ const cases: Def[] = [
     turns: [{ text: "Import my Maple Trust export for September.", attachments: ["maple-trust-2026-09.csv"] }],
     expect: {
       // A CSV states no closing date: the last row's date or the end of the month are both right.
-      present: [...cadRows, assertion([cadRows.at(-1)!.date as string, END], CAD_ACCOUNT, "CAD")],
+      present: [...cadRows, assertion([cadRows.at(-1)!.date as string, END], CAD_ACCOUNT, balance(all, CAD_ACCOUNT, "CAD", END), "CAD")],
       countDelta: cadRows.length + 1,
       balances: [{ account: CAD_ACCOUNT, amount: balance(all, CAD_ACCOUNT, "CAD", END), commodity: "CAD", date: END }],
     },
@@ -155,7 +156,7 @@ const cases: Def[] = [
         tx("2026-09-20", "Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true, related_file: "^files/" } }),
         tx("2026-09-20", "Thrift Loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true, ...IMPORTED } }),
         // The export has a Balance column: memory.md asks for a checkpoint after every import.
-        assertion(["2026-09-20", END], PAYPAL),
+        assertion(["2026-09-20", END], PAYPAL, 0),
       ],
       countDelta: 3,
       balances: [{ account: PAYPAL, amount: 0, commodity: "USD" }],
@@ -232,7 +233,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "I have $280 in my wallet right now. I don't remember where the rest went." }],
     expect: {
-      present: [tx("today", "Unknown", [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]), assertion("today", WALLET)],
+      present: [tx("today", "Unknown", [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]), assertion("today", WALLET, 280)],
       absent: [tx("today", undefined, [{ account: "Equity*" }], { exact: false })],
       countDelta: 2,
       balances: [{ account: WALLET, amount: 280, commodity: "USD" }],
@@ -243,7 +244,7 @@ const cases: Def[] = [
     tags: ["balance"],
     fixture: "household",
     turns: [{ text: `My Prairie joint account balance is $${joint.toFixed(2)} today.` }],
-    expect: { present: [assertion("today", JOINT)], countDelta: 1 },
+    expect: { present: [assertion("today", JOINT, joint)], countDelta: 1 },
   },
   {
     id: "balance-mismatch",

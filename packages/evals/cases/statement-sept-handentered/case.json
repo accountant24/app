@@ -200,7 +200,8 @@
           {
             "account": "Assets:Bank:Harbor Checking",
             "amount": 0,
-            "commodity": "USD"
+            "commodity": "USD",
+            "asserts": 6366.77
           }
         ]
       }
