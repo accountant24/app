@@ -176,8 +176,8 @@ const cases: Def[] = [
     source: ["sessions", "coverage"],
     why: "Receipts are often sent as photos. The agent should read the shop, date and total from the picture and book it as cash.",
     fixture: "household",
-    turns: [{ text: "Paid cash.", attachments: ["receipt.png"] }],
-    expect: { present: [tx("2026-09-29", "Green Basket Market", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])], countDelta: 1 },
+    turns: [{ text: "Paid cash from my wallet.", attachments: ["receipt.png"] }],
+    expect: { present: [tx("2026-09-26", "Green Basket Market", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])], countDelta: 1 },
   },
   {
     id: "receipt-toronto-dinner",
