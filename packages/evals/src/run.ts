@@ -4,11 +4,16 @@
 // errors.jsonl and never scored, a hard wall-clock ceiling per case, a
 // served-model check, and a harness gate a human approves.
 //
-//   npm run evals -- --variant baseline --model claude-sonnet-5 [--reps 2] [--only id,id] [--approve-harness]
+//   npm run evals -- --variant baseline --model anthropic/claude-sonnet-5 [--reps 2] [--only id,id] [--approve-harness]
+//
+// --model is provider/id (a bare id means anthropic). Credentials come from
+// ANTHROPIC_API_KEY / OPENAI_API_KEY, or a gitignored packages/evals/.env, or
+// --auth <auth.json> (a pi credentials file, copied per case and never written back).
+// Each variant directory is bound to one model on its first run.
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,7 +22,7 @@ import type { SessionJob, SessionOutput } from "./agent/session";
 import { collect, snapshot } from "./grade/collect";
 import { gradeFacts } from "./grade/grade";
 import { bashJournalWrites } from "./grade/guard";
-import { costUsd, summarize, toTranscript } from "./trace";
+import { summarize, toTranscript } from "./trace";
 import { git, prepareTurn, prepareWorkspace } from "./workspace";
 
 const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,6 +33,7 @@ const FLOW = join(PKG, "results", "bookkeeper");
 const SESSION_TS = join(PKG, "src", "agent", "session.ts");
 const RESOURCES = join(ROOT, "packages", "desktop", "resources");
 const SKILLS_DIR = join(PKG, ".cache", "skills");
+const TSX_LOADER = import.meta.resolve("tsx");
 
 type Args = {
   variant: string;
@@ -39,7 +45,27 @@ type Args = {
   only?: Set<string>;
   keep: boolean;
   approveHarness: boolean;
+  /** pi auth.json to use instead of API keys from the environment. */
+  auth?: string;
 };
+
+/** API key variable per provider, when credentials come from the environment. */
+const KEY_VARS: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY" };
+
+/** `provider/id`, or a bare id for Anthropic. */
+function splitModel(model: string): { provider: string; id: string } {
+  const slash = model.indexOf("/");
+  return slash === -1 ? { provider: "anthropic", id: model } : { provider: model.slice(0, slash), id: model.slice(slash + 1) };
+}
+
+/** KEY=value lines from a gitignored .env, without overriding the environment. */
+function loadDotEnv(path: string): void {
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
 
 function parseArgs(argv: string[]): Args {
   const a: Args = { variant: "baseline", model: "", thinking: "medium", reps: 1, concurrency: 4, timeoutS: 900, keep: false, approveHarness: false };
@@ -58,17 +84,18 @@ function parseArgs(argv: string[]): Args {
     else if (k === "--only") a.only = new Set(val(++i).split(","));
     else if (k === "--keep") a.keep = true;
     else if (k === "--approve-harness") a.approveHarness = true;
+    else if (k === "--auth") a.auth = resolve(val(++i));
     else fail(`unknown argument: ${k}`);
   }
   if (!/^(baseline|v[1-9]\d*)$/.test(a.variant)) fail(`--variant must be 'baseline' or 'v<N>', got '${a.variant}'`);
-  if (!a.model) fail("--model is required (e.g. claude-sonnet-5)");
+  if (!a.model) fail("--model is required (e.g. anthropic/claude-sonnet-5 or openai/gpt-5.5)");
   if (!Number.isInteger(a.reps) || a.reps < 1 || !Number.isInteger(a.concurrency) || a.concurrency < 1) fail("bad --reps/--concurrency");
   return a;
 }
 
 function fail(message: string): never {
   console.error(message);
-  console.error("usage: npm run evals -- --variant ID --model ID [--thinking LEVEL] [--reps N] [--concurrency N] [--timeout-s N] [--only id,…] [--keep] [--approve-harness]");
+  console.error("usage: npm run evals -- --variant ID --model PROVIDER/ID [--thinking LEVEL] [--reps N] [--concurrency N] [--timeout-s N] [--only id,…] [--auth auth.json] [--keep] [--approve-harness]");
   process.exit(2);
 }
 
@@ -131,11 +158,13 @@ async function runCase(c: EvalCase, args: Args, deadline: number): Promise<Run> 
   // The extension stamps the prompt with the UTC date; grade against the same.
   const today = now.toISOString().slice(0, 10);
   const agentDir = mkdtempSync(join(tmpdir(), "a24-eval-agent-"));
+  if (args.auth) copyFileSync(args.auth, join(agentDir, "auth.json"));
+  const { provider, id } = splitModel(args.model);
   const job: SessionJob = {
     workspace: ws,
     agentDir,
-    provider: "anthropic",
-    model: args.model,
+    provider,
+    model: id,
     thinking: args.thinking,
     extensionPath: join(RESOURCES, "accountant24-extension.js"),
     systemPromptPath: join(RESOURCES, "system.md"),
@@ -153,7 +182,9 @@ async function runCase(c: EvalCase, args: Args, deadline: number): Promise<Run> 
     ...(existsSync(docs) ? { ACCOUNTANT24_DOCS: docs } : {}),
   };
   const stderr = await new Promise<string>((done, reject) => {
-    const child = spawn(process.execPath, ["--import", "tsx", SESSION_TS, jobFile], { cwd: ws, env, stdio: ["ignore", "ignore", "pipe"] });
+    // The child runs inside the temp workspace, where "tsx" can't be resolved by
+    // name, so the loader is passed by its absolute URL.
+    const child = spawn(process.execPath, ["--import", TSX_LOADER, SESSION_TS, jobFile], { cwd: ws, env, stdio: ["ignore", "ignore", "pipe"] });
     let err = "";
     child.stderr.on("data", (d) => (err += d));
     const timer = setTimeout(() => {
@@ -172,9 +203,26 @@ async function runCase(c: EvalCase, args: Args, deadline: number): Promise<Run> 
   return { output, ws, today, before };
 }
 
-/** Served model must be the requested one, allowing a dated snapshot suffix. */
+/** Served model must be the requested one, allowing a dated snapshot suffix
+ *  (`-20251001` or `-2025-10-01`). */
 function servedModelOk(requested: string, served: string): boolean {
-  return served === requested || new RegExp(`^${requested}-\\d{8}$`).test(served);
+  const escaped = requested.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}(-\\d{8}|-\\d{4}-\\d{2}-\\d{2})?$`).test(served);
+}
+
+/** Bind a variant directory to one model and thinking level, so results from
+ *  different models never mix in one variant. Writes change.md for the report. */
+function bindVariant(vdir: string, args: Args): void {
+  const path = join(vdir, "variant.json");
+  const want = { model: args.model, thinking: args.thinking };
+  if (existsSync(path)) {
+    const have = JSON.parse(readFileSync(path, "utf8")) as typeof want;
+    if (have.model !== want.model || have.thinking !== want.thinking)
+      fail(`${relative(ROOT, vdir)} holds ${have.model} (thinking ${have.thinking}); use another --variant for ${want.model} (thinking ${want.thinking})`);
+    return;
+  }
+  writeFileSync(path, `${JSON.stringify(want, null, 2)}\n`);
+  writeFileSync(join(vdir, "change.md"), `${args.model}, thinking ${args.thinking}\n\nThe desktop agent (pi + accountant24 extension + system.md) on this model.\n`);
 }
 
 async function main(): Promise<void> {
@@ -185,7 +233,10 @@ async function main(): Promise<void> {
   const statePath = join(FLOW, "_state.json");
   const state = existsSync(statePath) ? (JSON.parse(readFileSync(statePath, "utf8")) as Record<string, unknown>) : {};
   checkHarness(statePath, state, args.approveHarness);
-  if (!process.env.ANTHROPIC_API_KEY) fail("ANTHROPIC_API_KEY is not set");
+  loadDotEnv(join(PKG, ".env"));
+  const keyVar = KEY_VARS[splitModel(args.model).provider];
+  if (!args.auth && keyVar && !process.env[keyVar]) fail(`${keyVar} is not set (export it, put it in packages/evals/.env, or pass --auth)`);
+  bindVariant(vdir, args);
   if (!existsSync(join(RESOURCES, "accountant24-extension.js"))) fail("bundle the extension first: npx tsx scripts/bundle-extension.ts");
 
   const resultsPath = join(vdir, "results.jsonl");
@@ -215,7 +266,7 @@ async function main(): Promise<void> {
         const latency_s = (Date.now() - t0) / 1000;
         const messages = run.output.messages as Parameters<typeof summarize>[0];
         const summary = summarize(messages);
-        const served = summary.models.find((m) => !servedModelOk(args.model, m));
+        const served = summary.models.find((m) => !servedModelOk(splitModel(args.model).id, m));
         if (served) throw new AttemptError(`served model ${served} != requested ${args.model}`, "serving_substitution", run);
         if (summary.stopReason === "error") throw new AttemptError(`provider error: ${summary.errors.at(-1)}`, "serving_error", run);
         const facts = collect(run.ws, run.before, run.today, summary.lastReply, bashJournalWrites(messages));
@@ -232,7 +283,7 @@ async function main(): Promise<void> {
           stop_reason: summary.stopReason,
           status: summary.stopReason === "length" ? "truncated" : "ok",
           latency_s,
-          cost_usd: costUsd(model, summary.usage),
+          cost_usd: summary.costUsd,
           model_calls: summary.modelCalls,
           tool_calls: summary.toolCalls,
           tool_errors: summary.toolErrors,

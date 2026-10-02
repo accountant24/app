@@ -8,9 +8,10 @@ import { join } from "node:path";
 import type { Facts } from "./grade";
 import { parseTransactions, type Transaction } from "./ledger";
 
-/** Uploads live outside git on mobile, so attachments archived under files/
- *  never count as unsaved work. */
-const IGNORED_PREFIXES = ["files/"];
+/** Never count as unsaved work: attachments archived under files/ (uploads
+ *  live outside git on mobile), and settings.json, which pi itself writes into
+ *  the workspace when the runner sets the model. */
+const IGNORED_PREFIXES = ["files/", "settings.json"];
 
 export type Snapshot = {
   transactions: Transaction[];

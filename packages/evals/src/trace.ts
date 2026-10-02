@@ -1,6 +1,6 @@
 // Pure conversion of a finished pi session into what the report reads: the
 // transcript as Turn[] (the report's trace format), token usage summed over
-// every model call, and the dollar cost derived from it.
+// every model call, and the dollar cost pi priced each call at.
 
 import type { AssistantMessage, Message, Usage } from "@earendil-works/pi-ai";
 
@@ -33,6 +33,8 @@ export type RunSummary = {
   lastReply: string;
   /** Error messages pi recorded on assistant messages (provider failures). */
   errors: string[];
+  /** Dollar cost pi computed per call from its model catalog prices, summed. */
+  costUsd: number;
 };
 
 const text = (parts: { type: string; text?: string }[]) =>
@@ -103,8 +105,10 @@ export function summarize(messages: Message[]): RunSummary {
   const models: string[] = [];
   const errors: string[] = [];
   let toolCalls = 0;
+  let cost = 0;
   for (const a of assistants) {
     addUsage(usage, a.usage);
+    cost += a.usage.cost?.total ?? 0;
     const served = a.responseModel ?? a.model;
     if (!models.includes(served)) models.push(served);
     if (a.errorMessage) errors.push(a.errorMessage);
@@ -120,25 +124,6 @@ export function summarize(messages: Message[]): RunSummary {
     stopReason: last?.stopReason ?? "none",
     lastReply: last ? text(last.content) : "",
     errors,
+    costUsd: cost,
   };
-}
-
-/** First-party list prices, $ per million tokens. */
-export const PRICES: Record<string, { in: number; out: number }> = {
-  "claude-opus-5": { in: 5, out: 25 },
-  "claude-sonnet-5": { in: 2, out: 10 },
-  "claude-haiku-4-5": { in: 1, out: 5 },
-};
-
-/** Dollar cost of `usage` on `model`: cache reads at 0.1× input, 5-minute
- *  cache writes at 1.25×, 1-hour writes at 2×. Throws on an unpriced model so
- *  a missing rate can never show up as a free run. */
-export function costUsd(model: string, usage: UsageTotals): number {
-  const price = PRICES[model.replace(/-\d{8}$/, "")];
-  if (!price) throw new Error(`no price for model ${model}`);
-  const write1h = usage.cache_creation_1h_input_tokens;
-  const write5m = usage.cache_creation_input_tokens - write1h;
-  const inputEquivalent =
-    usage.input_tokens + usage.cache_read_input_tokens * 0.1 + write5m * 1.25 + write1h * 2;
-  return (inputEquivalent * price.in + usage.output_tokens * price.out) / 1_000_000;
 }

@@ -1,2 +1,8 @@
 .cache/
 overview.html
+.env
+results/**/traces/
+results/**/report.html
+results/**/state.json
+results/**/trajectory/
+results/**/progress.txt

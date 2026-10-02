@@ -1,0 +1,62 @@
+{
+  "metrics": [
+    {
+      "id": "pass",
+      "label": "pass",
+      "kind": "binary"
+    },
+    {
+      "id": "correct",
+      "label": "correct",
+      "kind": "binary"
+    },
+    {
+      "id": "saved",
+      "label": "saved",
+      "kind": "binary"
+    },
+    {
+      "id": "valid",
+      "label": "valid",
+      "kind": "binary"
+    },
+    {
+      "id": "safe",
+      "label": "safe",
+      "kind": "binary"
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "cost_usd",
+      "label": "cost",
+      "unit": "$"
+    },
+    {
+      "id": "latency_s",
+      "label": "time",
+      "unit": "s"
+    },
+    {
+      "id": "model_calls",
+      "label": "model calls"
+    },
+    {
+      "id": "tool_calls",
+      "label": "tool calls"
+    },
+    {
+      "id": "auto_replied",
+      "label": "asked"
+    }
+  ],
+  "variants_plan": {
+    "baseline": "anthropic/claude-opus-5",
+    "v1": "anthropic/claude-sonnet-5",
+    "v2": "anthropic/claude-haiku-4-5",
+    "v3": "openai/gpt-5.6-sol",
+    "v4": "openai/gpt-5.6-terra",
+    "v5": "openai/gpt-5.6-luna"
+  },
+  "harness_sha": "4bc5665fa84ab906fc4e474112a0674e7b0c11d623e1b31c53b66475c2ab5a2b"
+}
