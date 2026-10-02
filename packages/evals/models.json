@@ -9,7 +9,7 @@
           "name": "DeepSeek V4.1 Flash",
           "reasoning": true,
           "input": ["text", "image"],
-          "cost": { "input": 0.14, "output": 0.28, "cacheRead": 0.028, "cacheWrite": 0 },
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
           "contextWindow": 1000000,
           "maxTokens": 384000,
           "compat": {
