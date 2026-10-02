@@ -1,0 +1,20 @@
+{
+  "id": "balance-mismatch",
+  "tags": [
+    "balance",
+    "ask"
+  ],
+  "fixture": "household",
+  "autoReply": "I'm not sure. Can you check what might be missing?",
+  "turns": [
+    {
+      "text": "My Stadtbank balance is 1,034.13 EUR today."
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "(?<![\\d.,])50([.,]00)?(?!\\d)"
+    ]
+  }
+}

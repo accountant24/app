@@ -1,0 +1,5 @@
+; Commodity declarations
+commodity 1,000.00 EUR
+commodity 1,000.00 UAH
+commodity 1,000.00 PLN
+commodity 1,000.0000 VWCE

@@ -1,0 +1,19 @@
+{
+  "id": "query-net-worth",
+  "tags": [
+    "query",
+    "fx"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "What's my net worth in EUR at the latest prices?"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "12[,. ]?15[01]"
+    ]
+  }
+}

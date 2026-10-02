@@ -1,0 +1,19 @@
+{
+  "id": "query-cleaning-next-due",
+  "tags": [
+    "query",
+    "memory"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "When is my next Sparkle Cleaning payment due?"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "(2026-10-01|1(st)? oct|oct(ober)? 1)"
+    ]
+  }
+}

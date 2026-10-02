@@ -1,0 +1,7 @@
+; Accountant24
+
+include commodities.journal
+include accounts.journal
+include 2026/07.journal
+include 2026/08.journal
+include 2026/09.journal

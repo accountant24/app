@@ -1,0 +1,126 @@
+2026-09-01 * Brightwave GmbH | salary
+    ; original_payee_name: BRIGHTWAVE GMBH GEHALT
+    ; related_file: files/2026/09/20260915071820.pdf
+    Income:Salary                                                   -3850.00 EUR
+    Assets:Bank:Lumen                                                3850.00 EUR
+
+2026-09-01 * BVG | monthly ticket
+    ; original_payee_name: BVG ABO MONATSKARTE
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -58.00 EUR
+    Expenses:Transport                                               58.00 EUR
+
+2026-09-01 * Hausverwaltung Ostpark | rent
+    Assets:Bank:Stadtbank                                           -1250.00 EUR
+    Expenses:Housing                                                 1250.00 EUR
+
+2026-09-02 * Hotel Wawel Garden | Krakow, 3 nights
+    ; original_payee_name: HOTEL WAWEL GARDEN KRAKOW
+    ; related_file: files/2026/09/20260915071820.pdf
+    ; trip: krakow-2026
+    Assets:Bank:Lumen                                               -412.00 EUR
+    Expenses:Travel                                                  412.00 EUR
+
+2026-09-02 * Internal Transfer | my share of rent and bills
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -1000.00 EUR
+    Assets:Bank:Stadtbank                                            1000.00 EUR
+
+2026-09-03 * Internal Transfer | top-up UAH account
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -95.00 EUR
+    Assets:Bank:Dnipro Bank                                          4150.00 UAH @@ 95.00 EUR
+
+2026-09-03 * NetzPlus | internet
+    Assets:Bank:Stadtbank                                           -39.99 EUR
+    Expenses:Utilities                                               39.99 EUR
+
+2026-09-04 * Frischmarkt
+    ; original_payee_name: FRISCHMARKT FIL.112 BERLIN
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -67.45 EUR
+    Expenses:Food                                                    67.45 EUR
+
+2026-09-05 * Internal Transfer | savings plan
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -200.00 EUR
+    Assets:Investments:Tradeview                                     200.00 EUR
+
+2026-09-05 * Stromwerk Berlin | electricity
+    Assets:Bank:Stadtbank                                           -85.00 EUR
+    Expenses:Utilities                                               85.00 EUR
+
+2026-09-06 * Tradeview | savings plan buy
+    Assets:Investments:Tradeview                                    -197.70 EUR
+    Assets:Investments:Tradeview                                     1.5000 VWCE @@ 197.70 EUR
+
+2026-09-07 * Internal Transfer | ATM
+    ; original_payee_name: UEBERWEISUNG
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -100.00 EUR
+    Assets:Cash:Wallet                                               100.00 EUR
+
+2026-09-08 * Bio Corner
+    ; original_payee_name: BIO CORNER FRIEDRICHSHAIN
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -25.20 EUR
+    Expenses:Food                                                    25.20 EUR
+
+2026-09-09 * Kaffeebar Ost
+    ; original_payee_name: KAFFEEBAR OST
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -4.40 EUR
+    Expenses:Food                                                    4.40 EUR
+
+2026-09-10 * StreamFlix
+    ; original_payee_name: STREAMFLIX.COM
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -12.99 EUR
+    Expenses:Subscriptions                                           12.99 EUR
+
+2026-09-11 * Frischmarkt
+    ; original_payee_name: FRISCHMARKT FIL.112 BERLIN
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -52.30 EUR
+    Expenses:Food                                                    52.30 EUR
+
+2026-09-12 * Kino Babylon Ost
+    ; original_payee_name: KINO BABYLON OST
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -21.00 EUR
+    Expenses:Entertainment                                           21.00 EUR
+
+2026-09-13 * Trattoria Sole | dinner
+    ; original_payee_name: TRATTORIA SOLE SRL
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Lumen                                               -46.80 EUR
+    Expenses:Food                                                    46.80 EUR
+
+2026-09-14 * Wochenmarkt
+    Assets:Cash:Wallet                                              -18.50 EUR
+    Expenses:Food                                                    18.50 EUR
+
+2026-09-14 * Balance Assertion
+    Assets:Bank:Lumen                                                0.00 EUR = 6646.36 EUR
+
+2026-09-19 * Apotheke am Park
+    Liabilities:Credit Card:Stadtbank Visa                          -23.80 EUR
+    Expenses:Health                                                  23.80 EUR
+
+2026-09-21 * Spaeti Eck
+    Assets:Cash:Wallet                                              -6.40 EUR
+    Expenses:Food                                                    6.40 EUR
+
+2026-09-28 * Internal Transfer | card bill
+    Assets:Bank:Stadtbank                                           -23.80 EUR
+    Liabilities:Credit Card:Stadtbank Visa                           23.80 EUR
+
+P 2026-09-14 VWCE 131.80 EUR
+P 2026-09-14 UAH 0.0229 EUR
+
+2026-09-29 * Trattoria Sole | dinner
+    Assets:Bank:Lumen                                               -46.80 EUR
+    Expenses:Food                                                    46.80 EUR

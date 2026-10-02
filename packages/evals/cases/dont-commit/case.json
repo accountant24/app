@@ -1,0 +1,54 @@
+{
+  "id": "dont-commit",
+  "tags": [
+    "entry",
+    "commit"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Don't commit anything until I say so. Log 32.40 at Bio Corner today, Lumen card."
+    },
+    {
+      "text": "Also 4.20 at Kaffeebar Ost, same card."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "description": "bio corner",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -32.4,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 32.4,
+            "commodity": "EUR"
+          }
+        ]
+      },
+      {
+        "date": "today",
+        "description": "kaffeebar",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -4.2,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 4.2,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 2,
+    "commit": "forbidden"
+  }
+}

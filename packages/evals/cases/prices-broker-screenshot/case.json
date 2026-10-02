@@ -1,0 +1,30 @@
+{
+  "id": "prices-broker-screenshot",
+  "tags": [
+    "prices",
+    "image"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Update prices from this.",
+      "attachments": [
+        "portfolio.png"
+      ]
+    }
+  ],
+  "expect": {
+    "prices": [
+      {
+        "date": "2026-09-30",
+        "commodity": "VWCE",
+        "amount": 133.2,
+        "in": "EUR"
+      }
+    ],
+    "countDelta": [
+      0,
+      1
+    ]
+  }
+}

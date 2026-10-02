@@ -1,0 +1,70 @@
+{
+  "id": "paypal-csv-sept",
+  "tags": [
+    "import",
+    "csv",
+    "paypal"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Here's my PayPal activity for September, please add it.",
+      "attachments": [
+        "paypal-2026-09.csv"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-20",
+        "description": "^Internal Transfer",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -22,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Assets:PayPal",
+            "amount": 22,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "link": true
+        }
+      },
+      {
+        "date": "2026-09-20",
+        "description": "secondhand loop",
+        "postings": [
+          {
+            "account": "Assets:PayPal",
+            "amount": -22,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Shopping",
+            "amount": 22,
+            "commodity": "EUR"
+          }
+        ],
+        "tags": {
+          "link": true
+        }
+      }
+    ],
+    "countDelta": [
+      2,
+      3
+    ],
+    "balances": [
+      {
+        "account": "Assets:PayPal",
+        "amount": 0,
+        "commodity": "EUR"
+      }
+    ]
+  }
+}

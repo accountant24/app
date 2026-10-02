@@ -1,0 +1,37 @@
+{
+  "id": "receipt-cash-grocery",
+  "tags": [
+    "receipt",
+    "image"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Paid cash.",
+      "attachments": [
+        "receipt.png"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-29",
+        "description": "frischmarkt",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -23.47,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 23.47,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

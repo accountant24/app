@@ -1,0 +1,63 @@
+{
+  "id": "cash-transfer-then-spend",
+  "tags": [
+    "entry",
+    "cash",
+    "transfer"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Took 50 from the cash box at home into my wallet, then spent 12 of it at Spaeti Eck."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "description": "^Internal Transfer",
+        "postings": [
+          {
+            "account": "Assets:Cash:Home",
+            "amount": -50,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": 50,
+            "commodity": "EUR"
+          }
+        ]
+      },
+      {
+        "date": "today",
+        "description": "spaeti",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -12,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 12,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 2,
+    "balances": [
+      {
+        "account": "Assets:Cash:Wallet",
+        "amount": 383.3,
+        "commodity": "EUR"
+      },
+      {
+        "account": "Assets:Cash:Home",
+        "amount": 350,
+        "commodity": "EUR"
+      }
+    ]
+  }
+}

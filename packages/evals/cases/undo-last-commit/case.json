@@ -1,0 +1,32 @@
+{
+  "id": "undo-last-commit",
+  "tags": [
+    "edit",
+    "commit",
+    "undo"
+  ],
+  "fixture": "household",
+  "setupCommit": {
+    "message": "Add Trattoria Sole dinner on 2026-09-29"
+  },
+  "turns": [
+    {
+      "text": "Undo my last change, I logged that dinner by mistake."
+    }
+  ],
+  "expect": {
+    "absent": [
+      {
+        "date": "2026-09-29",
+        "description": "trattoria",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": -1
+  }
+}

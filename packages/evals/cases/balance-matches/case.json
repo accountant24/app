@@ -1,0 +1,27 @@
+{
+  "id": "balance-matches",
+  "tags": [
+    "balance"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "My Stadtbank balance is 984.13 EUR today."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "description": "^Balance Assertion",
+        "postings": [
+          {
+            "account": "Assets:Bank:Stadtbank",
+            "amount": 0
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

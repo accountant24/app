@@ -1,0 +1,35 @@
+{
+  "id": "ask-missing-amount",
+  "tags": [
+    "entry",
+    "ask"
+  ],
+  "fixture": "household",
+  "autoReply": "3.80, Lumen card.",
+  "turns": [
+    {
+      "text": "Log a coffee at Kaffeebar Ost from yesterday."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today-1",
+        "description": "kaffeebar",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -3.8,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 3.8,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

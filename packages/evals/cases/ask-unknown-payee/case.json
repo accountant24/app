@@ -1,0 +1,35 @@
+{
+  "id": "ask-unknown-payee",
+  "tags": [
+    "entry",
+    "ask"
+  ],
+  "fixture": "household",
+  "autoReply": "It was for babysitting. Book it under Children.",
+  "turns": [
+    {
+      "text": "Paid 60 EUR to Marta from my Lumen account today."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "description": "marta",
+        "postings": [
+          {
+            "account": "Assets:Bank:Lumen",
+            "amount": -60,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Children",
+            "amount": 60,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

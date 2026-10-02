@@ -1,0 +1,104 @@
+{
+  "id": "csv-dnipro-sept",
+  "tags": [
+    "import",
+    "csv",
+    "statement",
+    "fx"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Import my Dnipro Bank export for September.",
+      "attachments": [
+        "dnipro-2026-09.csv"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-06",
+        "description": "kramnytsia",
+        "postings": [
+          {
+            "account": "Assets:Bank:Dnipro Bank",
+            "amount": -1349,
+            "commodity": "UAH"
+          },
+          {
+            "account": "Expenses:Shopping",
+            "amount": 1349,
+            "commodity": "UAH"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-12",
+        "description": "olena|marchenko",
+        "postings": [
+          {
+            "account": "Assets:Bank:Dnipro Bank",
+            "amount": -4000,
+            "commodity": "UAH"
+          },
+          {
+            "account": "Expenses:Gifts & Donations",
+            "amount": 4000,
+            "commodity": "UAH"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-18",
+        "description": "lviv mobile",
+        "postings": [
+          {
+            "account": "Assets:Bank:Dnipro Bank",
+            "amount": -250,
+            "commodity": "UAH"
+          },
+          {
+            "account": "Expenses:Utilities",
+            "amount": 250,
+            "commodity": "UAH"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-21",
+        "postings": [
+          {
+            "account": "Assets:Bank:Dnipro Bank",
+            "amount": -25,
+            "commodity": "UAH"
+          },
+          {
+            "account": "Expenses:Financial",
+            "amount": 25,
+            "commodity": "UAH"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-30",
+        "description": "^Balance Assertion",
+        "postings": [
+          {
+            "account": "Assets:Bank:Dnipro Bank",
+            "amount": 0
+          }
+        ]
+      }
+    ],
+    "countDelta": 5,
+    "balances": [
+      {
+        "account": "Assets:Bank:Dnipro Bank",
+        "amount": 10826,
+        "commodity": "UAH",
+        "date": "2026-09-30"
+      }
+    ]
+  }
+}

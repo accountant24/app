@@ -1,0 +1,34 @@
+{
+  "id": "refund-headphones",
+  "tags": [
+    "edit",
+    "refund"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "I returned the headphones from Elektronik Haus. The 349 EUR refund landed on my Visa today."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "description": "elektronik",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "amount": 349,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Shopping",
+            "amount": -349,
+            "commodity": "EUR"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

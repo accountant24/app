@@ -1,0 +1,61 @@
+{
+  "id": "cash-reconcile-unknown",
+  "tags": [
+    "balance",
+    "cash"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "My wallet has 280 EUR in it right now. I don't remember where the rest went."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -65.3,
+            "commodity": "EUR"
+          },
+          {
+            "account": "Expenses:Uncategorized",
+            "amount": 65.3,
+            "commodity": "EUR"
+          }
+        ]
+      },
+      {
+        "date": "today",
+        "description": "^Balance Assertion",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": 0
+          }
+        ]
+      }
+    ],
+    "absent": [
+      {
+        "date": "today",
+        "postings": [
+          {
+            "account": "Equity*"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 2,
+    "balances": [
+      {
+        "account": "Assets:Cash:Wallet",
+        "amount": 280,
+        "commodity": "EUR"
+      }
+    ]
+  }
+}
