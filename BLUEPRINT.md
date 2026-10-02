@@ -290,6 +290,8 @@ Margin (of revenue after VAT)  ||             0%            20%            42%  
 
 ## Build order
 
+The milestones, their status and what each one taught us live in [BUILD-PLAN.md](BUILD-PLAN.md).
+
 | Phase | Time | Work | Done when |
 | --- | --- | --- | --- |
 | 0 · Groundwork | ≈ 2 weeks | Eval set and the desktop's baseline; `pi-extension` ported to Pi Durable in its own package, then desktop, website, docs and demos deleted from the fork; dev environment from `cloudflare.config.ts` and the bootstrap script; a spike: Pi Durable in one EU bookkeeper calling AI Gateway, with an execution environment over `ctx.container` and a sandbox that clones and pushes an Artifacts repo; evals on Sonnet and Haiku, with GLM-5.3-Flash and Kimi K2.6 for comparison | the ported tools' tests pass, `cf deploy` works in dev, a run resumes after the bookkeeper restarts, first-reply and save times and the baseline numbers exist |
