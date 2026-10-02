@@ -7,7 +7,7 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "My wallet has 280 EUR in it right now. I don't remember where the rest went."
+      "text": "I have $280 in my wallet right now. I don't remember where the rest went."
     }
   ],
   "expect": {
@@ -18,12 +18,12 @@
           {
             "account": "Assets:Cash:Wallet",
             "amount": -65.3,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Uncategorized",
             "amount": 65.3,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       },
@@ -54,7 +54,7 @@
       {
         "account": "Assets:Cash:Wallet",
         "amount": 280,
-        "commodity": "EUR"
+        "commodity": "USD"
       }
     ]
   }

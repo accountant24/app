@@ -7,73 +7,72 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Rename the payee Spaeti Eck to Späti Eck everywhere, and keep the old spelling as original_payee_name."
+      "text": "Rename the payee Corner Deli to Sal's Corner Deli everywhere, and keep the old name as original_payee_name."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "2026-07-21",
-        "description": "^Späti Eck",
+        "description": "^Sal's Corner Deli",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
             "amount": -6.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food",
             "amount": 6.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
-          "original_payee_name": "spaeti eck"
+          "original_payee_name": "^corner deli$"
         }
       },
       {
         "date": "2026-08-21",
-        "description": "^Späti Eck",
+        "description": "^Sal's Corner Deli",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
             "amount": -6.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food",
             "amount": 6.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
-          "original_payee_name": "spaeti eck"
+          "original_payee_name": "^corner deli$"
         }
       },
       {
         "date": "2026-09-21",
-        "description": "^Späti Eck",
+        "description": "^Sal's Corner Deli",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
             "amount": -6.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food",
             "amount": 6.4,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
-          "original_payee_name": "spaeti eck"
+          "original_payee_name": "^corner deli$"
         }
       }
     ],
     "absent": [
       {
-        "date": null,
-        "description": "^spaeti",
+        "description": "^corner deli",
         "postings": [
           {
             "account": "Assets:Cash:Wallet"

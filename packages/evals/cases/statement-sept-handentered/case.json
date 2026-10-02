@@ -1,16 +1,17 @@
 {
-  "id": "statement-lumen-sept",
+  "id": "statement-sept-handentered",
   "tags": [
     "import",
     "pdf",
-    "statement"
+    "statement",
+    "duplicate"
   ],
   "fixture": "household",
   "turns": [
     {
-      "text": "Here's my Lumen statement for September. Add whatever is missing.",
+      "text": "Here's my Harbor Bank statement for September. Add whatever is missing.",
       "attachments": [
-        "lumen-2026-09.pdf"
+        "harbor-2026-09.pdf"
       ]
     }
   ],
@@ -21,14 +22,14 @@
         "description": "cloudbox",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -2.99,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
-            "account": "Expenses:Subscriptions",
+            "account": "Expenses:Subscriptions*",
             "amount": 2.99,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -38,17 +39,17 @@
       },
       {
         "date": "2026-09-16",
-        "description": "kaffeebar",
+        "description": "daily",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -7.6,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 7.6,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -58,17 +59,17 @@
       },
       {
         "date": "2026-09-18",
-        "description": "frischmarkt",
+        "description": "green",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -70.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 70.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -78,37 +79,17 @@
       },
       {
         "date": "2026-09-19",
-        "description": "seitenweise",
+        "description": "chapter",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -18.5,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
-            "account": "Expenses:Education",
+            "account": "Expenses:Education*",
             "amount": 18.5,
-            "commodity": "EUR"
-          }
-        ],
-        "tags": {
-          "related_file": "^files/",
-          "original_payee_name": true
-        }
-      },
-      {
-        "date": "2026-09-22",
-        "description": "bio corner",
-        "postings": [
-          {
-            "account": "Assets:Bank:Lumen",
-            "amount": -33.45,
-            "commodity": "EUR"
-          },
-          {
-            "account": "Expenses:Food*",
-            "amount": 33.45,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -118,17 +99,17 @@
       },
       {
         "date": "2026-09-23",
-        "description": "kaffeebar",
+        "description": "daily",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -5.1,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 5.1,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -138,17 +119,17 @@
       },
       {
         "date": "2026-09-25",
-        "description": "frischmarkt",
+        "description": "green",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -59.15,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 59.15,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -158,17 +139,17 @@
       },
       {
         "date": "2026-09-26",
-        "description": "kaffeebar",
+        "description": "daily",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -3.9,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 3.9,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -178,17 +159,17 @@
       },
       {
         "date": "2026-09-27",
-        "description": "pho lan",
+        "description": "pho",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -28.6,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 28.6,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ],
         "tags": {
@@ -197,22 +178,38 @@
         }
       },
       {
+        "date": "2026-09-22",
+        "description": "harvest",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -33.45,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 33.45,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
         "date": "2026-09-30",
         "description": "^Balance Assertion",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": 0
           }
         ]
       }
     ],
-    "countDelta": 10,
+    "countDelta": 9,
     "balances": [
       {
-        "account": "Assets:Bank:Lumen",
-        "amount": 6416.27,
-        "commodity": "EUR",
+        "account": "Assets:Bank:Harbor Checking",
+        "amount": 6366.77,
+        "commodity": "USD",
         "date": "2026-09-30"
       }
     ]

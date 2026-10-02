@@ -7,24 +7,24 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Spent 14.80 at the Wochenmarkt this morning, cash."
+      "text": "Spent $14.80 at the farmers market this morning, cash."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today",
-        "description": "wochenmarkt",
+        "description": "farmers market",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
             "amount": -14.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 14.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }

@@ -1,0 +1,375 @@
+// Writes every cases/<id>/case.json. Expected amounts are computed from
+// data.ts, the same source the fixture ledger and the documents come from, so
+// a change there can't leave a case expecting a stale number. Rerun after
+// changing data.ts (and run gen-ledger.ts and gen-documents.ts too):
+//
+//   npx tsx packages/evals/scripts/household/gen-cases.ts
+
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { EvalCase, PostingPattern, TransactionPattern } from "../../src/cases";
+import {
+  balance,
+  CAD_ACCOUNT,
+  CAD_PRICE,
+  CARD,
+  CHECKING,
+  HOME_CASH,
+  JOINT,
+  PAYPAL,
+  type Tx,
+  VTI_PRICE,
+  WALLET,
+  world,
+} from "./data";
+
+const CASES = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "cases");
+const END = "2026-09-30";
+
+const all = world();
+const recorded = all.filter((t) => !t.unrecorded);
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** The category an existing payee is booked to; subaccounts of it are fine too. */
+function categoryOf(payee: string): string {
+  const t = recorded.find((x) => x.payee === payee);
+  const expense = t?.postings.find((p) => p.account.startsWith("Expenses:"));
+  if (!expense) throw new Error(`no history for ${payee}`);
+  return `${expense.account}*`;
+}
+
+const p = (account: string, amount?: number, commodity = "USD"): PostingPattern =>
+  amount === undefined ? { account } : { account, amount, commodity };
+
+function tx(date: string | undefined, description: string | undefined, postings: PostingPattern[], extra: Partial<TransactionPattern> = {}): TransactionPattern {
+  return { ...(date ? { date } : {}), ...(description ? { description } : {}), postings, ...extra };
+}
+
+const assertion = (date: string, account: string): TransactionPattern => tx(date, "^Balance Assertion", [{ account, amount: 0 }]);
+const IMPORTED = { related_file: "^files/", original_payee_name: true as const };
+
+/** The statement rows a September import must add, as patterns. */
+function importRows(source: NonNullable<Tx["bank"]>["source"], account: string, commodity: string): TransactionPattern[] {
+  return all
+    .filter((t) => t.unrecorded && t.bank?.source === source)
+    .map((t) => {
+      const amount = t.postings.find((x) => x.account === account)!.amount;
+      const expense = t.postings.find((x) => x.account.startsWith("Expenses:"))!;
+      const category = recorded.some((x) => x.payee === t.payee) ? categoryOf(t.payee) : expense.account;
+      const words = t.payee === "Maple Trust" ? undefined : escapeRe(t.payee.split(" ")[0].replace(/'s$/, "")).toLowerCase();
+      return tx(t.date, words, [p(account, amount, commodity), p(category, -amount, commodity)], source === "harbor" ? { tags: IMPORTED } : {});
+    });
+}
+
+/** Regex for a dollar figure, tolerating rounding to whole dollars and an optional thousands comma. */
+function dollars(value: number): string {
+  const whole = Math.floor(value);
+  const forms = [whole, whole + 1].map((n) => {
+    const s = String(n);
+    return s.length > 3 ? `${s.slice(0, -3)},?${s.slice(-3)}` : s;
+  });
+  return `(${forms.join("|")})`;
+}
+
+const harborRows = importRows("harbor", CHECKING, "USD");
+const harborClosing = balance(all, CHECKING, "USD", END);
+const cadRows = importRows("maple", CAD_ACCOUNT, "CAD");
+const wallet = balance(recorded, WALLET, "USD", END);
+const joint = balance(recorded, JOINT, "USD", END);
+const food = balance(recorded, "Expenses:Food", "USD", END);
+const foodAugust = round2(
+  recorded
+    .filter((t) => t.date.startsWith("2026-08"))
+    .flatMap((t) => t.postings)
+    .filter((x) => x.account === "Expenses:Food")
+    .reduce((s, x) => s + x.amount, 0),
+);
+const usdAssets = [CHECKING, JOINT, WALLET, HOME_CASH, PAYPAL, "Assets:Investments:Brightline", CARD].reduce(
+  (s, a) => s + balance(recorded, a, "USD", END),
+  0,
+);
+const netWorth = round2(
+  usdAssets +
+    balance(recorded, "Assets:Investments:Brightline", "VTI", END) * VTI_PRICE["2026-09"] +
+    balance(recorded, CAD_ACCOUNT, "CAD", END) * CAD_PRICE["2026-09"],
+);
+
+type Def = Omit<EvalCase, "dir">;
+const cases: Def[] = [
+  {
+    id: "statement-sept",
+    tags: ["import", "pdf", "statement"],
+    fixture: "household",
+    turns: [{ text: "Here's my Harbor Bank statement for September. Add whatever is missing.", attachments: ["harbor-2026-09.pdf"] }],
+    expect: {
+      present: [...harborRows, assertion(END, CHECKING)],
+      countDelta: harborRows.length + 1,
+      balances: [{ account: CHECKING, amount: harborClosing, commodity: "USD", date: END }],
+    },
+  },
+  {
+    id: "statement-sept-handentered",
+    tags: ["import", "pdf", "statement", "duplicate"],
+    fixture: "household",
+    turns: [{ text: "Here's my Harbor Bank statement for September. Add whatever is missing.", attachments: ["harbor-2026-09.pdf"] }],
+    expect: {
+      present: [
+        ...harborRows.filter((r) => r.date !== "2026-09-22"),
+        tx("2026-09-22", "harvest", [p(CHECKING, -33.45), p("Expenses:Food*", 33.45)]),
+        assertion(END, CHECKING),
+      ],
+      countDelta: harborRows.length,
+      balances: [{ account: CHECKING, amount: harborClosing, commodity: "USD", date: END }],
+    },
+  },
+  {
+    id: "csv-cad-sept",
+    tags: ["import", "csv", "statement", "fx"],
+    fixture: "household",
+    turns: [{ text: "Import my Maple Trust export for September.", attachments: ["maple-trust-2026-09.csv"] }],
+    expect: {
+      present: [...cadRows, tx(END, "^Balance Assertion", [{ account: CAD_ACCOUNT, amount: 0, commodity: "CAD" }])],
+      countDelta: cadRows.length + 1,
+      balances: [{ account: CAD_ACCOUNT, amount: balance(all, CAD_ACCOUNT, "CAD", END), commodity: "CAD", date: END }],
+    },
+  },
+  {
+    id: "paypal-csv-sept",
+    tags: ["import", "csv", "paypal"],
+    fixture: "household",
+    turns: [{ text: "Here's my PayPal activity for September, please add it.", attachments: ["paypal-2026-09.csv"] }],
+    expect: {
+      present: [
+        tx("2026-09-20", "^Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true } }),
+        tx("2026-09-20", "thrift loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true } }),
+      ],
+      countDelta: [2, 3],
+      balances: [{ account: PAYPAL, amount: 0, commodity: "USD" }],
+    },
+  },
+  {
+    id: "receipt-cash-grocery",
+    tags: ["receipt", "image"],
+    fixture: "household",
+    turns: [{ text: "Paid cash.", attachments: ["receipt.png"] }],
+    expect: { present: [tx("2026-09-29", "green basket", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])], countDelta: 1 },
+  },
+  {
+    id: "receipt-toronto-dinner",
+    tags: ["receipt", "image", "trip"],
+    fixture: "household",
+    turns: [{ text: "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.", attachments: ["receipt.png"] }],
+    expect: {
+      present: [tx("2026-09-29", "maple table", [p(CHECKING, -36.55), p("Expenses:Travel*", 36.55)], { tags: { trip: "toronto-2026" } })],
+      countDelta: 1,
+    },
+  },
+  {
+    id: "invoice-hotel-extras",
+    tags: ["receipt", "pdf", "trip", "duplicate"],
+    fixture: "household",
+    turns: [
+      {
+        text: "Here's the final bill from the Toronto hotel. I paid the extras at checkout with my Harbor debit card, it came to $40.00.",
+        attachments: ["folio-2026-10-0183.pdf"],
+      },
+    ],
+    expect: {
+      present: [tx("2026-10-01", "harbourfront", [p(CHECKING, -40), p("Expenses:Travel*")], { exact: false, tags: { trip: "toronto-2026", related_file: "^files/" } })],
+      countDelta: 1,
+      balances: [{ account: "Expenses:Travel", amount: 452, commodity: "USD" }],
+    },
+  },
+  {
+    id: "quick-cash-entry",
+    tags: ["entry", "cash"],
+    fixture: "household",
+    turns: [{ text: "Spent $14.80 at the farmers market this morning, cash." }],
+    expect: { present: [tx("today", "farmers market", [p(WALLET, -14.8), p("Expenses:Food*", 14.8)])], countDelta: 1 },
+  },
+  {
+    id: "quick-entry-tip",
+    tags: ["entry"],
+    fixture: "household",
+    turns: [{ text: "Lunch at Pho Saigon yesterday, $24.50 plus a $3 tip, on my Harbor debit card." }],
+    expect: {
+      present: [tx("today-1", "pho saigon", [p(CHECKING, -27.5), p("Expenses:Food*")], { exact: false })],
+      countDelta: 1,
+      balances: [{ account: "Expenses:Food", amount: round2(food + 27.5), commodity: "USD" }],
+    },
+  },
+  {
+    id: "cash-transfer-then-spend",
+    tags: ["entry", "cash", "transfer"],
+    fixture: "household",
+    turns: [{ text: "Took $50 from the cash jar at home into my wallet, then spent $12 of it at Corner Deli." }],
+    expect: {
+      present: [tx("today", "^Internal Transfer", [p(HOME_CASH, -50), p(WALLET, 50)]), tx("today", "corner deli", [p(WALLET, -12), p("Expenses:Food*", 12)])],
+      countDelta: 2,
+      balances: [
+        { account: WALLET, amount: round2(wallet + 38), commodity: "USD" },
+        { account: HOME_CASH, amount: round2(balance(recorded, HOME_CASH, "USD", END) - 50), commodity: "USD" },
+      ],
+    },
+  },
+  {
+    id: "cash-reconcile-unknown",
+    tags: ["balance", "cash"],
+    fixture: "household",
+    turns: [{ text: "I have $280 in my wallet right now. I don't remember where the rest went." }],
+    expect: {
+      present: [tx("today", undefined, [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]), assertion("today", WALLET)],
+      absent: [tx("today", undefined, [{ account: "Equity*" }], { exact: false })],
+      countDelta: 2,
+      balances: [{ account: WALLET, amount: 280, commodity: "USD" }],
+    },
+  },
+  {
+    id: "balance-matches",
+    tags: ["balance"],
+    fixture: "household",
+    turns: [{ text: `My Prairie joint account balance is $${joint.toFixed(2)} today.` }],
+    expect: { present: [assertion("today", JOINT)], countDelta: 1 },
+  },
+  {
+    id: "balance-mismatch",
+    tags: ["balance", "ask"],
+    fixture: "household",
+    autoReply: "I'm not sure. Can you check what might be missing?",
+    turns: [{ text: `My Prairie joint account balance is $${(joint + 50).toLocaleString("en-US", { minimumFractionDigits: 2 })} today.` }],
+    expect: { countDelta: 0, answer: ["(?<![\\d.,])50([.,]00)?(?!\\d)"] },
+  },
+  {
+    id: "refund-headphones",
+    tags: ["edit", "refund"],
+    fixture: "household",
+    turns: [{ text: "I returned the headphones from Volt Electronics. The $349 refund hit my Summit Visa today." }],
+    expect: { present: [tx("today", "volt", [p(CARD, 349), p("Expenses:Shopping", -349)])], countDelta: 1 },
+  },
+  {
+    id: "recategorize-merchant",
+    tags: ["edit", "memory"],
+    fixture: "household",
+    turns: [{ text: "Parkside Pharmacy should be Personal Care, not Health. Fix the existing ones and keep it that way from now on." }],
+    expect: {
+      present: ["2026-07-19", "2026-08-19", "2026-09-19"].map((d) => tx(d, "parkside", [p(CARD, -23.8), p("Expenses:Personal Care", 23.8)])),
+      absent: [tx(undefined, "parkside", [{ account: "Expenses:Health" }], { exact: false })],
+      countDelta: 0,
+    },
+  },
+  {
+    id: "payee-rename",
+    tags: ["edit", "payees"],
+    fixture: "household",
+    turns: [{ text: "Rename the payee Corner Deli to Sal's Corner Deli everywhere, and keep the old name as original_payee_name." }],
+    expect: {
+      present: ["2026-07-21", "2026-08-21", "2026-09-21"].map((d) =>
+        tx(d, "^Sal's Corner Deli", [p(WALLET, -6.4), p("Expenses:Food", 6.4)], { tags: { original_payee_name: "^corner deli$" } }),
+      ),
+      absent: [tx(undefined, "^corner deli", [{ account: WALLET }], { exact: false })],
+      countDelta: 0,
+    },
+  },
+  {
+    id: "undo-last-commit",
+    tags: ["edit", "commit", "undo"],
+    fixture: "household",
+    setupCommit: { message: "Add Luigi's Trattoria dinner on 2026-09-29" },
+    turns: [{ text: "Undo my last change, I logged that dinner by mistake." }],
+    expect: { absent: [tx("2026-09-29", "luigi", [{ account: CHECKING }], { exact: false })], countDelta: -1 },
+  },
+  {
+    id: "query-food-august",
+    tags: ["query"],
+    fixture: "household",
+    turns: [{ text: "How much did I spend on food in August 2026?" }],
+    expect: { countDelta: 0, answer: [escapeRe(foodAugust.toFixed(2))] },
+  },
+  {
+    id: "query-net-worth",
+    tags: ["query", "fx"],
+    fixture: "household",
+    turns: [{ text: "What's my net worth in USD at the latest prices?" }],
+    expect: { countDelta: 0, answer: [dollars(netWorth)] },
+  },
+  {
+    id: "query-cleaning-next-due",
+    tags: ["query", "memory"],
+    fixture: "household",
+    turns: [{ text: "When is my next Sparkle Cleaning payment due?" }],
+    expect: { countDelta: 0, answer: ["(2026-10-01|oct(ober|\\.)? 1(st)?\\b|10/0?1)"] },
+  },
+  {
+    id: "skill-subscription-audit",
+    tags: ["query", "skill"],
+    fixture: "household",
+    turns: [{ text: "/skill:accountant24-skills:subscription-audit" }],
+    expect: { countDelta: 0, answer: ["streamflix", "cloudbox"] },
+  },
+  {
+    id: "memory-add-rule",
+    tags: ["memory"],
+    fixture: "household",
+    turns: [{ text: "Remember this: my employer reimburses my City Transit monthly pass, so book those reimbursements against Transport." }],
+    expect: { countDelta: 0, memory: ["transit", "transport"], memoryMaxAdded: 2 },
+  },
+  {
+    id: "memory-correct-fact",
+    tags: ["memory"],
+    fixture: "household",
+    turns: [{ text: "Correction: Sparkle Cleaning comes every week now, not every other Thursday." }],
+    expect: { countDelta: 0, memory: ["sparkle[^\\n]*(every week|weekly)"], memoryReplaces: ["sparkle"], memoryMaxAdded: 0 },
+  },
+  {
+    id: "dont-commit",
+    tags: ["entry", "commit"],
+    fixture: "household",
+    turns: [
+      { text: "Don't commit anything until I say so. Log $32.40 at Harvest Co-op today, Harbor debit card." },
+      { text: "Also $4.20 at Daily Grind Coffee, same card." },
+    ],
+    expect: {
+      present: [tx("today", "harvest", [p(CHECKING, -32.4), p("Expenses:Food*", 32.4)]), tx("today", "daily grind", [p(CHECKING, -4.2), p("Expenses:Food*", 4.2)])],
+      countDelta: 2,
+      commit: "forbidden",
+    },
+  },
+  {
+    id: "ask-unknown-payee",
+    tags: ["entry", "ask"],
+    fixture: "household",
+    autoReply: "It was for babysitting. Book it under Children.",
+    turns: [{ text: "Paid Megan $60 from my Harbor checking today." }],
+    expect: { present: [tx("today", "megan", [p(CHECKING, -60), p("Expenses:Children", 60)])], countDelta: 1 },
+  },
+  {
+    id: "ask-missing-amount",
+    tags: ["entry", "ask"],
+    fixture: "household",
+    autoReply: "$3.80, Harbor debit card.",
+    turns: [{ text: "Log a coffee at Daily Grind Coffee from yesterday." }],
+    expect: { present: [tx("today-1", "daily grind", [p(CHECKING, -3.8), p("Expenses:Food*", 3.8)])], countDelta: 1 },
+  },
+  {
+    id: "prices-broker-screenshot",
+    tags: ["prices", "image"],
+    fixture: "household",
+    turns: [{ text: "Update prices from this.", attachments: ["portfolio.png"] }],
+    expect: { prices: [{ date: END, commodity: "VTI", amount: 297.4, in: "USD" }], countDelta: [0, 1] },
+  },
+  {
+    id: "fresh-first-expense",
+    tags: ["entry", "fresh"],
+    fixture: "_template",
+    turns: [{ text: "I just paid $12.50 for lunch at Rosie's Diner, in cash." }],
+    expect: { present: [tx("today", "rosie", [p("Assets:Cash", -12.5), p("Expenses:Food", 12.5)])], countDelta: 1 },
+  },
+];
+
+for (const c of cases) {
+  mkdirSync(join(CASES, c.id), { recursive: true });
+  writeFileSync(join(CASES, c.id, "case.json"), `${JSON.stringify(c, null, 2)}\n`);
+}
+console.log(`${cases.length} cases; Harbor closing ${harborClosing}, wallet ${wallet}, joint ${joint}, food Aug ${foodAugust}, net worth ${netWorth}`);

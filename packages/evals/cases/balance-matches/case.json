@@ -6,7 +6,7 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "My Stadtbank balance is 984.13 EUR today."
+      "text": "My Prairie joint account balance is $1203.13 today."
     }
   ],
   "expect": {
@@ -16,7 +16,7 @@
         "description": "^Balance Assertion",
         "postings": [
           {
-            "account": "Assets:Bank:Stadtbank",
+            "account": "Assets:Bank:Prairie Joint",
             "amount": 0
           }
         ]

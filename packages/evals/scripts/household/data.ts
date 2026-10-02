@@ -1,11 +1,12 @@
-// The made-up household behind the `household` fixture: Alex Morgan in Berlin,
-// with a partner (Sam), a neobank account, a joint account, a credit card, a
-// UAH account at a Ukrainian bank, PayPal, cash and a broker. Every name, bank,
-// payee and amount here is invented.
+// The made-up household behind the `household` fixture: Alex Morgan in
+// Chicago, sharing a joint account with Sam. Alex has a checking account at
+// Harbor Bank, the joint account at Prairie Credit Union, a credit card, a CAD
+// account kept from years in Toronto, PayPal, cash and a brokerage account.
+// Every person, bank, merchant and amount here is invented.
 //
 // `world()` is everything that happened from 2026-07-01 to 2026-09-30. The
 // fixture ledger holds what Alex had recorded by mid-September; the rest only
-// exists in the statements the cases attach (see gen-documents.ts).
+// exists in the documents the cases attach (see gen-documents.ts).
 
 export type Posting = { account: string; amount: number; commodity: string; cost?: { total: number; commodity: string } };
 
@@ -16,37 +17,37 @@ export type Tx = {
   tags?: Record<string, string>;
   postings: Posting[];
   /** Statement line as the bank shows it, for imported transactions. */
-  bank?: { source: "lumen" | "dnipro"; rawPayee: string; rawDescription: string };
+  bank?: { source: "harbor" | "maple"; rawPayee: string; rawDescription: string };
   /** Not in the fixture ledger: happened after Alex last updated the books. */
   unrecorded?: boolean;
 };
 
-export const LUMEN = "Assets:Bank:Lumen";
-export const STADT = "Assets:Bank:Stadtbank";
-export const DNIPRO = "Assets:Bank:Dnipro Bank";
+export const CHECKING = "Assets:Bank:Harbor Checking";
+export const JOINT = "Assets:Bank:Prairie Joint";
+export const CAD_ACCOUNT = "Assets:Bank:Maple Trust";
 export const PAYPAL = "Assets:PayPal";
 export const WALLET = "Assets:Cash:Wallet";
 export const HOME_CASH = "Assets:Cash:Home";
-export const BROKER = "Assets:Investments:Tradeview";
-export const VISA = "Liabilities:Credit Card:Stadtbank Visa";
+export const BROKER = "Assets:Investments:Brightline";
+export const CARD = "Liabilities:Credit Card:Summit Visa";
 
-/** Lumen statements already imported into the fixture, by period end. */
-export const LUMEN_IMPORTED: Record<string, string> = {
+/** Harbor statements already imported into the fixture, by period. */
+export const HARBOR_IMPORTED: Record<string, string> = {
   "2026-07": "files/2026/08/20260801090412.pdf",
   "2026-08": "files/2026/09/20260901083055.pdf",
   "2026-09-partial": "files/2026/09/20260915071820.pdf",
 };
-/** The fixture's last imported Lumen day; later Lumen activity is unrecorded. */
-export const LUMEN_RECORDED_THROUGH = "2026-09-14";
-/** The Dnipro Bank account was last updated by hand through August. */
-export const DNIPRO_RECORDED_THROUGH = "2026-08-31";
+/** The fixture's last imported Harbor day; later Harbor activity is unrecorded. */
+export const HARBOR_RECORDED_THROUGH = "2026-09-14";
+/** The CAD account was last updated by hand through August. */
+export const CAD_RECORDED_THROUGH = "2026-08-31";
 
-const eur = (account: string, amount: number): Posting => ({ account, amount, commodity: "EUR" });
-const uah = (account: string, amount: number): Posting => ({ account, amount, commodity: "UAH" });
+const usd = (account: string, amount: number): Posting => ({ account, amount, commodity: "USD" });
+const cad = (account: string, amount: number): Posting => ({ account, amount, commodity: "CAD" });
 
-/** A simple two-posting expense or income, money from/to `from`. */
+/** A two-posting expense (or income, with a negative amount), paid from `from`. */
 function spend(date: string, payee: string, category: string, amount: number, from: string, extra: Partial<Tx> = {}): Tx {
-  const commodity = from === DNIPRO ? "UAH" : "EUR";
+  const commodity = from === CAD_ACCOUNT ? "CAD" : "USD";
   return {
     date,
     payee,
@@ -59,29 +60,28 @@ function spend(date: string, payee: string, category: string, amount: number, fr
 }
 
 function transfer(date: string, from: string, to: string, amount: number, extra: Partial<Tx> = {}): Tx {
-  return { date, payee: "Internal Transfer", postings: [eur(from, -amount), eur(to, amount)], ...extra };
+  return { date, payee: "Internal Transfer", postings: [usd(from, -amount), usd(to, amount)], ...extra };
 }
 
 const months = ["2026-07", "2026-08", "2026-09"] as const;
 const day = (month: string, d: number) => `${month}-${String(d).padStart(2, "0")}`;
 
-/** Card-statement spellings for payees that come from the Lumen account. */
+/** How Harbor Bank's statement spells each payee. */
 const RAW: Record<string, string> = {
-  "Brightwave GmbH": "BRIGHTWAVE GMBH GEHALT",
-  BVG: "BVG ABO MONATSKARTE",
+  "Brightwave Inc.": "BRIGHTWAVE INC PAYROLL",
+  "City Transit": "CITY TRANSIT MONTHLY PASS",
   StreamFlix: "STREAMFLIX.COM",
   CloudBox: "CLOUDBOX STORAGE",
-  Frischmarkt: "FRISCHMARKT FIL.112 BERLIN",
-  "Bio Corner": "BIO CORNER FRIEDRICHSHAIN",
-  "Trattoria Sole": "TRATTORIA SOLE SRL",
-  "Pho Lan": "PHO LAN BERLIN",
-  "Kaffeebar Ost": "KAFFEEBAR OST",
-  "Sparkle Cleaning": "SPARKLE CLEANING SERVICES",
-  "Hotel Wawel Garden": "HOTEL WAWEL GARDEN KRAKOW",
-  "Internal Transfer": "UEBERWEISUNG",
-  "Buchhandlung Seitenweise": "BUCHHANDLUNG SEITENWEISE",
-  "Kino Babylon Ost": "KINO BABYLON OST",
-  "Apotheke am Park": "APOTHEKE AM PARK",
+  "Green Basket Market": "GREEN BASKET MKT #112 CHICAGO IL",
+  "Harvest Co-op": "HARVEST CO-OP LOGAN SQ",
+  "Daily Grind Coffee": "DAILY GRIND COFFEE",
+  "Luigi's Trattoria": "LUIGIS TRATTORIA",
+  "Pho Saigon": "PHO SAIGON CHICAGO",
+  "Sparkle Cleaning": "SPARKLE CLEANING SVCS",
+  "Harbourfront Hotel": "HARBOURFRONT HOTEL TORONTO",
+  "Internal Transfer": "ONLINE TRANSFER",
+  "Chapter One Books": "CHAPTER ONE BOOKS",
+  "Starlight Cinema": "STARLIGHT CINEMA",
 };
 
 const GROCERIES: Record<string, number[]> = {
@@ -89,9 +89,10 @@ const GROCERIES: Record<string, number[]> = {
   "2026-08": [61.3, 49.75, 80.15, 55.6],
   "2026-09": [67.45, 52.3, 70.8, 59.15],
 };
-const BIO: Record<string, number[]> = { "2026-07": [23.4, 31.1], "2026-08": [27.9, 19.6], "2026-09": [25.2, 33.45] };
+const COOP: Record<string, number[]> = { "2026-07": [23.4, 31.1], "2026-08": [27.9, 19.6], "2026-09": [25.2, 33.45] };
 const COFFEE: Record<string, number[]> = { "2026-07": [4.2, 7.8, 3.9], "2026-08": [4.6, 8.4, 4.2], "2026-09": [4.4, 7.6, 5.1] };
-const VWCE_PRICE: Record<string, number> = { "2026-07": 126.4, "2026-08": 129.1, "2026-09": 131.8 };
+export const VTI_PRICE: Record<string, number> = { "2026-07": 286.4, "2026-08": 291.1, "2026-09": 294.8 };
+export const CAD_PRICE: Record<string, number> = { "2026-07": 0.731, "2026-08": 0.728, "2026-09": 0.734 };
 
 export function world(): Tx[] {
   const txs: Tx[] = [];
@@ -99,84 +100,79 @@ export function world(): Tx[] {
     date: "2026-07-01",
     payee: "Opening Balance",
     postings: [
-      eur(LUMEN, 1200),
-      eur(STADT, 2850),
-      uah(DNIPRO, 12500),
-      eur(WALLET, 120),
-      eur(HOME_CASH, 400),
-      eur(BROKER, 150),
-      { account: BROKER, amount: 20, commodity: "VWCE", cost: { total: 2480, commodity: "EUR" } },
-      eur(VISA, -320.5),
-      { account: "Equity:Opening Balances", amount: -6879.5, commodity: "EUR" },
-      { account: "Equity:Opening Balances", amount: -12500, commodity: "UAH" },
+      usd(CHECKING, 1200),
+      usd(JOINT, 2850),
+      cad(CAD_ACCOUNT, 2500),
+      usd(WALLET, 120),
+      usd(HOME_CASH, 400),
+      usd(BROKER, 150),
+      { account: BROKER, amount: 20, commodity: "VTI", cost: { total: 5480, commodity: "USD" } },
+      usd(CARD, -320.5),
+      { account: "Equity:Opening Balances", amount: -9879.5, commodity: "USD" },
+      { account: "Equity:Opening Balances", amount: -2500, commodity: "CAD" },
     ],
   });
 
   for (const m of months) {
-    txs.push(spend(day(m, 1), "Brightwave GmbH", "Income:Salary", -3850, LUMEN, { note: "salary" }));
-    txs.push(spend(day(m, 1), "Hausverwaltung Ostpark", "Expenses:Housing", 1250, STADT, { note: "rent" }));
-    txs.push(spend(day(m, 1), "BVG", "Expenses:Transport", 58, LUMEN, { note: "monthly ticket" }));
-    txs.push(transfer(day(m, 2), LUMEN, STADT, 1000, { note: "my share of rent and bills" }));
-    txs.push(spend(day(m, 3), "NetzPlus", "Expenses:Utilities", 39.99, STADT, { note: "internet" }));
-    txs.push(spend(day(m, 5), "Stromwerk Berlin", "Expenses:Utilities", 85, STADT, { note: "electricity" }));
-    txs.push(transfer(day(m, 5), LUMEN, BROKER, 200, { note: "savings plan" }));
-    const price = VWCE_PRICE[m];
+    txs.push(spend(day(m, 1), "Brightwave Inc.", "Income:Salary", -4850, CHECKING, { note: "salary" }));
+    txs.push(spend(day(m, 1), "Oakridge Property Management", "Expenses:Housing", 1850, JOINT, { note: "rent" }));
+    txs.push(spend(day(m, 1), "City Transit", "Expenses:Transport", 75, CHECKING, { note: "monthly pass" }));
+    txs.push(transfer(day(m, 2), CHECKING, JOINT, 1700, { note: "my share of rent and bills" }));
+    txs.push(spend(day(m, 3), "Lakeside Fiber", "Expenses:Utilities", 59.99, JOINT, { note: "internet" }));
+    txs.push(spend(day(m, 5), "Metro Electric", "Expenses:Utilities", 92, JOINT, { note: "electricity" }));
+    txs.push(transfer(day(m, 5), CHECKING, BROKER, 300, { note: "monthly investment" }));
+    const price = VTI_PRICE[m];
     txs.push({
       date: day(m, 6),
-      payee: "Tradeview",
-      note: "savings plan buy",
+      payee: "Brightline",
+      note: "monthly investment",
       postings: [
-        { account: BROKER, amount: 1.5, commodity: "VWCE", cost: { total: +(1.5 * price).toFixed(2), commodity: "EUR" } },
-        eur(BROKER, -+(1.5 * price).toFixed(2)),
+        { account: BROKER, amount: 1, commodity: "VTI", cost: { total: price, commodity: "USD" } },
+        usd(BROKER, -price),
       ],
     });
-    txs.push(transfer(day(m, 7), LUMEN, WALLET, 100, { note: "ATM" }));
-    txs.push(spend(day(m, 10), "StreamFlix", "Expenses:Subscriptions", 12.99, LUMEN));
-    txs.push(spend(day(m, 15), "CloudBox", "Expenses:Subscriptions", 2.99, LUMEN));
-    [4, 11, 18, 25].forEach((d, i) => txs.push(spend(day(m, d), "Frischmarkt", "Expenses:Food", GROCERIES[m][i], LUMEN)));
-    [8, 22].forEach((d, i) => txs.push(spend(day(m, d), "Bio Corner", "Expenses:Food", BIO[m][i], LUMEN)));
-    [9, 16, 23].forEach((d, i) => txs.push(spend(day(m, d), "Kaffeebar Ost", "Expenses:Food", COFFEE[m][i], LUMEN)));
-    txs.push(spend(day(m, 13), "Trattoria Sole", "Expenses:Food", m === "2026-08" ? 52.4 : 46.8, LUMEN, { note: "dinner" }));
-    txs.push(spend(day(m, 27), "Pho Lan", "Expenses:Food", 28.6, LUMEN, { note: "dinner" }));
-    txs.push(spend(day(m, 14), "Wochenmarkt", "Expenses:Food", 18.5, WALLET));
-    txs.push(spend(day(m, 21), "Spaeti Eck", "Expenses:Food", 6.4, WALLET));
-    txs.push(spend(day(m, 19), "Apotheke am Park", "Expenses:Health", 23.8, VISA));
-    // Dnipro Bank (UAH): a top-up from Lumen, support for Alex's parents, the phone plan.
+    txs.push(transfer(day(m, 7), CHECKING, WALLET, 100, { note: "ATM" }));
+    txs.push(spend(day(m, 10), "StreamFlix", "Expenses:Subscriptions", 15.49, CHECKING));
+    txs.push(spend(day(m, 15), "CloudBox", "Expenses:Subscriptions", 2.99, CHECKING));
+    [4, 11, 18, 25].forEach((d, i) => txs.push(spend(day(m, d), "Green Basket Market", "Expenses:Food", GROCERIES[m][i], CHECKING)));
+    [8, 22].forEach((d, i) => txs.push(spend(day(m, d), "Harvest Co-op", "Expenses:Food", COOP[m][i], CHECKING)));
+    [9, 16, 23].forEach((d, i) => txs.push(spend(day(m, d), "Daily Grind Coffee", "Expenses:Food", COFFEE[m][i], CHECKING)));
+    txs.push(spend(day(m, 13), "Luigi's Trattoria", "Expenses:Food", m === "2026-08" ? 52.4 : 46.8, CHECKING, { note: "dinner" }));
+    txs.push(spend(day(m, 27), "Pho Saigon", "Expenses:Food", 28.6, CHECKING, { note: "dinner" }));
+    txs.push(spend(day(m, 14), "Farmers Market", "Expenses:Food", 18.5, WALLET));
+    txs.push(spend(day(m, 21), "Corner Deli", "Expenses:Food", 6.4, WALLET));
+    txs.push(spend(day(m, 19), "Parkside Pharmacy", "Expenses:Health", 23.8, CARD));
+    // Maple Trust (CAD): a top-up from checking, help for Alex's mom in Toronto, a phone plan there.
     txs.push({
       date: day(m, 3),
       payee: "Internal Transfer",
-      note: "top-up UAH account",
+      note: "top-up CAD account",
       postings: [
-        { account: DNIPRO, amount: 4150, commodity: "UAH", cost: { total: 95, commodity: "EUR" } },
-        eur(LUMEN, -95),
+        { account: CAD_ACCOUNT, amount: 400, commodity: "CAD", cost: { total: 292, commodity: "USD" } },
+        usd(CHECKING, -292),
       ],
     });
-    txs.push(spend(day(m, 12), "Olena Marchenko", "Expenses:Gifts & Donations", 4000, DNIPRO, { note: "for mom" }));
-    txs.push(spend(day(m, 18), "Lviv Mobile", "Expenses:Utilities", 250, DNIPRO, { note: "phone plan" }));
+    txs.push(spend(day(m, 12), "Linda Morgan", "Expenses:Gifts & Donations", 300, CAD_ACCOUNT, { note: "for mom" }));
+    txs.push(spend(day(m, 18), "Northern Mobile", "Expenses:Utilities", 45, CAD_ACCOUNT, { note: "phone plan" }));
   }
 
   // One-offs.
-  txs.push(spend("2026-07-16", "Buchhandlung Seitenweise", "Expenses:Education", 24.9, LUMEN));
-  txs.push(...paypalPurchase("2026-07-20", "Secondhand Loop", "Expenses:Shopping", 35, "jacket"));
-  txs.push(spend("2026-07-28", "Internal Transfer", VISA, 344.3, STADT, { note: "card bill" }));
-  txs.push(...paypalPurchase("2026-08-09", "Gamestore Online", "Expenses:Entertainment", 59.99, "board game"));
-  txs.push(spend("2026-08-20", "Sparkle Cleaning", "Expenses:Household Help", 165, LUMEN, { note: "3 visits prepaid" }));
-  txs.push(spend("2026-08-22", "Elektronik Haus", "Expenses:Shopping", 349, VISA, { note: "headphones" }));
-  txs.push(spend("2026-08-28", "Internal Transfer", VISA, 372.8, STADT, { note: "card bill" }));
-  txs.push(spend("2026-09-02", "Hotel Wawel Garden", "Expenses:Travel", 412, LUMEN, { note: "Krakow, 3 nights", tags: { trip: "krakow-2026" } }));
-  txs.push(spend("2026-09-12", "Kino Babylon Ost", "Expenses:Entertainment", 21, LUMEN));
-  txs.push(spend("2026-09-28", "Internal Transfer", VISA, 23.8, STADT, { note: "card bill" }));
+  txs.push(spend("2026-07-16", "Chapter One Books", "Expenses:Education", 24.9, CHECKING));
+  txs.push(...paypalPurchase("2026-07-20", "Thrift Loop", "Expenses:Shopping", 35, "jacket"));
+  txs.push(spend("2026-07-28", "Internal Transfer", CARD, 344.3, JOINT, { note: "card payment" }));
+  txs.push(...paypalPurchase("2026-08-09", "Game Vault", "Expenses:Entertainment", 59.99, "board game"));
+  txs.push(spend("2026-08-20", "Sparkle Cleaning", "Expenses:Household Help", 165, CHECKING, { note: "3 visits prepaid" }));
+  txs.push(spend("2026-08-22", "Volt Electronics", "Expenses:Shopping", 349, CARD, { note: "headphones" }));
+  txs.push(spend("2026-08-28", "Internal Transfer", CARD, 372.8, JOINT, { note: "card payment" }));
+  txs.push(spend("2026-09-02", "Harbourfront Hotel", "Expenses:Travel", 412, CHECKING, { note: "Toronto, 3 nights", tags: { trip: "toronto-2026" } }));
+  txs.push(spend("2026-09-12", "Starlight Cinema", "Expenses:Entertainment", 21, CHECKING));
+  txs.push(spend("2026-09-28", "Internal Transfer", CARD, 23.8, JOINT, { note: "card payment" }));
 
-  // After the last update: only in the September statements.
-  for (const t of [
-    spend("2026-09-19", "Buchhandlung Seitenweise", "Expenses:Education", 18.5, LUMEN),
-    spend("2026-09-26", "Kaffeebar Ost", "Expenses:Food", 3.9, LUMEN),
-  ])
-    txs.push(t);
-
-  // Dnipro Bank card purchases in September, in the CSV only.
-  txs.push(spend("2026-09-06", "Kramnytsia Online", "Expenses:Shopping", 1349, DNIPRO, { note: "book order for parents" }));
-  txs.push(spend("2026-09-21", "Bank fee", "Expenses:Financial", 25, DNIPRO));
+  // After the last update: only in the September documents.
+  txs.push(spend("2026-09-19", "Chapter One Books", "Expenses:Education", 18.5, CHECKING));
+  txs.push(spend("2026-09-26", "Daily Grind Coffee", "Expenses:Food", 3.9, CHECKING));
+  txs.push(spend("2026-09-06", "Maple Books Online", "Expenses:Shopping", 64.99, CAD_ACCOUNT, { note: "books for mom" }));
+  txs.push(spend("2026-09-21", "Maple Trust", "Expenses:Financial", 4.95, CAD_ACCOUNT, { note: "monthly account fee" }));
 
   for (const t of txs) annotate(t);
   return txs.sort((a, b) => a.date.localeCompare(b.date) || a.payee.localeCompare(b.payee));
@@ -185,28 +181,28 @@ export function world(): Tx[] {
 function paypalPurchase(date: string, merchant: string, category: string, amount: number, note: string): Tx[] {
   const link = `${merchant.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${date}`;
   return [
-    transfer(date, LUMEN, PAYPAL, amount, { note: `PayPal top-up for ${merchant}`, tags: { link } }),
+    transfer(date, CHECKING, PAYPAL, amount, { note: `PayPal top-up for ${merchant}`, tags: { link } }),
     spend(date, merchant, category, amount, PAYPAL, { note, tags: { link } }),
   ];
 }
 
 /** Mark imported/unrecorded status and statement spellings. */
 function annotate(t: Tx): void {
-  const lumen = t.postings.find((p) => p.account === LUMEN);
-  const dnipro = t.postings.find((p) => p.account === DNIPRO);
-  if (lumen && t.payee !== "Opening Balance") {
+  const checking = t.postings.find((p) => p.account === CHECKING);
+  const cadPosting = t.postings.find((p) => p.account === CAD_ACCOUNT);
+  if (checking && t.payee !== "Opening Balance") {
     const raw = RAW[t.payee] ?? t.payee.toUpperCase();
-    t.bank = { source: "lumen", rawPayee: raw, rawDescription: lumen.amount > 0 ? "CREDIT TRANSFER" : "CARD PAYMENT" };
+    t.bank = { source: "harbor", rawPayee: raw, rawDescription: checking.amount > 0 ? "DIRECT DEPOSIT" : "DEBIT CARD PURCHASE" };
     if (t.payee === "Internal Transfer") t.bank.rawDescription = t.note?.toUpperCase() ?? "TRANSFER";
-    if (t.date > LUMEN_RECORDED_THROUGH) t.unrecorded = true;
+    if (t.date > HARBOR_RECORDED_THROUGH) t.unrecorded = true;
     else {
       const period = t.date < "2026-08-01" ? "2026-07" : t.date < "2026-09-01" ? "2026-08" : "2026-09-partial";
-      t.tags = { ...t.tags, original_payee_name: raw, related_file: LUMEN_IMPORTED[period] };
+      t.tags = { ...t.tags, original_payee_name: raw, related_file: HARBOR_IMPORTED[period] };
     }
-  } else if (dnipro && t.payee !== "Opening Balance") {
-    t.bank = { source: "dnipro", rawPayee: t.payee === "Internal Transfer" ? "Popovnennia z kartky" : t.payee, rawDescription: t.note ?? "" };
-    // The September top-up was recorded from the Lumen side; the rest of September is only in the CSV.
-    if (t.date > DNIPRO_RECORDED_THROUGH && t.payee !== "Internal Transfer") t.unrecorded = true;
+  } else if (cadPosting && t.payee !== "Opening Balance") {
+    t.bank = { source: "maple", rawPayee: t.payee, rawDescription: t.note ?? "" };
+    // The September top-up was recorded from the checking side; the rest of September is only in the CSV.
+    if (t.date > CAD_RECORDED_THROUGH) t.unrecorded = true;
   }
 }
 

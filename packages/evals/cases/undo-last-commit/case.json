@@ -7,7 +7,7 @@
   ],
   "fixture": "household",
   "setupCommit": {
-    "message": "Add Trattoria Sole dinner on 2026-09-29"
+    "message": "Add Luigi's Trattoria dinner on 2026-09-29"
   },
   "turns": [
     {
@@ -18,10 +18,10 @@
     "absent": [
       {
         "date": "2026-09-29",
-        "description": "trattoria",
+        "description": "luigi",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen"
+            "account": "Assets:Bank:Harbor Checking"
           }
         ],
         "exact": false

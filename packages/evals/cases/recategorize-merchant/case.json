@@ -7,64 +7,63 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Apotheke am Park should be Personal Care, not Health. Fix the existing ones and keep it that way from now on."
+      "text": "Parkside Pharmacy should be Personal Care, not Health. Fix the existing ones and keep it that way from now on."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "2026-07-19",
-        "description": "apotheke",
+        "description": "parkside",
         "postings": [
           {
-            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "account": "Liabilities:Credit Card:Summit Visa",
             "amount": -23.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Personal Care",
             "amount": 23.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       },
       {
         "date": "2026-08-19",
-        "description": "apotheke",
+        "description": "parkside",
         "postings": [
           {
-            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "account": "Liabilities:Credit Card:Summit Visa",
             "amount": -23.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Personal Care",
             "amount": 23.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       },
       {
         "date": "2026-09-19",
-        "description": "apotheke",
+        "description": "parkside",
         "postings": [
           {
-            "account": "Liabilities:Credit Card:Stadtbank Visa",
+            "account": "Liabilities:Credit Card:Summit Visa",
             "amount": -23.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Personal Care",
             "amount": 23.8,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }
     ],
     "absent": [
       {
-        "date": null,
-        "description": "apotheke",
+        "description": "parkside",
         "postings": [
           {
             "account": "Expenses:Health"

@@ -1,0 +1,105 @@
+{
+  "id": "csv-cad-sept",
+  "tags": [
+    "import",
+    "csv",
+    "statement",
+    "fx"
+  ],
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Import my Maple Trust export for September.",
+      "attachments": [
+        "maple-trust-2026-09.csv"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-06",
+        "description": "maple",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -64.99,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Shopping",
+            "amount": 64.99,
+            "commodity": "CAD"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-12",
+        "description": "linda",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -300,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Gifts & Donations*",
+            "amount": 300,
+            "commodity": "CAD"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-18",
+        "description": "northern",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -45,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Utilities*",
+            "amount": 45,
+            "commodity": "CAD"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-21",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -4.95,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Financial",
+            "amount": 4.95,
+            "commodity": "CAD"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-30",
+        "description": "^Balance Assertion",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": 0,
+            "commodity": "CAD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 5,
+    "balances": [
+      {
+        "account": "Assets:Bank:Maple Trust",
+        "amount": 2595.06,
+        "commodity": "CAD",
+        "date": "2026-09-30"
+      }
+    ]
+  }
+}

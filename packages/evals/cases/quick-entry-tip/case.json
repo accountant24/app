@@ -6,19 +6,19 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Lunch at Pho Lan yesterday, 24.50 plus 3 tip, paid with my Lumen card."
+      "text": "Lunch at Pho Saigon yesterday, $24.50 plus a $3 tip, on my Harbor debit card."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today-1",
-        "description": "pho lan",
+        "description": "pho saigon",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -27.5,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*"
@@ -31,8 +31,8 @@
     "balances": [
       {
         "account": "Expenses:Food",
-        "amount": 1084.0,
-        "commodity": "EUR"
+        "amount": 1084,
+        "commodity": "USD"
       }
     ]
   }

@@ -7,13 +7,13 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "What's my net worth in EUR at the latest prices?"
+      "text": "What's my net worth in USD at the latest prices?"
     }
   ],
   "expect": {
     "countDelta": 0,
     "answer": [
-      "12[,. ]?15[01]"
+      "(17,?712|17,?713)"
     ]
   }
 }

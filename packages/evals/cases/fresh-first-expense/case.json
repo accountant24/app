@@ -7,24 +7,24 @@
   "fixture": "_template",
   "turns": [
     {
-      "text": "I just paid 12.50 EUR for lunch at Café Mondo in cash."
+      "text": "I just paid $12.50 for lunch at Rosie's Diner, in cash."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today",
-        "description": "mondo",
+        "description": "rosie",
         "postings": [
           {
             "account": "Assets:Cash",
             "amount": -12.5,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food",
             "amount": 12.5,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }

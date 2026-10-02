@@ -8,24 +8,24 @@
   "autoReply": "It was for babysitting. Book it under Children.",
   "turns": [
     {
-      "text": "Paid 60 EUR to Marta from my Lumen account today."
+      "text": "Paid Megan $60 from my Harbor checking today."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today",
-        "description": "marta",
+        "description": "megan",
         "postings": [
           {
-            "account": "Assets:Bank:Lumen",
+            "account": "Assets:Bank:Harbor Checking",
             "amount": -60,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Children",
             "amount": 60,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }

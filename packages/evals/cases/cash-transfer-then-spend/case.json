@@ -8,7 +8,7 @@
   "fixture": "household",
   "turns": [
     {
-      "text": "Took 50 from the cash box at home into my wallet, then spent 12 of it at Spaeti Eck."
+      "text": "Took $50 from the cash jar at home into my wallet, then spent $12 of it at Corner Deli."
     }
   ],
   "expect": {
@@ -20,28 +20,28 @@
           {
             "account": "Assets:Cash:Home",
             "amount": -50,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Assets:Cash:Wallet",
             "amount": 50,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       },
       {
         "date": "today",
-        "description": "spaeti",
+        "description": "corner deli",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
             "amount": -12,
-            "commodity": "EUR"
+            "commodity": "USD"
           },
           {
             "account": "Expenses:Food*",
             "amount": 12,
-            "commodity": "EUR"
+            "commodity": "USD"
           }
         ]
       }
@@ -51,12 +51,12 @@
       {
         "account": "Assets:Cash:Wallet",
         "amount": 383.3,
-        "commodity": "EUR"
+        "commodity": "USD"
       },
       {
         "account": "Assets:Cash:Home",
         "amount": 350,
-        "commodity": "EUR"
+        "commodity": "USD"
       }
     ]
   }
