@@ -1,0 +1,25 @@
+{
+  "providers": {
+    "fireworks": {
+      "baseUrl": "https://api.fireworks.ai/inference",
+      "api": "anthropic-messages",
+      "models": [
+        {
+          "id": "accounts/fireworks/models/deepseek-v4p1-flash",
+          "name": "DeepSeek V4.1 Flash",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 0.14, "output": 0.28, "cacheRead": 0.028, "cacheWrite": 0 },
+          "contextWindow": 1000000,
+          "maxTokens": 384000,
+          "compat": {
+            "sendSessionAffinityHeaders": true,
+            "supportsEagerToolInputStreaming": false,
+            "supportsCacheControlOnTools": false,
+            "supportsLongCacheRetention": false
+          }
+        }
+      ]
+    }
+  }
+}

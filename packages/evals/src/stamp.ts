@@ -13,7 +13,7 @@ export type Stamp = {
   cases: string;
   /** The runner and grader sources. */
   harness: string;
-  /** system.md, the bundled extension and the default skills. */
+  /** system.md, the bundled extension, the default skills and the custom model list. */
   agent: string;
   /** pi-coding-agent version. */
   pi: string;
@@ -52,6 +52,7 @@ export function computeStamp(pkg: string, root: string): Stamp {
         join(resources, "system.md"),
         join(resources, "accountant24-extension.js"),
         join(pkg, ".cache", "skills", "skills"),
+        join(pkg, "models.json"),
       ],
       root,
     ),

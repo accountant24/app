@@ -98,7 +98,10 @@ const KEY_VARS: Record<string, string> = {
   anthropic: "ANTHROPIC_API_KEY",
   openai: "OPENAI_API_KEY",
   deepseek: "DEEPSEEK_API_KEY",
+  fireworks: "FIREWORKS_API_KEY",
 };
+/** Models pi's catalog doesn't have yet (pi models.json format), given to every case. */
+const CUSTOM_MODELS = join(PKG, "models.json");
 
 /** KEY=value lines from a gitignored .env, without overriding the environment. */
 function loadDotEnv(path: string): void {
@@ -223,6 +226,7 @@ async function runCase(c: EvalCase, args: Args, deadline: number): Promise<Run> 
   const today = now.toISOString().slice(0, 10);
   const agentDir = mkdtempSync(join(tmpdir(), "a24-eval-agent-"));
   if (args.auth) copyFileSync(args.auth, join(agentDir, "auth.json"));
+  copyFileSync(CUSTOM_MODELS, join(agentDir, "models.json"));
   const { provider, id } = splitModel(args.model);
   const job: SessionJob = {
     workspace: ws,
