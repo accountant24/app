@@ -6,7 +6,7 @@ How we build [BLUEPRINT.md](BLUEPRINT.md): small milestones, each ending in some
 
 | Milestone | Status | PR |
 | --- | --- | --- |
-| M0 · Eval set and desktop baseline | in progress | |
+| M0 · Eval set and desktop baseline | done (PR pending) | |
 | M1 · Cloud risk spike | not started | |
 | M1b · Phone client spike | not started | |
 | M2 · Port the extension behind an execution environment | not started | |
@@ -85,4 +85,21 @@ Blueprint Phases 2 (the app on TestFlight) and 3 (launch), planned in detail aft
 
 ## Results
 
-Filled in as milestones finish.
+### M0 · Eval set and desktop baseline (2026-10-02)
+
+- `packages/evals`: 38 cases on a generated US household (invented data), run through pi exactly as the desktop agent host runs it, graded on the books left behind: correct (expected transactions, payees, descriptions, balances, memory), saved (committed, history never rewritten), valid (`hledger check --strict`), safe (journals never changed through bash). Every case states why it exists and its source; `npm run evals:overview` shows them all.
+- Results live in dated run sets stamped with the cases, harness and agent they ran against; `npm run evals:compare` writes `comparison.md`. The first run set is `packages/evals/results/2026-10-02-models/`.
+- Baseline, desktop agent at medium thinking, 76 runs per model (38 cases × 2):
+
+| Model | Pass | Cost per case |
+| --- | --- | --- |
+| Claude Opus 5 | 95% | $0.111 |
+| GPT-5.6 Sol | 89% | $0.099 |
+| GPT-5.6 Terra | 89% | $0.032 |
+| Claude Sonnet 5 | 78% | $0.050 |
+| GPT-5.6 Luna | 74% | $0.004 |
+| Claude Haiku 4.5 | 45% | $0.026 |
+
+- Every model kept the ledger valid and never touched journals through bash. Opus, Sol and Terra sit within the noise of each other (about ±10 points at 76 runs); Opus is the clear best at statement imports. Terra matches Sol at about a third of the cost. Haiku 4.5 often skips the commit, which rules it out where the push is the save.
+- Weak spots shared by every model point at the prompt, not a model: no holdings checks from a broker screenshot (0% everywhere), missing balance checks after CSV imports, explanations not reaching the description, and "from now on" rules not saved to memory. These are the first candidates for a prompt round, measured as a new run set.
+- The blueprint's model decision (Sonnet 5.5 or Haiku) predates these numbers: Haiku 4.5 is out, and an OpenAI model such as Terra is now a serious option next to Claude. The M3 eval run against the cloud agent compares with this run set.
