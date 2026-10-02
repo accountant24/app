@@ -7,7 +7,7 @@
     "sessions",
     "system.md"
   ],
-  "why": "The agent in the sessions added narration the user never gave and the user called it fabricated, against system.md's never-fabricate rule. With no purpose stated, the description stays empty.",
+  "why": "The agent used to make up descriptions nobody gave it. If you don't say what it was for, the description should stay empty.",
   "fixture": "household",
   "turns": [
     {

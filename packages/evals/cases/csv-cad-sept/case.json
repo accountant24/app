@@ -10,7 +10,7 @@
     "sessions",
     "coverage"
   ],
-  "why": "CSV exports and a second currency are common in the sessions. The top-up row is the other leg of a transfer already recorded from the checking side, and adding it again is the double-booked transfer the sessions complained about.",
+  "why": "The money moved in from checking is already in the books from the other side. The agent should not add it again, only the new spending.",
   "fixture": "household",
   "turns": [
     {

@@ -8,7 +8,7 @@
   "source": [
     "sessions"
   ],
-  "why": "The sessions show PayPal purchases booked straight from the card. The household rule is two linked legs, checking to PayPal and PayPal to the merchant, so the export has to become exactly those plus a checkpoint.",
+  "why": "PayPal purchases were booked straight from the card. They should be two linked steps: checking to PayPal, then PayPal to the shop.",
   "fixture": "household",
   "turns": [
     {

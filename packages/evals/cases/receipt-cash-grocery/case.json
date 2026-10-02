@@ -8,7 +8,7 @@
     "sessions",
     "coverage"
   ],
-  "why": "Receipt photos are a common input and go to the model as images, a path the port has to keep working. The agent has to read the store, date and total off the receipt and book it to cash as told.",
+  "why": "Receipts are often sent as photos. The agent should read the shop, date and total from the picture and book it as cash.",
   "fixture": "household",
   "turns": [
     {

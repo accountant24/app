@@ -8,7 +8,7 @@
     "sessions",
     "system.md"
   ],
-  "why": "When cash didn't add up, the agent in the sessions booked the gap to equity, which the user rejected. The household rule sends unexplained gaps to Expenses:Uncategorized with payee Unknown, followed by a checkpoint at the stated balance.",
+  "why": "When cash didn't add up, the gap was once booked to equity, which was wrong. It should go to Uncategorized with payee Unknown, plus a balance check.",
   "fixture": "household",
   "turns": [
     {

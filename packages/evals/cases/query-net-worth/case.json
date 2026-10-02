@@ -8,7 +8,7 @@
     "sessions",
     "coverage"
   ],
-  "why": "Net worth comes up often in the sessions, and it exercises valuation at the latest prices: VTI shares and the CAD account converted to USD.",
+  "why": "Net worth is a frequent question, and it needs the latest prices for the shares and the Canadian dollars.",
   "fixture": "household",
   "turns": [
     {

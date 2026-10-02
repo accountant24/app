@@ -7,7 +7,7 @@
   "source": [
     "sessions"
   ],
-  "why": "The sessions include batch payee renames that keep the old name as metadata. Every Corner Deli entry has to become Sal's Corner Deli, with the old name kept exactly in original_payee_name.",
+  "why": "Renaming payees in bulk is a common chore. Every Corner Deli entry should become Sal's Corner Deli, keeping the old name as a tag.",
   "fixture": "household",
   "turns": [
     {

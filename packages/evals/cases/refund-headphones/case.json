@@ -8,7 +8,7 @@
     "system.md",
     "sessions"
   ],
-  "why": "system.md says a refund reverses the account of the original payment, and the sessions show refunds booked as income. The return has to reduce Shopping and the card balance.",
+  "why": "Refunds were sometimes booked as income. A returned purchase should reduce Shopping and the card balance instead.",
   "fixture": "household",
   "turns": [
     {
