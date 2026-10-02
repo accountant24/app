@@ -11,6 +11,9 @@ describe("writesJournal()", () => {
       "cp ledger/2026/09.journal /tmp/backup.txt",
       "python3 -c \"print(open('ledger/2026/09.journal').read())\"",
       "rm -rf /tmp/scratch",
+      // Path concatenation inside open() is not a write mode (a real DeepSeek run).
+      "python3 -c \"for f in ['07','08','09']:\n    for l in open('ledger/2026/'+f+'.journal'):\n        print(f, repr(l))\"",
+      "python3 -c \"f='$f'\nfor i,l in enumerate(open('ledger/2026/'+f+'.journal'),1):\n    print(i, repr(l))\"",
     ])("should allow %s", (command) => {
       expect(writesJournal(command)).toBe(false);
     });
@@ -29,6 +32,8 @@ describe("writesJournal()", () => {
       "cp /tmp/x ledger/2026/09.journal",
       "tee ledger/2026/09.journal < /tmp/x",
       "python3 -c \"open('ledger/2026/09.journal','w').write('')\"",
+      "python3 -c \"f=open('ledger/2026/09.journal', mode='a'); f.close()\"",
+      "python3 -c \"open('ledger/main.journal', 'r+')\"",
       "node -e \"require('fs').writeFileSync('ledger/main.journal','')\"",
     ])("should flag %s", (command) => {
       expect(writesJournal(command)).toBe(true);

@@ -25,7 +25,10 @@ const RULES: RegExp[] = [
 ];
 /** A script that touches a journal and writes files. */
 const SCRIPT = /\b(python3?|node|ruby|perl)\b/;
-const SCRIPT_WRITES = /open\([^)]*['"][wa+]|\.write\(|writeFile|appendFile|write_text/;
+/** A write: open() with a write or append mode argument, or a write call. The
+ *  mode is the string after a comma, so path concatenation ('…/'+f+'.journal')
+ *  doesn't count. */
+const SCRIPT_WRITES = /open\([^)]*,\s*(mode\s*=\s*)?['"][rbt]*[wax+]|\.write\(|writeFile|appendFile|write_text/;
 
 export function writesJournal(command: string): boolean {
   if (RULES.some((re) => re.test(command))) return true;

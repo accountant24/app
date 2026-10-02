@@ -38,8 +38,8 @@ import { fileURLToPath } from "node:url";
 import type { SessionJob, SessionOutput } from "./agent/session";
 import { DEFAULT_AUTO_REPLY, type EvalCase, loadCases } from "./cases";
 import { collect, snapshot } from "./grade/collect";
-import { gradeFacts } from "./grade/grade";
-import { bashJournalWrites } from "./grade/guard";
+import { type Facts, gradeFacts } from "./grade/grade";
+import { bashJournalWrites, writesJournal } from "./grade/guard";
 import { servedModelOk, splitModel } from "./models";
 import { computeStamp, type Stamp, stampDiff } from "./stamp";
 import { summarize, toTranscript } from "./trace";
@@ -453,7 +453,10 @@ function regrade(vdir: string): void {
         missing.push(`${row.prompt_id} rep${row.rep}`);
         return row;
       }
-      const graded = gradeFacts(c.expect, JSON.parse(readFileSync(factsPath, "utf8")));
+      const facts = JSON.parse(readFileSync(factsPath, "utf8")) as Facts;
+      // Re-apply the current guard to the commands it flagged at run time.
+      facts.bashJournalWrites = facts.bashJournalWrites.filter(writesJournal);
+      const graded = gradeFacts(c.expect, facts);
       if (JSON.stringify(graded.grade) !== JSON.stringify(row.grade)) changed++;
       return { ...row, grade: graded.grade, explanation: graded.explanation };
     });
