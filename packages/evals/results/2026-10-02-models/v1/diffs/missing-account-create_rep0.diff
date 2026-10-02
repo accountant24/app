@@ -1,0 +1,43 @@
+diff --git a/ledger/2026/10.journal b/ledger/2026/10.journal
+new file mode 100644
+index 0000000..bf23033
+--- /dev/null
++++ b/ledger/2026/10.journal
+@@ -0,0 +1,3 @@
++2026-10-02 * Daily Grind Coffee
++    Expenses:Food                                                    20.00 USD
++    Assets:Bank:Harbor Savings                                      -20.00 USD
+diff --git a/ledger/accounts.journal b/ledger/accounts.journal
+index 74ae92a..549ae19 100644
+--- a/ledger/accounts.journal
++++ b/ledger/accounts.journal
+@@ -15,7 +15,8 @@ account Assets:Cash  ; physical cash
+ account Assets:Cash:Wallet               ; Alex's wallet
+ account Assets:Cash:Home                 ; cash jar at home
+ account Assets:Bank:Harbor Checking      ; Alex's main checking account
+-account Assets:Bank:Prairie Joint        ; joint account with Sam: rent and bills
++account Assets:Bank:Prairie Joint
++account Assets:Bank:Harbor Savings        ; joint account with Sam: rent and bills
+ account Assets:Bank:Maple Trust          ; Alex's CAD account in Toronto
+ account Assets:PayPal
+ account Assets:Investments:Brightline    ; brokerage: monthly investment into VTI
+diff --git a/ledger/main.journal b/ledger/main.journal
+index 1400bab..7bdb4b5 100644
+--- a/ledger/main.journal
++++ b/ledger/main.journal
+@@ -5,3 +5,4 @@ include accounts.journal
+ include 2026/07.journal
+ include 2026/08.journal
+ include 2026/09.journal
++include 2026/10.journal
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dee90cf
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "anthropic",
++  "defaultModel": "claude-sonnet-5"
++}
+\ No newline at end of file

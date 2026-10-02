@@ -1,0 +1,25 @@
+diff --git a/memory.md b/memory.md
+index 7384273..f6a9a35 100644
+--- a/memory.md
++++ b/memory.md
+@@ -2,6 +2,9 @@
+ - Main account: Harbor Checking. Rent and household bills go out of the Prairie joint account shared with Sam.
+ - Default currency: USD.
+ 
++## Income
++- Monthly salary: $5,200, effective 2026-10.
++
+ ## Rules
+ - PayPal purchases are two transactions: a Harbor Checking → PayPal top-up (Internal Transfer), then the PayPal payment to the merchant; both carry the same `link` tag.
+ - Unexplained cash differences go to Expenses:Uncategorized, never to equity.
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dee90cf
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "anthropic",
++  "defaultModel": "claude-sonnet-5"
++}
+\ No newline at end of file

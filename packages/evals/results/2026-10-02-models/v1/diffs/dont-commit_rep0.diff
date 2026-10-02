@@ -1,0 +1,33 @@
+diff --git a/ledger/2026/10.journal b/ledger/2026/10.journal
+new file mode 100644
+index 0000000..a543ef0
+--- /dev/null
++++ b/ledger/2026/10.journal
+@@ -0,0 +1,7 @@
++2026-10-02 * Harvest Co-op
++    Assets:Bank:Harbor Checking                                     -32.40 USD
++    Expenses:Food                                                    32.40 USD
++
++2026-10-02 * Daily Grind Coffee
++    Assets:Bank:Harbor Checking                                     -4.20 USD
++    Expenses:Food                                                    4.20 USD
+diff --git a/ledger/main.journal b/ledger/main.journal
+index 1400bab..7bdb4b5 100644
+--- a/ledger/main.journal
++++ b/ledger/main.journal
+@@ -5,3 +5,4 @@ include accounts.journal
+ include 2026/07.journal
+ include 2026/08.journal
+ include 2026/09.journal
++include 2026/10.journal
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dee90cf
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "anthropic",
++  "defaultModel": "claude-sonnet-5"
++}
+\ No newline at end of file

@@ -1,0 +1,5 @@
+{"prompt_id":"memory-add-rule","rep":0,"failure_class":"harness_error","error":"agent process exited 1:     at node:internal/modules/esm/loader:639:32 { |   code: 'ERR_MODULE_NOT_FOUND' | } |  | Node.js v26.7.0","latency_s":0.821}
+{"prompt_id":"query-food-august","rep":0,"failure_class":"harness_error","error":"agent process exited 1:     at node:internal/modules/esm/loader:639:32 { |   code: 'ERR_MODULE_NOT_FOUND' | } |  | Node.js v26.7.0","latency_s":0.577}
+{"prompt_id":"quick-cash-entry","rep":0,"failure_class":"harness_error","error":"agent process exited 1:     at node:internal/modules/esm/loader:639:32 { |   code: 'ERR_MODULE_NOT_FOUND' | } |  | Node.js v26.7.0","latency_s":0.433}
+{"prompt_id":"receipt-cash-grocery","rep":0,"failure_class":"harness_error","error":"agent process exited 1:     at node:internal/modules/esm/loader:639:32 { |   code: 'ERR_MODULE_NOT_FOUND' | } |  | Node.js v26.7.0","latency_s":0.298}
+{"prompt_id":"statement-sept","rep":0,"failure_class":"harness_error","error":"agent process exited 1:     at node:internal/modules/esm/loader:639:32 { |   code: 'ERR_MODULE_NOT_FOUND' | } |  | Node.js v26.7.0","latency_s":0.16}
