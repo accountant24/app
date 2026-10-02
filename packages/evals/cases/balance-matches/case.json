@@ -18,7 +18,8 @@
           {
             "account": "Assets:Bank:Prairie Joint",
             "amount": 0,
-            "commodity": "USD"
+            "commodity": "USD",
+            "asserts": 1203.13
           }
         ]
       }

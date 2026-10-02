@@ -12,9 +12,12 @@ export type AccountPattern = string | string[];
 
 export type PostingPattern = {
   account: AccountPattern;
-  /** Signed quantity in `commodity`; omitted = any amount. */
+  /** Signed quantity in `commodity`; omitted = any amount. A balance
+   *  assertion's posting moves 0 and carries the asserted balance in `asserts`. */
   amount?: number;
   commodity?: string;
+  /** The balance this posting asserts (`0.00 CAD = 2595.06 CAD`), in `commodity`. */
+  asserts?: number;
 };
 
 export type TransactionPattern = {

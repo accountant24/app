@@ -4,7 +4,13 @@
 import type { AccountPattern, PostingPattern, TransactionPattern } from "../cases";
 
 export type Amount = { commodity: string; quantity: number };
-export type Posting = { account: string; amounts: Amount[]; tags: [string, string][] };
+export type Posting = {
+  account: string;
+  amounts: Amount[];
+  /** The balance the posting asserts (`= 2595.06 CAD`), if any. */
+  assertion?: Amount;
+  tags: [string, string][];
+};
 export type Transaction = {
   date: string;
   /** Header text before the first ` | `, as hledger splits it. */
@@ -24,7 +30,14 @@ export function splitHeader(header: string): { payee: string; description: strin
 }
 
 type HledgerAmount = { acommodity: string; aquantity: { floatingPoint: number } };
-type HledgerPosting = { paccount: string; pamount: HledgerAmount[]; ptags?: [string, string][] };
+type HledgerPosting = {
+  paccount: string;
+  pamount: HledgerAmount[];
+  pbalanceassertion?: { baamount: HledgerAmount } | null;
+  ptags?: [string, string][];
+};
+
+const amountOf = (a: HledgerAmount): Amount => ({ commodity: a.acommodity, quantity: a.aquantity.floatingPoint });
 type HledgerTransaction = {
   tdate: string;
   tdescription: string;
@@ -42,7 +55,8 @@ export function parseTransactions(json: unknown): Transaction[] {
     postings: t.tpostings.map((p) => ({
       account: p.paccount,
       tags: p.ptags ?? [],
-      amounts: p.pamount.map((a) => ({ commodity: a.acommodity, quantity: a.aquantity.floatingPoint })),
+      amounts: p.pamount.map(amountOf),
+      ...(p.pbalanceassertion ? { assertion: amountOf(p.pbalanceassertion.baamount) } : {}),
     })),
   }));
 }
@@ -70,6 +84,11 @@ const CENT = 0.005;
 
 export function postingMatches(pattern: PostingPattern, posting: Posting): boolean {
   if (!accountMatches(pattern.account, posting.account)) return false;
+  if (pattern.asserts !== undefined) {
+    const a = posting.assertion;
+    if (!a || Math.abs(a.quantity - pattern.asserts) >= CENT) return false;
+    if (pattern.commodity !== undefined && a.commodity !== pattern.commodity) return false;
+  }
   if (pattern.amount === undefined && pattern.commodity === undefined) return true;
   return posting.amounts.some(
     (a) =>
@@ -118,7 +137,10 @@ export function matchDistinct<P, T>(patterns: P[], items: T[], matches: (p: P, t
 /** Short human-readable form of a pattern, for grade explanations. */
 export function describePattern(p: TransactionPattern): string {
   const postings = p.postings
-    .map((x) => `${[x.account].flat().join("|")}${x.amount === undefined ? "" : ` ${x.amount}`}${x.commodity ? ` ${x.commodity}` : ""}`)
+    .map(
+      (x) =>
+        `${[x.account].flat().join("|")}${x.amount === undefined ? "" : ` ${x.amount}`}${x.commodity ? ` ${x.commodity}` : ""}${x.asserts === undefined ? "" : ` = ${x.asserts}`}`,
+    )
     .join(", ");
   const payee = p.payee ? ` payee /${p.payee}/` : "";
   const description = p.description ? ` description /${p.description}/i` : "";

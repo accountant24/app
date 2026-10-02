@@ -35,7 +35,8 @@
           {
             "account": "Assets:Cash:Wallet",
             "amount": 0,
-            "commodity": "USD"
+            "commodity": "USD",
+            "asserts": 280
           }
         ]
       }

@@ -107,7 +107,8 @@
           {
             "account": "Assets:Bank:Maple Trust",
             "amount": 0,
-            "commodity": "CAD"
+            "commodity": "CAD",
+            "asserts": 2595.06
           }
         ]
       }

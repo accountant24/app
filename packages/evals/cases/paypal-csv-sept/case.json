@@ -67,7 +67,8 @@
           {
             "account": "Assets:PayPal",
             "amount": 0,
-            "commodity": "USD"
+            "commodity": "USD",
+            "asserts": 0
           }
         ]
       }
