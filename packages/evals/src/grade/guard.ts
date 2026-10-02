@@ -13,13 +13,15 @@ const RULES: RegExp[] = [
   // Redirect into a journal: `> ledger/2026/09.journal`, `>> main.journal`.
   new RegExp(String.raw`>>?\s*["']?${JOURNAL}`),
   // In-place edits: `sed -i … x.journal`, `perl -pi -e … x.journal`.
-  new RegExp(String.raw`\b(sed|perl)\b[^|;&]*\s-[a-z]*i[a-z]*\b[^|;&]*\.journal\b`),
+  /\b(sed|perl)\b[^|;&]*\s-[a-z]*i[a-z]*\b[^|;&]*\.journal\b/,
   // Moving, deleting or truncating a journal.
-  new RegExp(String.raw`\b(rm|mv|truncate|unlink)\b[^|;&]*\.journal\b`),
+  /\b(rm|mv|truncate|unlink)\b[^|;&]*\.journal\b/,
   // Deleting the ledger folder itself.
   /\brm\b[^|;&]*\bledger\/?(\s|$|;|&|\|)/,
-  // Copying or teeing onto a journal (the journal as the destination).
-  new RegExp(String.raw`\b(cp|tee)\b[^|;&]*\s${JOURNAL}\s*($|;|&|\|)`),
+  // tee writes to every file it is given.
+  /\btee\b[^|;&]*\.journal\b/,
+  // Copying onto a journal (the journal as the destination, the last argument).
+  new RegExp(String.raw`\bcp\b[^|;&]*\s${JOURNAL}\s*($|;|&|\|)`),
 ];
 /** A script that touches a journal and writes files. */
 const SCRIPT = /\b(python3?|node|ruby|perl)\b/;

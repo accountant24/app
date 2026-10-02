@@ -58,14 +58,26 @@ export function snapshot(ws: string, unchanged: string[] = []): Snapshot {
     transactions: ledger.transactions,
     memory: readOr(join(ws, "memory.md"), ""),
     head: git(ws, "rev-parse", "HEAD"),
-    files: Object.fromEntries(unchanged.map((p) => [p, existsSync(join(ws, p)) ? readFileSync(join(ws, p), "utf8") : null])),
+    files: Object.fromEntries(
+      unchanged.map((p) => [p, existsSync(join(ws, p)) ? readFileSync(join(ws, p), "utf8") : null]),
+    ),
   };
 }
 
-export function collect(ws: string, before: Snapshot, today: string, replies: string, bashJournalWrites: string[]): Facts {
+export function collect(
+  ws: string,
+  before: Snapshot,
+  today: string,
+  replies: string,
+  bashJournalWrites: string[],
+): Facts {
   const ledger = readLedger(ws);
   const check = spawnSync("hledger", ["check", "--strict", "-f", "ledger/main.journal"], { cwd: ws, encoding: "utf8" });
-  const uncommitted = git(ws, "status", "--porcelain", "--untracked-files=all")
+  // Untrimmed: each porcelain line is "XY path", and the status columns can start with a space.
+  const uncommitted = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+    cwd: ws,
+    encoding: "utf8",
+  })
     .split("\n")
     .filter(Boolean)
     .filter((line) => !IGNORED_PREFIXES.some((prefix) => line.slice(3).startsWith(prefix)));
