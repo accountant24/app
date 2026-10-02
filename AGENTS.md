@@ -159,6 +159,15 @@ Four tiers, all on Vitest (`npm test`); the first three run in CI on every PR.
 - A change must not drop coverage below the gate.
 - A bug fix ships with a regression test that **fails before** the fix and passes after.
 
+# Evals
+
+`packages/evals` runs the real agent over scripted cases on generated test data and grades the books it leaves behind, not its wording. It answers whether a change (a port, a model, a prompt) keeps the agent at least as good.
+
+- Cases are generated: edit `scripts/household/` and run `npm run evals:generate -w @accountant24/evals`, never hand-edit a `case.json`. Test data is invented, never taken from a real workspace.
+- Every case states `why` it exists (one or two sentences: the behavior it guards and where that came from) and its `source`: `sessions`, `system.md` or `coverage`. The loader rejects a case without them.
+- Expectations are unambiguous: when more than one outcome is correct, accept each explicitly; never hedge a case into accepting a wrong one.
+- Look at the cases with `npm run evals:overview -w @accountant24/evals` (the `a24-evals-overview` skill).
+
 # Pull Requests
 
 - Title: Conventional Commit style matching the main commit subject; the subject is the user-visible outcome, written for the changelog.
