@@ -24,6 +24,8 @@ import {
   world,
 } from "./data";
 
+/** Auto-reply for questions: if the agent offers to do something, the answer is no. */
+const NO_THANKS = "No thanks, I was just asking.";
 const CASES = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "cases");
 const END = "2026-09-30";
 
@@ -61,6 +63,12 @@ const assertion = (date: string | string[], account: string, balance: number, co
 /** Every imported row links its source document and keeps the bank's payee spelling (system.md). */
 const IMPORTED = { related_file: "^files/", original_payee_name: true as const };
 
+/** Other categories that are also right for a new payee, per the chart of accounts. */
+const ALSO_RIGHT: Record<string, string[]> = {
+  // Books bought for Alex's mom: Education covers books, and they are a gift.
+  "Maple Books Online": ["Expenses:Gifts & Donations"],
+};
+
 /** The statement rows a September import must add, as patterns. */
 function importRows(source: NonNullable<Tx["bank"]>["source"], account: string, commodity: string): TransactionPattern[] {
   return all
@@ -69,7 +77,9 @@ function importRows(source: NonNullable<Tx["bank"]>["source"], account: string, 
       const amount = t.postings.find((x) => x.account === account)!.amount;
       const expense = t.postings.find((x) => x.account.startsWith("Expenses:"))!;
       const category = recorded.some((x) => x.payee === t.payee) ? categoryOf(t.payee) : expense.account;
-      return tx(t.date, t.payee, [p(account, amount, commodity), p(category, -amount, commodity)], { tags: IMPORTED });
+      const accounts = [category, ...(ALSO_RIGHT[t.payee] ?? [])];
+      const expensePosting = { account: accounts.length > 1 ? accounts : category, amount: -amount, commodity };
+      return tx(t.date, t.payee, [p(account, amount, commodity), expensePosting], { tags: IMPORTED });
     });
 }
 
@@ -187,7 +197,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.", attachments: ["receipt.png"] }],
     expect: {
-      present: [tx("2026-09-29", undefined, [p(CHECKING, -36.55), p("Expenses:Travel*", 36.55)], { payee: "^(The )?Maple Table$", description: "dinner", tags: { trip: named("toronto-2026") } })],
+      present: [tx("2026-09-29", undefined, [p(CHECKING, -36.55), { account: ["Expenses:Travel*", "Expenses:Food*"], amount: 36.55, commodity: "USD" }], { payee: "^(The )?Maple Table$", description: "dinner", tags: { trip: named("toronto-2026") } })],
       countDelta: 1,
     },
   },
@@ -369,6 +379,7 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "Spending by category is the most common question. The answer should be the exact August food total.",
     fixture: "household",
+    autoReply: NO_THANKS,
     turns: [{ text: "How much did I spend on food in August 2026?" }],
     expect: { countDelta: 0, answer: [escapeRe(foodAugust.toFixed(2))] },
   },
@@ -378,6 +389,7 @@ const cases: Def[] = [
     source: ["sessions", "coverage"],
     why: "Net worth is a frequent question, and it needs the latest prices for the shares and the Canadian dollars.",
     fixture: "household",
+    autoReply: NO_THANKS,
     turns: [{ text: "What's my net worth in USD at the latest prices?" }],
     expect: { countDelta: 0, answer: [dollars(netWorth)] },
   },
@@ -387,6 +399,7 @@ const cases: Def[] = [
     source: ["sessions"],
     why: "Questions like when a prepaid service is due again came up often. The answer comes from the last payment and the schedule in memory.md.",
     fixture: "household",
+    autoReply: NO_THANKS,
     // Asked from the last recorded payment so the answer doesn't depend on the run date.
     turns: [{ text: "Going by my last Sparkle Cleaning payment, which visit dates does it cover, and when is the next payment due?" }],
     expect: {
@@ -400,6 +413,7 @@ const cases: Def[] = [
     source: ["sessions", "coverage"],
     why: "This is the most used skill, and skills must keep working after the move to mobile. It should list the subscriptions.",
     fixture: "household",
+    autoReply: NO_THANKS,
     turns: [{ text: "/skill:accountant24-skills:subscription-audit" }],
     expect: { countDelta: 0, answer: ["streamflix", "cloudbox"] },
   },
@@ -419,7 +433,7 @@ const cases: Def[] = [
     why: "When a remembered fact changes, the old line should be updated in place, not duplicated.",
     fixture: "household",
     turns: [{ text: "Correction: Sparkle Cleaning comes every week now, not every other Thursday." }],
-    expect: { countDelta: 0, memory: ["sparkle[^\\n]*(every week|weekly)"], memoryReplaces: ["sparkle"], memoryMaxAdded: 0 },
+    expect: { countDelta: 0, memory: ["sparkle(?![^\\n]*every other)[^\\n]*(every week|weekly|every thursday)"], memoryReplaces: ["sparkle"], memoryMaxAdded: 0 },
   },
   {
     id: "dont-commit",

@@ -31,7 +31,10 @@
             "commodity": "USD"
           },
           {
-            "account": "Expenses:Travel*",
+            "account": [
+              "Expenses:Travel*",
+              "Expenses:Food*"
+            ],
             "amount": 36.55,
             "commodity": "USD"
           }

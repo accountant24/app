@@ -32,7 +32,10 @@
             "commodity": "CAD"
           },
           {
-            "account": "Expenses:Shopping",
+            "account": [
+              "Expenses:Education",
+              "Expenses:Gifts & Donations"
+            ],
             "amount": 64.99,
             "commodity": "CAD"
           }

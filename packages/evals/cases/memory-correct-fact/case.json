@@ -17,7 +17,7 @@
   "expect": {
     "countDelta": 0,
     "memory": [
-      "sparkle[^\\n]*(every week|weekly)"
+      "sparkle(?![^\\n]*every other)[^\\n]*(every week|weekly|every thursday)"
     ],
     "memoryReplaces": [
       "sparkle"

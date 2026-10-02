@@ -172,7 +172,7 @@ export function world(): Tx[] {
   // After the last update: only in the September documents.
   txs.push(spend("2026-09-19", "Chapter One Books", "Expenses:Education", 18.5, CHECKING));
   txs.push(spend("2026-09-26", "Daily Grind Coffee", "Expenses:Food", 3.9, CHECKING));
-  txs.push(spend("2026-09-06", "Maple Books Online", "Expenses:Shopping", 64.99, CAD_ACCOUNT, { description: "books for mom" }));
+  txs.push(spend("2026-09-06", "Maple Books Online", "Expenses:Education", 64.99, CAD_ACCOUNT, { description: "books for mom" }));
   txs.push(spend("2026-09-21", "Maple Trust", "Expenses:Financial", 4.95, CAD_ACCOUNT, { description: "monthly account fee" }));
 
   for (const t of txs) annotate(t);

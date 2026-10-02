@@ -9,6 +9,7 @@
   ],
   "why": "Questions like when a prepaid service is due again came up often. The answer comes from the last payment and the schedule in memory.md.",
   "fixture": "household",
+  "autoReply": "No thanks, I was just asking.",
   "turns": [
     {
       "text": "Going by my last Sparkle Cleaning payment, which visit dates does it cover, and when is the next payment due?"
