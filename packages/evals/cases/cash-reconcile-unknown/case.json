@@ -34,7 +34,8 @@
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
-            "amount": 0
+            "amount": 0,
+            "commodity": "USD"
           }
         ]
       }

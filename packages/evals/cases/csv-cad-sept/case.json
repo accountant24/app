@@ -31,7 +31,11 @@
             "amount": 64.99,
             "commodity": "CAD"
           }
-        ]
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
       },
       {
         "date": "2026-09-12",
@@ -47,7 +51,11 @@
             "amount": 300,
             "commodity": "CAD"
           }
-        ]
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
       },
       {
         "date": "2026-09-18",
@@ -63,7 +71,11 @@
             "amount": 45,
             "commodity": "CAD"
           }
-        ]
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
       },
       {
         "date": "2026-09-21",
@@ -79,10 +91,17 @@
             "amount": 4.95,
             "commodity": "CAD"
           }
-        ]
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
       },
       {
-        "date": "2026-09-30",
+        "date": [
+          "2026-09-21",
+          "2026-09-30"
+        ],
         "payee": "^Balance Assertion$",
         "postings": [
           {

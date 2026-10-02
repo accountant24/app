@@ -59,7 +59,8 @@ function amount(p: PostingPattern): string {
   return `${p.amount < 0 ? "−" : "+"}${money(Math.abs(p.amount))} ${p.commodity ?? ""}`.trim();
 }
 
-function when(date?: string): string {
+function when(date?: string | string[]): string {
+  if (Array.isArray(date)) return date.map((d) => when(d)).join(" or ");
   if (!date) return "any date";
   if (date === "today") return "the run date";
   const m = /^today-(\d+)$/.exec(date);

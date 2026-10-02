@@ -52,7 +52,12 @@ function tx(date: string | undefined, payee: string | undefined, postings: Posti
   return { ...(date ? { date } : {}), ...(payeeRe ? { payee: payeeRe } : {}), ...(description ? { description } : {}), postings, ...rest };
 }
 
-const assertion = (date: string, account: string): TransactionPattern => tx(date, "Balance Assertion", [{ account, amount: 0 }]);
+/** A balance checkpoint on `account`; pass several dates when more than one is correct. */
+const assertion = (date: string | string[], account: string, commodity = "USD"): TransactionPattern => ({
+  date,
+  ...tx(undefined, "Balance Assertion", [{ account, amount: 0, commodity }]),
+});
+/** Every imported row links its source document and keeps the bank's payee spelling (system.md). */
 const IMPORTED = { related_file: "^files/", original_payee_name: true as const };
 
 /** The statement rows a September import must add, as patterns. */
@@ -63,7 +68,7 @@ function importRows(source: NonNullable<Tx["bank"]>["source"], account: string, 
       const amount = t.postings.find((x) => x.account === account)!.amount;
       const expense = t.postings.find((x) => x.account.startsWith("Expenses:"))!;
       const category = recorded.some((x) => x.payee === t.payee) ? categoryOf(t.payee) : expense.account;
-      return tx(t.date, t.payee, [p(account, amount, commodity), p(category, -amount, commodity)], source === "harbor" ? { tags: IMPORTED } : {});
+      return tx(t.date, t.payee, [p(account, amount, commodity), p(category, -amount, commodity)], { tags: IMPORTED });
     });
 }
 
@@ -134,7 +139,8 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Import my Maple Trust export for September.", attachments: ["maple-trust-2026-09.csv"] }],
     expect: {
-      present: [...cadRows, tx(END, "Balance Assertion", [{ account: CAD_ACCOUNT, amount: 0, commodity: "CAD" }])],
+      // A CSV states no closing date: the last row's date or the end of the month are both right.
+      present: [...cadRows, assertion([cadRows.at(-1)!.date as string, END], CAD_ACCOUNT, "CAD")],
       countDelta: cadRows.length + 1,
       balances: [{ account: CAD_ACCOUNT, amount: balance(all, CAD_ACCOUNT, "CAD", END), commodity: "CAD", date: END }],
     },
@@ -146,10 +152,12 @@ const cases: Def[] = [
     turns: [{ text: "Here's my PayPal activity for September, please add it.", attachments: ["paypal-2026-09.csv"] }],
     expect: {
       present: [
-        tx("2026-09-20", "Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true } }),
-        tx("2026-09-20", "Thrift Loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true } }),
+        tx("2026-09-20", "Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true, related_file: "^files/" } }),
+        tx("2026-09-20", "Thrift Loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true, ...IMPORTED } }),
+        // The export has a Balance column: memory.md asks for a checkpoint after every import.
+        assertion(["2026-09-20", END], PAYPAL),
       ],
-      countDelta: [2, 3],
+      countDelta: 3,
       balances: [{ account: PAYPAL, amount: 0, commodity: "USD" }],
     },
   },
@@ -329,8 +337,12 @@ const cases: Def[] = [
     id: "query-cleaning-next-due",
     tags: ["query", "memory"],
     fixture: "household",
-    turns: [{ text: "When is my next Sparkle Cleaning payment due?" }],
-    expect: { countDelta: 0, answer: ["(2026-10-01|oct(ober|\\.)? 1(st)?\\b|10/0?1)"] },
+    // Asked from the last recorded payment so the answer doesn't depend on the run date.
+    turns: [{ text: "Going by my last Sparkle Cleaning payment, which visit dates does it cover, and when is the next payment due?" }],
+    expect: {
+      countDelta: 0,
+      answer: ["(2026-08-20|aug(ust|\\.)? 20(th)?\\b|8/20)", "(2026-09-03|sep(tember|\\.)? 3(rd)?\\b|9/0?3)", "(2026-09-17|sep(tember|\\.)? 17(th)?\\b|9/17)", "(2026-10-01|oct(ober|\\.)? 1(st)?\\b|10/0?1)"],
+    },
   },
   {
     id: "skill-subscription-audit",

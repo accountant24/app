@@ -18,8 +18,9 @@ export type PostingPattern = {
 };
 
 export type TransactionPattern = {
-  /** `YYYY-MM-DD`, or `today` / `today-N` relative to the run date. */
-  date?: string;
+  /** `YYYY-MM-DD`, or `today` / `today-N` relative to the run date; a list
+   *  accepts any of its dates (when more than one is correct). */
+  date?: string | string[];
   /** Regex over the payee (the header text before ` | `). Case-sensitive:
    *  payee names must be spelled properly. */
   payee?: string;
@@ -123,7 +124,8 @@ export function validateCase(
   if (!e || Object.keys(e).length === 0) problems.push("expect must hold at least one check");
   for (const t of [...(e?.present ?? []), ...(e?.absent ?? [])]) {
     if (!Array.isArray(t.postings)) problems.push("every transaction pattern needs postings");
-    if (t.date && !/^(\d{4}-\d{2}-\d{2}|today(-\d+)?)$/.test(t.date)) problems.push(`bad date "${t.date}"`);
+    for (const date of [t.date ?? []].flat())
+      if (!/^(\d{4}-\d{2}-\d{2}|today(-\d+)?)$/.test(date)) problems.push(`bad date "${date}"`);
     if ("note" in t) problems.push("use description instead of note");
   }
   return problems;

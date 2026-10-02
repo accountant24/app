@@ -199,7 +199,8 @@
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
-            "amount": 0
+            "amount": 0,
+            "commodity": "USD"
           }
         ]
       }
