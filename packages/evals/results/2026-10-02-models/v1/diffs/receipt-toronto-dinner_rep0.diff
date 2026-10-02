@@ -1,0 +1,24 @@
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..5c43b40 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -120,3 +120,8 @@
+ 
+ P 2026-09-14 VTI 294.80 USD
+ P 2026-09-14 CAD 0.734 USD
++
++2026-09-29 * The Maple Table
++    ; trip: toronto-2026
++    Expenses:Travel                                                 -36.55 USD
++    Assets:Bank:Harbor Checking                                      36.55 USD
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dee90cf
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "anthropic",
++  "defaultModel": "claude-sonnet-5"
++}
+\ No newline at end of file
