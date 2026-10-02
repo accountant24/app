@@ -10,7 +10,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_AUTO_REPLY, type EvalCase, loadCases, type PostingPattern, type TransactionPattern } from "../src/cases";
+import {
+  DEFAULT_AUTO_REPLY,
+  type EvalCase,
+  loadCases,
+  type PostingPattern,
+  type TransactionPattern,
+} from "../src/cases";
 import { IMAGE_TYPES } from "../src/workspace";
 import { CAD_RECORDED_THROUGH, HARBOR_RECORDED_THROUGH } from "./household/data";
 
@@ -43,7 +49,8 @@ const hledger = (...args: string[]) =>
  *  anything looser stays a regex. */
 function pattern(re: string): string {
   const exact = /^\^(.*)\$$/.exec(re)?.[1].replace(/\['’\]/g, "'");
-  if (exact !== undefined && !/[[\]()|*+?{}^$]|\\(?![.\-&])/.test(exact)) return `<b>“${esc(exact.replace(/\\(.)/g, "$1"))}”</b>`;
+  if (exact !== undefined && !/[[\]()|*+?{}^$]|\\(?![.\-&])/.test(exact))
+    return `<b>“${esc(exact.replace(/\\(.)/g, "$1"))}”</b>`;
   return code(re);
 }
 
@@ -76,10 +83,18 @@ function transaction(t: TransactionPattern): string {
   if (t.description) lines.push(`<div class="txline">description mentions ${code(t.description)}</div>`);
   const rules: string[] = [];
   if (t.exact === false) rules.push("other postings allowed");
-  if (t.tags) rules.push(`tags ${Object.entries(t.tags).map(([k, v]) => code(k) + (v === true ? "" : ` = ${pattern(v)}`)).join(", ")}`);
+  if (t.tags)
+    rules.push(
+      `tags ${Object.entries(t.tags)
+        .map(([k, v]) => code(k) + (v === true ? "" : ` = ${pattern(v)}`))
+        .join(", ")}`,
+    );
   if (rules.length) lines.push(`<div class="txline">${rules.join(" · ")}</div>`);
   const postings = t.postings
-    .map((p) => `<div class="post"><span class="acc">${esc(account(p.account))}</span><span class="amt">${esc(amount(p))}</span></div>`)
+    .map(
+      (p) =>
+        `<div class="post"><span class="acc">${esc(account(p.account))}</span><span class="amt">${esc(amount(p))}</span></div>`,
+    )
     .join("");
   return `<div class="tx"><div class="txhead">${lines.join("")}</div>${postings}</div>`;
 }
@@ -88,19 +103,28 @@ function passesWhen(c: EvalCase): string {
   const x = c.expect;
   const items: string[] = [];
   if (x.present?.length)
-    items.push(`<li><b>These transactions exist</b> (each matched to a different one):${x.present.map(transaction).join("")}</li>`);
+    items.push(
+      `<li><b>These transactions exist</b> (each matched to a different one):${x.present.map(transaction).join("")}</li>`,
+    );
   if (x.absent?.length) items.push(`<li><b>None of these exist:</b>${x.absent.map(transaction).join("")}</li>`);
   if (x.countDelta !== undefined)
     items.push(
       `<li>The ledger has exactly <b>${[x.countDelta].flat().join(" or ")}</b> more transaction(s) than before (catches duplicates and stray edits).</li>`,
     );
   for (const b of x.balances ?? [])
-    items.push(`<li>Balance of ${code(b.account)} ${b.date ? `on ${esc(when(b.date))}` : "at the end"} is <b>${money(b.amount)} ${esc(b.commodity)}</b>.</li>`);
-  for (const p of x.prices ?? []) items.push(`<li>Price recorded: ${code(`P ${p.date} ${p.commodity} ${p.amount} ${p.in}`)}.</li>`);
+    items.push(
+      `<li>Balance of ${code(b.account)} ${b.date ? `on ${esc(when(b.date))}` : "at the end"} is <b>${money(b.amount)} ${esc(b.commodity)}</b>.</li>`,
+    );
+  for (const p of x.prices ?? [])
+    items.push(`<li>Price recorded: ${code(`P ${p.date} ${p.commodity} ${p.amount} ${p.in}`)}.</li>`);
   for (const a of x.answer ?? []) items.push(`<li>The final reply matches ${code(a)}.</li>`);
   if (x.memory) {
-    const replaces = x.memoryReplaces?.length ? `, and may rewrite lines matching ${x.memoryReplaces.map(code).join(", ")}` : "";
-    items.push(`<li>memory.md matches ${x.memory.map(code).join(", ")}, grows by at most ${x.memoryMaxAdded ?? 3} line(s)${replaces}.</li>`);
+    const replaces = x.memoryReplaces?.length
+      ? `, and may rewrite lines matching ${x.memoryReplaces.map(code).join(", ")}`
+      : "";
+    items.push(
+      `<li>memory.md matches ${x.memory.map(code).join(", ")}, grows by at most ${x.memoryMaxAdded ?? 3} line(s)${replaces}.</li>`,
+    );
   } else items.push('<li class="dim">memory.md stays unchanged.</li>');
   if (x.commit === "forbidden") items.push("<li><b>Nothing is committed.</b></li>");
   else items.push(`<li class="dim">Changes end up committed; ${code("hledger check --strict")} passes.</li>`);
@@ -113,7 +137,9 @@ function attachment(c: EvalCase, name: string): string {
   if (mime)
     return `<figure><img src="data:${mime};base64,${readFileSync(path).toString("base64")}" alt="${esc(name)}"><figcaption>${esc(name)}</figcaption></figure>`;
   const isPdf = name.toLowerCase().endsWith(".pdf");
-  const text = isPdf ? execFileSync("pdftotext", ["-layout", path, "-"], { encoding: "utf8" }) : readFileSync(path, "utf8");
+  const text = isPdf
+    ? execFileSync("pdftotext", ["-layout", path, "-"], { encoding: "utf8" })
+    : readFileSync(path, "utf8");
   return `<details class="doc"><summary>${esc(name)} <span class="dim">(${isPdf ? "PDF, text layer shown" : "text"})</span></summary><div class="scroll"><pre>${esc(text)}</pre></div></details>`;
 }
 
@@ -139,7 +165,10 @@ function caseCard(c: EvalCase): string {
   if (c.setupCommit) setup.push(`latest commit: ${c.setupCommit.message}`);
   const chips =
     c.source.map((s) => `<span class="chip src">${esc(s)}</span>`).join("") +
-    c.tags.slice(1).map((t) => `<span class="chip">${esc(t)}</span>`).join("");
+    c.tags
+      .slice(1)
+      .map((t) => `<span class="chip">${esc(t)}</span>`)
+      .join("");
   return `<article id="${c.id}"><header><h3>${esc(c.id)}</h3><div class="chips">${chips}<span class="chip fx">${esc(setup.join(" · "))}</span></div></header><p class="why">${esc(c.why)}</p><div class="cols"><div><h4>Conversation</h4>${turns}${auto}</div><div><h4>Passes when</h4>${passesWhen(c)}</div></div></article>`;
 }
 
@@ -153,10 +182,16 @@ function main(): void {
   const label = (key: string) => GROUPS.find(([k]) => k === key)?.[1] ?? key;
   const filled = [...groups].filter(([, list]) => list.length);
   const nav = filled
-    .map(([key, list]) => `<div class="ng"><div class="nl">${esc(label(key))}</div>${list.map((c) => `<a href="#${c.id}">${esc(c.id)}</a>`).join("")}</div>`)
+    .map(
+      ([key, list]) =>
+        `<div class="ng"><div class="nl">${esc(label(key))}</div>${list.map((c) => `<a href="#${c.id}">${esc(c.id)}</a>`).join("")}</div>`,
+    )
     .join("");
   const body = filled
-    .map(([key, list]) => `<section><h2>${esc(label(key))} <span class="count">${list.length}</span></h2>${list.map(caseCard).join("")}</section>`)
+    .map(
+      ([key, list]) =>
+        `<section><h2>${esc(label(key))} <span class="count">${list.length}</span></h2>${list.map(caseCard).join("")}</section>`,
+    )
     .join("");
 
   const transactions = (JSON.parse(hledger("print", "-O", "json")) as unknown[]).length;
@@ -182,7 +217,9 @@ function main(): void {
 <h4>How every case is graded</h4><p>Payees are matched case-sensitively against the payee alone (the header text before <code>|</code>), so names must be spelled properly; a name in quotes must match exactly (either apostrophe style), anything else is a regex; description patterns are case-insensitive regexes over the text after it, required where the message says what a transaction was for. Five scores. Four come from the end state, not from the reply; safe comes from the commands the agent ran. <b>correct</b>: every “passes when” check holds. <b>saved</b>: everything is committed (or, where told not to, nothing is), and the existing git history is untouched: undo is always a revert commit, never a reset, amend or force push. <b>valid</b>: ${code("hledger check --strict")} passes. <b>safe</b>: no bash command wrote to or deleted a journal file (journals change only through the agent's own tools). <b>pass</b>: all four. Each case opens with why it exists; its source chip says where that came from: <b>sessions</b> (a failure or habit in real desktop chats), <b>system.md</b> (a rule the agent must follow) or <b>coverage</b> (a tool path the mobile port must keep working). Attachments under ${code("files/")} never count as unsaved, since on mobile uploads live outside git.</p></section>
 ${body}</main></div></div>`;
   writeFileSync(OUT, page);
-  console.log(`overview: ${cases.length} cases -> ${relative(process.cwd(), OUT)} (${Math.round(page.length / 1024)} KB)`);
+  console.log(
+    `overview: ${cases.length} cases -> ${relative(process.cwd(), OUT)} (${Math.round(page.length / 1024)} KB)`,
+  );
 }
 
 main();

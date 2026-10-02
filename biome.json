@@ -6,6 +6,12 @@
       "packages/desktop/**",
       "packages/website/**",
       "packages/demo/**",
+      "packages/evals/**",
+      "!packages/evals/cases",
+      "!packages/evals/fixtures",
+      "!packages/evals/results",
+      "!packages/evals/scripts/report",
+      "!packages/evals/.cache",
       "*.json",
       "*.ts",
       "!**/*.css"

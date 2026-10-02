@@ -19,7 +19,10 @@ const CASES = join(PKG, "cases");
  *  unchanged document leaves the file byte-identical. Same length, so the
  *  PDF's byte offsets stay valid. */
 function pinPdfDates(path: string): void {
-  const pdf = readFileSync(path, "latin1").replace(/\((D:\d{14}[^)]*)\)/g, (_, date: string) => `(${"D:20261001000000+00'00'".padEnd(date.length).slice(0, date.length)})`);
+  const pdf = readFileSync(path, "latin1").replace(
+    /\((D:\d{14}[^)]*)\)/g,
+    (_, date: string) => `(${"D:20261001000000+00'00'".padEnd(date.length).slice(0, date.length)})`,
+  );
   writeFileSync(path, pdf, "latin1");
 }
 
@@ -66,12 +69,22 @@ function harborStatement(txs: Tx[], from: string, to: string, title: string): st
 function mapleCsv(txs: Tx[]): string {
   let running = balance(txs, CAD_ACCOUNT, "CAD", "2026-08-31");
   const lines = ["Date,Description,Withdrawals,Deposits,Balance"];
-  for (const t of txs.filter((x) => x.date >= "2026-09-01" && x.date <= "2026-09-30" && x.postings.some((p) => p.account === CAD_ACCOUNT))) {
+  for (const t of txs.filter(
+    (x) => x.date >= "2026-09-01" && x.date <= "2026-09-30" && x.postings.some((p) => p.account === CAD_ACCOUNT),
+  )) {
     const amount = t.postings.find((p) => p.account === CAD_ACCOUNT)!.amount;
     running = Math.round((running + amount) * 100) / 100;
     const desc =
-      t.payee === "Internal Transfer" ? "INTL WIRE IN - HARBOR BANK NA" : t.payee === "Maple Trust" ? "MONTHLY ACCOUNT FEE" : t.payee === "Linda Morgan" ? "E-TRANSFER SENT LINDA MORGAN" : t.payee.toUpperCase();
-    lines.push(`${t.date},"${desc}",${amount < 0 ? (-amount).toFixed(2) : ""},${amount > 0 ? amount.toFixed(2) : ""},${running.toFixed(2)}`);
+      t.payee === "Internal Transfer"
+        ? "INTL WIRE IN - HARBOR BANK NA"
+        : t.payee === "Maple Trust"
+          ? "MONTHLY ACCOUNT FEE"
+          : t.payee === "Linda Morgan"
+            ? "E-TRANSFER SENT LINDA MORGAN"
+            : t.payee.toUpperCase();
+    lines.push(
+      `${t.date},"${desc}",${amount < 0 ? (-amount).toFixed(2) : ""},${amount > 0 ? amount.toFixed(2) : ""},${running.toFixed(2)}`,
+    );
   }
   return `${lines.join("\n")}\n`;
 }
@@ -147,9 +160,18 @@ async function main(): Promise<void> {
     await page.locator("body").screenshot({ path });
   };
 
-  await pdf(harborStatement(txs, "2026-07-01", "2026-07-31", "Statement for July 2026"), join(FIXTURE, HARBOR_IMPORTED["2026-07"]));
-  await pdf(harborStatement(txs, "2026-08-01", "2026-08-31", "Statement for August 2026"), join(FIXTURE, HARBOR_IMPORTED["2026-08"]));
-  await pdf(harborStatement(txs, "2026-09-01", "2026-09-14", "Activity month to date"), join(FIXTURE, HARBOR_IMPORTED["2026-09-partial"]));
+  await pdf(
+    harborStatement(txs, "2026-07-01", "2026-07-31", "Statement for July 2026"),
+    join(FIXTURE, HARBOR_IMPORTED["2026-07"]),
+  );
+  await pdf(
+    harborStatement(txs, "2026-08-01", "2026-08-31", "Statement for August 2026"),
+    join(FIXTURE, HARBOR_IMPORTED["2026-08"]),
+  );
+  await pdf(
+    harborStatement(txs, "2026-09-01", "2026-09-14", "Activity month to date"),
+    join(FIXTURE, HARBOR_IMPORTED["2026-09-partial"]),
+  );
   const september = harborStatement(txs, "2026-09-01", "2026-09-30", "Statement for September 2026");
   await pdf(september, join(CASES, "statement-sept", "harbor-2026-09.pdf"));
   await pdf(september, join(CASES, "statement-sept-handentered", "harbor-2026-09.pdf"));

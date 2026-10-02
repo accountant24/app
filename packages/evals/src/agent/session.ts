@@ -19,6 +19,7 @@ import {
   SessionManager,
 } from "@earendil-works/pi-coding-agent";
 import type { PreparedTurn } from "../workspace";
+import { askedInsteadOfActing } from "./ask";
 
 export type SessionJob = {
   workspace: string;
@@ -42,31 +43,6 @@ export type SessionOutput = {
   messages: unknown[];
   autoReplied: boolean;
 };
-
-/** Tools that change the books; a turn that used none and ends in a question is a clarification. */
-const WRITE_TOOLS = new Set([
-  "add_transactions",
-  "add_balance_assertions",
-  "add_prices",
-  "bulk_edit_transactions",
-  "edit",
-  "write",
-]);
-
-export function askedInsteadOfActing(turnMessages: { role: string; content?: unknown }[]): boolean {
-  const assistants = turnMessages.filter((m) => m.role === "assistant");
-  const calls = assistants.flatMap((m) =>
-    (m.content as { type: string; name?: string }[]).filter((p) => p.type === "toolCall").map((p) => p.name),
-  );
-  if (calls.some((name) => name && WRITE_TOOLS.has(name))) return false;
-  const last = assistants.at(-1)?.content as { type: string; text?: string }[] | undefined;
-  const reply = (last ?? [])
-    .filter((p) => p.type === "text")
-    .map((p) => p.text)
-    .join("\n")
-    .trim();
-  return reply.slice(-300).includes("?");
-}
 
 async function main(): Promise<void> {
   const job = JSON.parse(readFileSync(process.argv[2], "utf8")) as SessionJob;
@@ -106,7 +82,11 @@ async function main(): Promise<void> {
   const runtime = await createAgentSessionRuntime(factory, {
     cwd: job.workspace,
     agentDir: job.workspace,
-    sessionManager: SessionManager.open(join(job.workspace, "sessions", "eval.jsonl"), join(job.workspace, "sessions"), job.workspace),
+    sessionManager: SessionManager.open(
+      join(job.workspace, "sessions", "eval.jsonl"),
+      join(job.workspace, "sessions"),
+      job.workspace,
+    ),
   });
   const session = runtime.session;
   await session.bindExtensions({

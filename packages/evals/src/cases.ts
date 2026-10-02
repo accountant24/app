@@ -107,8 +107,10 @@ export function loadCases(casesDir: string, fixturesDir: string): EvalCase[] {
     const file = join(dir, "case.json");
     if (!existsSync(file)) continue;
     const raw = JSON.parse(readFileSync(file, "utf8")) as Omit<EvalCase, "dir">;
-    const problems = validateCase(raw, (fixture) => existsSync(join(fixturesDir, fixture)), (att) =>
-      existsSync(join(dir, att)),
+    const problems = validateCase(
+      raw,
+      (fixture) => existsSync(join(fixturesDir, fixture)),
+      (att) => existsSync(join(dir, att)),
     );
     if (raw.id !== name) problems.push(`id "${raw.id}" must equal its folder name "${name}"`);
     if (problems.length) throw new Error(`cases/${name}: ${problems.join("; ")}`);
@@ -126,16 +128,19 @@ export function validateCase(
   const problems: string[] = [];
   if (!c.id || !/^[a-z0-9][a-z0-9-]*$/.test(c.id)) problems.push("id must be kebab-case");
   if (!Array.isArray(c.tags) || c.tags.length === 0) problems.push("tags must be a non-empty list");
-  if (!c.why?.trim()) problems.push("why is required: one or two sentences on what the case guards and where that came from");
+  if (!c.why?.trim())
+    problems.push("why is required: one or two sentences on what the case guards and where that came from");
   else if (c.why.length > 400) problems.push("why must stay short (400 characters at most)");
-  if (!Array.isArray(c.source) || c.source.length === 0) problems.push(`source must list at least one of ${CASE_SOURCES.join(", ")}`);
+  if (!Array.isArray(c.source) || c.source.length === 0)
+    problems.push(`source must list at least one of ${CASE_SOURCES.join(", ")}`);
   for (const s of c.source ?? []) if (!CASE_SOURCES.includes(s)) problems.push(`unknown source "${s}"`);
   if (!c.fixture) problems.push("fixture is required");
   else if (!fixtureExists(c.fixture)) problems.push(`fixture "${c.fixture}" not found`);
   if (!Array.isArray(c.turns) || c.turns.length === 0) problems.push("turns must be a non-empty list");
   for (const turn of c.turns ?? []) {
     if (!turn.text?.trim()) problems.push("every turn needs text");
-    for (const att of turn.attachments ?? []) if (!attachmentExists(att)) problems.push(`attachment "${att}" not found`);
+    for (const att of turn.attachments ?? [])
+      if (!attachmentExists(att)) problems.push(`attachment "${att}" not found`);
   }
   const e = c.expect;
   if (!e || Object.keys(e).length === 0) problems.push("expect must hold at least one check");

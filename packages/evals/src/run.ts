@@ -21,15 +21,26 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_AUTO_REPLY, type EvalCase, loadCases } from "./cases";
 import type { SessionJob, SessionOutput } from "./agent/session";
+import { DEFAULT_AUTO_REPLY, type EvalCase, loadCases } from "./cases";
 import { collect, snapshot } from "./grade/collect";
 import { gradeFacts } from "./grade/grade";
 import { bashJournalWrites } from "./grade/guard";
+import { servedModelOk, splitModel } from "./models";
 import { computeStamp, type Stamp, stampDiff } from "./stamp";
 import { summarize, toTranscript } from "./trace";
 import { git, prepareTurn, prepareWorkspace } from "./workspace";
@@ -83,13 +94,11 @@ const RUN_SET_STATE = {
 };
 
 /** API key variable per provider, when credentials come from the environment. */
-const KEY_VARS: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY" };
-
-/** `provider/id`, or a bare id for Anthropic. */
-function splitModel(model: string): { provider: string; id: string } {
-  const slash = model.indexOf("/");
-  return slash === -1 ? { provider: "anthropic", id: model } : { provider: model.slice(0, slash), id: model.slice(slash + 1) };
-}
+const KEY_VARS: Record<string, string> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+  deepseek: "DEEPSEEK_API_KEY",
+};
 
 /** KEY=value lines from a gitignored .env, without overriding the environment. */
 function loadDotEnv(path: string): void {
@@ -136,9 +145,11 @@ function parseArgs(argv: string[]): Args {
     else fail(`unknown argument: ${k}`);
   }
   if (!/^(baseline|v[1-9]\d*)$/.test(a.variant)) fail(`--variant must be 'baseline' or 'v<N>', got '${a.variant}'`);
-  if (!/^\d{4}-\d{2}-\d{2}-[a-z0-9-]+$/.test(a.runSet)) fail("--run-set is required: <date>-<purpose>, e.g. 2026-10-02-models");
+  if (!/^\d{4}-\d{2}-\d{2}-[a-z0-9-]+$/.test(a.runSet))
+    fail("--run-set is required: <date>-<purpose>, e.g. 2026-10-02-models");
   if (!a.model && !a.regrade) fail("--model is required (e.g. anthropic/claude-sonnet-5 or openai/gpt-5.5)");
-  if (!Number.isInteger(a.reps) || a.reps < 1 || !Number.isInteger(a.concurrency) || a.concurrency < 1) fail("bad --reps/--concurrency");
+  if (!Number.isInteger(a.reps) || a.reps < 1 || !Number.isInteger(a.concurrency) || a.concurrency < 1)
+    fail("bad --reps/--concurrency");
   return a;
 }
 
@@ -171,7 +182,9 @@ function checkHarness(statePath: string, state: Record<string, unknown>, approve
     console.error(`harness approved: ${sha.slice(0, 12)} over ${paths.length} files`);
     return;
   }
-  console.error(`harness ${state.harness_sha ? "changed since the last approved run" : "not approved yet"} (now ${sha.slice(0, 12)}).`);
+  console.error(
+    `harness ${state.harness_sha ? "changed since the last approved run" : "not approved yet"} (now ${sha.slice(0, 12)}).`,
+  );
   console.error("Review it, then run once with --approve-harness.");
   process.exit(2);
 }
@@ -235,30 +248,36 @@ async function runCase(c: EvalCase, args: Args, deadline: number): Promise<Run> 
   const stderr = await new Promise<string>((done, reject) => {
     // The child runs inside the temp workspace, where "tsx" can't be resolved by
     // name, so the loader is passed by its absolute URL.
-    const child = spawn(process.execPath, ["--import", TSX_LOADER, SESSION_TS, jobFile], { cwd: ws, env, stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(process.execPath, ["--import", TSX_LOADER, SESSION_TS, jobFile], {
+      cwd: ws,
+      env,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
     let err = "";
     child.stderr.on("data", (d) => (err += d));
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new AttemptError(`exceeded the ${args.timeoutS}s wall-clock ceiling`, "timeout"));
-    }, Math.max(0, deadline - Date.now()));
+    const timer = setTimeout(
+      () => {
+        child.kill("SIGKILL");
+        reject(new AttemptError(`exceeded the ${args.timeoutS}s wall-clock ceiling`, "timeout"));
+      },
+      Math.max(0, deadline - Date.now()),
+    );
     child.on("exit", (code) => {
       clearTimeout(timer);
       if (code === 0) done(err);
-      else reject(new AttemptError(`agent process exited ${code}: ${err.trim().split("\n").slice(-5).join(" | ")}`, "harness_error"));
+      else
+        reject(
+          new AttemptError(
+            `agent process exited ${code}: ${err.trim().split("\n").slice(-5).join(" | ")}`,
+            "harness_error",
+          ),
+        );
     });
   });
   if (!existsSync(job.outFile)) throw new AttemptError(`agent wrote no output: ${stderr.trim()}`, "harness_error");
   const output = JSON.parse(readFileSync(job.outFile, "utf8")) as SessionOutput;
   rmSync(agentDir, { recursive: true, force: true });
   return { output, ws, today, before };
-}
-
-/** Served model must be the requested one, allowing a dated snapshot suffix
- *  (`-20251001` or `-2025-10-01`). */
-function servedModelOk(requested: string, served: string): boolean {
-  const escaped = requested.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^${escaped}(-\\d{8}|-\\d{4}-\\d{2}-\\d{2})?$`).test(served);
 }
 
 type VariantInfo = { model: string; thinking: string; stamp: Stamp; runs: string[] };
@@ -271,7 +290,9 @@ function bindVariant(vdir: string, args: Args, stamp: Stamp): void {
   if (existsSync(path)) {
     const have = JSON.parse(readFileSync(path, "utf8")) as VariantInfo;
     if (have.model !== args.model || have.thinking !== args.thinking)
-      fail(`${relative(ROOT, vdir)} holds ${have.model} (thinking ${have.thinking}); use another --variant for ${args.model} (thinking ${args.thinking})`);
+      fail(
+        `${relative(ROOT, vdir)} holds ${have.model} (thinking ${have.thinking}); use another --variant for ${args.model} (thinking ${args.thinking})`,
+      );
     const changed = have.stamp ? stampDiff(have.stamp, stamp) : [];
     if (changed.length && !args.restamp)
       fail(
@@ -284,7 +305,10 @@ function bindVariant(vdir: string, args: Args, stamp: Stamp): void {
   }
   const info: VariantInfo = { model: args.model, thinking: args.thinking, stamp, runs: [today] };
   writeFileSync(path, `${JSON.stringify(info, null, 2)}\n`);
-  writeFileSync(join(vdir, "change.md"), `${args.model}, thinking ${args.thinking}\n\nThe desktop agent (pi + accountant24 extension + system.md) on this model.\n`);
+  writeFileSync(
+    join(vdir, "change.md"),
+    `${args.model}, thinking ${args.thinking}\n\nThe desktop agent (pi + accountant24 extension + system.md) on this model.\n`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -298,13 +322,17 @@ async function main(): Promise<void> {
   if (!existsSync(statePath)) writeFileSync(statePath, `${JSON.stringify(RUN_SET_STATE, null, 2)}\n`);
   // Harness approval is shared by every run set.
   const harnessPath = join(RESULTS, "_harness.json");
-  const harness = existsSync(harnessPath) ? (JSON.parse(readFileSync(harnessPath, "utf8")) as Record<string, unknown>) : {};
+  const harness = existsSync(harnessPath)
+    ? (JSON.parse(readFileSync(harnessPath, "utf8")) as Record<string, unknown>)
+    : {};
   checkHarness(harnessPath, harness, args.approveHarness);
   if (args.regrade) return regrade(vdir);
   loadDotEnv(join(PKG, ".env"));
   const keyVar = KEY_VARS[splitModel(args.model).provider];
-  if (!args.auth && keyVar && !process.env[keyVar]) fail(`${keyVar} is not set (export it, put it in packages/evals/.env, or pass --auth)`);
-  if (!existsSync(join(RESOURCES, "accountant24-extension.js"))) fail("bundle the extension first: npx tsx scripts/bundle-extension.ts");
+  if (!args.auth && keyVar && !process.env[keyVar])
+    fail(`${keyVar} is not set (export it, put it in packages/evals/.env, or pass --auth)`);
+  if (!existsSync(join(RESOURCES, "accountant24-extension.js")))
+    fail("bundle the extension first: npx tsx scripts/bundle-extension.ts");
   bindVariant(vdir, args, computeStamp(PKG, ROOT));
 
   const resultsPath = join(vdir, "results.jsonl");
@@ -317,7 +345,9 @@ async function main(): Promise<void> {
       done.add(`${r.prompt_id}\0${r.rep}`);
     }
   const cases = loadCases(CASES, FIXTURES).filter((c) => !args.only || args.only.has(c.id));
-  const tasks = cases.flatMap((c) => Array.from({ length: args.reps }, (_, rep) => ({ c, rep }))).filter(({ c, rep }) => !done.has(`${c.id}\0${rep}`));
+  const tasks = cases
+    .flatMap((c) => Array.from({ length: args.reps }, (_, rep) => ({ c, rep })))
+    .filter(({ c, rep }) => !done.has(`${c.id}\0${rep}`));
   console.error(`[${args.variant}] ${tasks.length} of ${cases.length * args.reps} (case, rep) to run on ${args.model}`);
 
   let next = 0;
@@ -335,8 +365,10 @@ async function main(): Promise<void> {
         const messages = run.output.messages as Parameters<typeof summarize>[0];
         const summary = summarize(messages);
         const served = summary.models.find((m) => !servedModelOk(splitModel(args.model).id, m));
-        if (served) throw new AttemptError(`served model ${served} != requested ${args.model}`, "serving_substitution", run);
-        if (summary.stopReason === "error") throw new AttemptError(`provider error: ${summary.errors.at(-1)}`, "serving_error", run);
+        if (served)
+          throw new AttemptError(`served model ${served} != requested ${args.model}`, "serving_substitution", run);
+        if (summary.stopReason === "error")
+          throw new AttemptError(`provider error: ${summary.errors.at(-1)}`, "serving_error", run);
         const facts = collect(run.ws, run.before, run.today, summary.replies, bashJournalWrites(messages));
         const graded = gradeFacts(c.expect, facts);
         writeFileSync(join(vdir, "facts", `${c.id}_rep${rep}.json`), JSON.stringify(facts));
@@ -361,13 +393,19 @@ async function main(): Promise<void> {
           explanation: graded.explanation,
         };
         appendFileSync(resultsPath, `${JSON.stringify(row)}\n`);
-        writeFileSync(join(vdir, "traces", `${c.id}_rep${rep}.json`), JSON.stringify(toTranscript(run.output.systemPrompt, messages), null, 2));
+        writeFileSync(
+          join(vdir, "traces", `${c.id}_rep${rep}.json`),
+          JSON.stringify(toTranscript(run.output.systemPrompt, messages), null, 2),
+        );
         writeFileSync(join(vdir, "diffs", `${c.id}_rep${rep}.diff`), workspaceDiff(run.ws, run.before.head));
         ok++;
-        console.error(`  ${c.id} rep${rep}: ${graded.grade.pass ? "pass" : `FAIL (${graded.explanation.pass})`} $${row.cost_usd.toFixed(3)} ${latency_s.toFixed(0)}s`);
+        console.error(
+          `  ${c.id} rep${rep}: ${graded.grade.pass ? "pass" : `FAIL (${graded.explanation.pass})`} $${row.cost_usd.toFixed(3)} ${latency_s.toFixed(0)}s`,
+        );
       } catch (e) {
         failed++;
-        const err = e instanceof AttemptError ? e : new AttemptError(e instanceof Error ? e.message : String(e), "harness_error");
+        const err =
+          e instanceof AttemptError ? e : new AttemptError(e instanceof Error ? e.message : String(e), "harness_error");
         const billed = err.run ?? run;
         const summary = billed ? summarize(billed.output.messages as never) : undefined;
         appendFileSync(
@@ -382,7 +420,9 @@ async function main(): Promise<void> {
     }
   }
   await Promise.all(Array.from({ length: args.concurrency }, worker));
-  console.error(`[${args.variant}] done in ${Math.round((Date.now() - started) / 1000)}s: ${ok} graded, ${failed} errors -> ${relative(ROOT, resultsPath)}`);
+  console.error(
+    `[${args.variant}] done in ${Math.round((Date.now() - started) / 1000)}s: ${ok} graded, ${failed} errors -> ${relative(ROOT, resultsPath)}`,
+  );
   process.exit(failed ? 1 : 0);
 }
 
@@ -397,7 +437,12 @@ function regrade(vdir: string): void {
     .split("\n")
     .filter((line) => line.trim())
     .map((line) => {
-      const row = JSON.parse(line) as { prompt_id: string; rep: number; grade: Record<string, number>; explanation: Record<string, string> };
+      const row = JSON.parse(line) as {
+        prompt_id: string;
+        rep: number;
+        grade: Record<string, number>;
+        explanation: Record<string, string>;
+      };
       const factsPath = join(vdir, "facts", `${row.prompt_id}_rep${row.rep}.json`);
       const c = cases.get(row.prompt_id);
       if (!c || !existsSync(factsPath)) {
