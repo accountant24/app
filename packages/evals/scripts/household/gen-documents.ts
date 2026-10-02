@@ -5,7 +5,7 @@
 //
 //   npx tsx packages/evals/scripts/household/gen-documents.ts
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -14,6 +14,14 @@ import { balance, CAD_ACCOUNT, CHECKING, HARBOR_IMPORTED, type Tx, world } from 
 const PKG = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = join(PKG, "fixtures", "household");
 const CASES = join(PKG, "cases");
+
+/** Chrome stamps the render time into every PDF; pin it so regenerating an
+ *  unchanged document leaves the file byte-identical. Same length, so the
+ *  PDF's byte offsets stay valid. */
+function pinPdfDates(path: string): void {
+  const pdf = readFileSync(path, "latin1").replace(/\((D:\d{14}[^)]*)\)/g, (_, date: string) => `(${"D:20261001000000+00'00'".padEnd(date.length).slice(0, date.length)})`);
+  writeFileSync(path, pdf, "latin1");
+}
 
 const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const mdy = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`;
@@ -131,6 +139,7 @@ async function main(): Promise<void> {
     mkdirSync(dirname(path), { recursive: true });
     await page.setContent(html);
     await page.pdf({ path, format: "Letter", printBackground: true });
+    pinPdfDates(path);
   };
   const png = async (html: string, path: string) => {
     mkdirSync(dirname(path), { recursive: true });
