@@ -1,0 +1,23 @@
+diff --git a/memory.md b/memory.md
+index 7384273..7756230 100644
+--- a/memory.md
++++ b/memory.md
+@@ -7,6 +7,7 @@
+ - Unexplained cash differences go to Expenses:Uncategorized, never to equity.
+ - Notes go in the transaction description, never in comments.
+ - After every bank statement import, add a balance assertion for that account on the statement's closing date.
++- City Transit monthly pass is reimbursed by the employer; book each reimbursement against Expenses:Transport (reversing the original pass payment), not as income.
+ 
+ ## Arrangements
+ - Sparkle Cleaning: a visit every other Thursday; each payment ($165) covers 3 visits and is made on the first visit it covers.
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dd253e9
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/deepseek-v4p1-flash"
++}
+\ No newline at end of file

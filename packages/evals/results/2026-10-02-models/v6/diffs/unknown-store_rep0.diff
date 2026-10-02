@@ -1,0 +1,29 @@
+diff --git a/ledger/2026/10.journal b/ledger/2026/10.journal
+new file mode 100644
+index 0000000..d5b50b8
+--- /dev/null
++++ b/ledger/2026/10.journal
+@@ -0,0 +1,3 @@
++2026-10-02 * Unknown
++    Expenses:Food                                                   -40.00 USD
++    Assets:Bank:Harbor Checking                                      40.00 USD
+diff --git a/ledger/main.journal b/ledger/main.journal
+index 1400bab..7bdb4b5 100644
+--- a/ledger/main.journal
++++ b/ledger/main.journal
+@@ -5,3 +5,4 @@ include accounts.journal
+ include 2026/07.journal
+ include 2026/08.journal
+ include 2026/09.journal
++include 2026/10.journal
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dd253e9
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/deepseek-v4p1-flash"
++}
+\ No newline at end of file

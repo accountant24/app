@@ -1,0 +1,11 @@
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dd253e9
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/deepseek-v4p1-flash"
++}
+\ No newline at end of file
