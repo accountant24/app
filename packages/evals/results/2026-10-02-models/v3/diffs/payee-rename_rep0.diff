@@ -1,0 +1,53 @@
+diff --git a/ledger/2026/07.journal b/ledger/2026/07.journal
+index fa6a176..1957a75 100644
+--- a/ledger/2026/07.journal
++++ b/ledger/2026/07.journal
+@@ -150,7 +150,8 @@
+     Assets:PayPal                                                   -35.00 USD
+     Expenses:Shopping                                                35.00 USD
+ 
+-2026-07-21 * Corner Deli
++2026-07-21 * Sal's Corner Deli
++    ; original_payee_name: Corner Deli
+     Assets:Cash:Wallet                                              -6.40 USD
+     Expenses:Food                                                    6.40 USD
+ 
+diff --git a/ledger/2026/08.journal b/ledger/2026/08.journal
+index 645ef92..6185f71 100644
+--- a/ledger/2026/08.journal
++++ b/ledger/2026/08.journal
+@@ -138,7 +138,8 @@
+     Assets:Bank:Harbor Checking                                     -165.00 USD
+     Expenses:Household Help                                          165.00 USD
+ 
+-2026-08-21 * Corner Deli
++2026-08-21 * Sal's Corner Deli
++    ; original_payee_name: Corner Deli
+     Assets:Cash:Wallet                                              -6.40 USD
+     Expenses:Food                                                    6.40 USD
+ 
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..417e5f4 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -110,7 +110,8 @@
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+     Expenses:Health                                                  23.80 USD
+ 
+-2026-09-21 * Corner Deli
++2026-09-21 * Sal's Corner Deli
++    ; original_payee_name: Corner Deli
+     Assets:Cash:Wallet                                              -6.40 USD
+     Expenses:Food                                                    6.40 USD
+ 
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..fb2edc3
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "openai",
++  "defaultModel": "gpt-5.6-sol"
++}
+\ No newline at end of file

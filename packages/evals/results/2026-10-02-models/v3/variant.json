@@ -1,0 +1,13 @@
+{
+  "model": "openai/gpt-5.6-sol",
+  "thinking": "medium",
+  "stamp": {
+    "cases": "ec60b79b4f2f",
+    "harness": "cbafc6b314cc",
+    "agent": "0548f12ca213",
+    "pi": "0.84.1"
+  },
+  "runs": [
+    "2026-10-02"
+  ]
+}

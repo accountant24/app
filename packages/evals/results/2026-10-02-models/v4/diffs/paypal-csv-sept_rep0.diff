@@ -1,0 +1,38 @@
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..3219bbb 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -120,3 +120,22 @@
+ 
+ P 2026-09-14 VTI 294.80 USD
+ P 2026-09-14 CAD 0.734 USD
++
++2026-09-20 * Internal Transfer | PayPal top-up from Harbor Checking
++    ; link: paypal-20260920-5RT77310GH9981B
++    ; original_description: General Card Deposit
++    ; original_payee_name: Bank deposit from Harbor Bank debit x4417
++    ; related_file: files/2026/10/20261002221341.csv
++    Assets:Bank:Harbor Checking                                     -22.00 USD
++    Assets:PayPal                                                    22.00 USD
++
++2026-09-20 * Thrift Loop | Wool scarf, gray
++    ; link: paypal-20260920-5RT77310GH9981B
++    ; original_description: Express Checkout Payment
++    ; original_payee_name: Thrift Loop
++    ; related_file: files/2026/10/20261002221341.csv
++    Assets:PayPal                                                   -22.00 USD
++    Expenses:Shopping                                                22.00 USD
++
++2026-09-20 * Balance Assertion
++    Assets:PayPal                                                    0.00 USD = 0.00 USD
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..f646200
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "openai",
++  "defaultModel": "gpt-5.6-terra"
++}
+\ No newline at end of file
