@@ -3,6 +3,10 @@
   "tags": [
     "query"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Questions about spending by category are the most common questions in the sessions. The answer has to be the exact August food total from the ledger.",
   "fixture": "household",
   "turns": [
     {

@@ -3,6 +3,11 @@
   "tags": [
     "memory"
   ],
+  "source": [
+    "system.md",
+    "sessions"
+  ],
+  "why": "system.md says a corrected fact gets fixed in place, not added as a near duplicate. The cleaning schedule line has to change, and memory.md must not grow.",
   "fixture": "household",
   "turns": [
     {

@@ -5,6 +5,10 @@
     "csv",
     "paypal"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The sessions show PayPal purchases booked straight from the card. The household rule is two linked legs, checking to PayPal and PayPal to the merchant, so the export has to become exactly those plus a checkpoint.",
   "fixture": "household",
   "turns": [
     {

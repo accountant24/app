@@ -70,10 +70,20 @@ export type Expect = {
 
 export type Turn = { text: string; attachments?: string[] };
 
+/** Where a case comes from: a failure or habit seen in real desktop chats, a
+ *  rule in system.md the agent must follow, or a tool path the port must keep working. */
+export const CASE_SOURCES = ["sessions", "system.md", "coverage"] as const;
+export type CaseSource = (typeof CASE_SOURCES)[number];
+
 export type EvalCase = {
   id: string;
   /** tags[0] groups the report; later tags render as chips. */
   tags: string[];
+  /** One or two sentences on why the case exists: the behavior it guards and
+   *  where that came from. Never sent to the agent. Required. */
+  why: string;
+  /** Where the case comes from; at least one. Required. */
+  source: CaseSource[];
   /** Workspace overlay under `fixtures/`; the case folder's own `workspace/` is laid over it. */
   fixture: string;
   turns: Turn[];
@@ -116,6 +126,10 @@ export function validateCase(
   const problems: string[] = [];
   if (!c.id || !/^[a-z0-9][a-z0-9-]*$/.test(c.id)) problems.push("id must be kebab-case");
   if (!Array.isArray(c.tags) || c.tags.length === 0) problems.push("tags must be a non-empty list");
+  if (!c.why?.trim()) problems.push("why is required: one or two sentences on what the case guards and where that came from");
+  else if (c.why.length > 400) problems.push("why must stay short (400 characters at most)");
+  if (!Array.isArray(c.source) || c.source.length === 0) problems.push(`source must list at least one of ${CASE_SOURCES.join(", ")}`);
+  for (const s of c.source ?? []) if (!CASE_SOURCES.includes(s)) problems.push(`unknown source "${s}"`);
   if (!c.fixture) problems.push("fixture is required");
   else if (!fixtureExists(c.fixture)) problems.push(`fixture "${c.fixture}" not found`);
   if (!Array.isArray(c.turns) || c.turns.length === 0) problems.push("turns must be a non-empty list");

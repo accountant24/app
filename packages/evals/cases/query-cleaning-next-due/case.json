@@ -4,6 +4,10 @@
     "query",
     "memory"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Which dates a prepayment covers and when the next one is due was asked about a dozen times in the sessions. The answer comes from the last payment plus the arrangement in memory.md.",
   "fixture": "household",
   "turns": [
     {

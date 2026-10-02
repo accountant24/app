@@ -5,6 +5,10 @@
     "commit",
     "undo"
   ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The user wants undo, and the mobile app can never rewrite history or force a push. Undo has to be a new commit that removes the mistaken dinner, with the existing history left intact.",
   "fixture": "household",
   "setupCommit": {
     "message": "Add Luigi's Trattoria dinner on 2026-09-29"
