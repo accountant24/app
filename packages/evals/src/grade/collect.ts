@@ -62,7 +62,7 @@ export function snapshot(ws: string, unchanged: string[] = []): Snapshot {
   };
 }
 
-export function collect(ws: string, before: Snapshot, today: string, lastReply: string, bashJournalWrites: string[]): Facts {
+export function collect(ws: string, before: Snapshot, today: string, replies: string, bashJournalWrites: string[]): Facts {
   const ledger = readLedger(ws);
   const check = spawnSync("hledger", ["check", "--strict", "-f", "ledger/main.journal"], { cwd: ws, encoding: "utf8" });
   const uncommitted = git(ws, "status", "--porcelain", "--untracked-files=all")
@@ -75,13 +75,13 @@ export function collect(ws: string, before: Snapshot, today: string, lastReply: 
   const untracked = uncommitted.filter((line) => line.startsWith("??"));
   return {
     today,
-    initial: before.transactions,
+    initialCount: before.transactions.length,
     final: "error" in ledger ? null : ledger.transactions,
     checkError: check.status === 0 ? undefined : (check.stderr || check.stdout).trim(),
     prices: readPrices(ws),
     initialMemory: before.memory,
     memory: readOr(join(ws, "memory.md"), ""),
-    lastReply,
+    replies,
     changedPaths: Object.entries(before.files)
       .filter(([p, content]) => (existsSync(join(ws, p)) ? readFileSync(join(ws, p), "utf8") : null) !== content)
       .map(([p]) => p),

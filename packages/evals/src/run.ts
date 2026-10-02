@@ -4,12 +4,20 @@
 // errors.jsonl and never scored, a hard wall-clock ceiling per case, a
 // served-model check, and a harness gate a human approves.
 //
-//   npm run evals -- --variant baseline --model anthropic/claude-sonnet-5 [--reps 2] [--only id,id] [--approve-harness]
+//   npm run evals -- --run-set 2026-10-02-models --variant v1 --model anthropic/claude-sonnet-5 [--reps 2] [--only id,id] [--approve-harness]
+//
+// A run set (results/<name>/) is one round of comparison, named by date and
+// purpose; it holds one variant folder per model (baseline, v1, v2, …).
 //
 // --model is provider/id (a bare id means anthropic). Credentials come from
 // ANTHROPIC_API_KEY / OPENAI_API_KEY, or a gitignored packages/evals/.env, or
 // --auth <auth.json> (a pi credentials file, copied per case and never written back).
-// Each variant directory is bound to one model on its first run.
+// Each variant directory is bound to one model on its first run, and stamped with
+// what it ran against (stamp.ts); a later run against a different case set,
+// harness or agent is refused unless --restamp says the affected cases were rerun.
+//
+// Every run saves the facts it was graded on (facts/<id>_rep<k>.json), so after
+// a grading fix `--variant vN --regrade` re-scores saved runs without calling a model.
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -22,6 +30,7 @@ import type { SessionJob, SessionOutput } from "./agent/session";
 import { collect, snapshot } from "./grade/collect";
 import { gradeFacts } from "./grade/grade";
 import { bashJournalWrites } from "./grade/guard";
+import { computeStamp, type Stamp, stampDiff } from "./stamp";
 import { summarize, toTranscript } from "./trace";
 import { git, prepareTurn, prepareWorkspace } from "./workspace";
 
@@ -29,7 +38,7 @@ const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = resolve(PKG, "..", "..");
 const CASES = join(PKG, "cases");
 const FIXTURES = join(PKG, "fixtures");
-const FLOW = join(PKG, "results", "bookkeeper");
+const RESULTS = join(PKG, "results");
 const SESSION_TS = join(PKG, "src", "agent", "session.ts");
 const RESOURCES = join(ROOT, "packages", "desktop", "resources");
 const SKILLS_DIR = join(PKG, ".cache", "skills");
@@ -47,6 +56,30 @@ type Args = {
   approveHarness: boolean;
   /** pi auth.json to use instead of API keys from the environment. */
   auth?: string;
+  /** Re-score saved runs from their facts instead of running cases. */
+  regrade: boolean;
+  /** results/<runSet>/ holds this round of comparison. */
+  runSet: string;
+  /** Accept a changed stamp (after rerunning the cases the change affects). */
+  restamp: boolean;
+};
+
+/** Metric and column declarations the report reads, written into each new run set. */
+const RUN_SET_STATE = {
+  metrics: [
+    { id: "pass", label: "pass", kind: "binary" },
+    { id: "correct", label: "correct", kind: "binary" },
+    { id: "saved", label: "saved", kind: "binary" },
+    { id: "valid", label: "valid", kind: "binary" },
+    { id: "safe", label: "safe", kind: "binary" },
+  ],
+  perf_fields: [
+    { id: "cost_usd", label: "cost", unit: "$" },
+    { id: "latency_s", label: "time", unit: "s" },
+    { id: "model_calls", label: "model calls" },
+    { id: "tool_calls", label: "tool calls" },
+    { id: "auto_replied", label: "asked" },
+  ],
 };
 
 /** API key variable per provider, when credentials come from the environment. */
@@ -68,7 +101,19 @@ function loadDotEnv(path: string): void {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { variant: "baseline", model: "", thinking: "medium", reps: 1, concurrency: 4, timeoutS: 900, keep: false, approveHarness: false };
+  const a: Args = {
+    variant: "baseline",
+    model: "",
+    thinking: "medium",
+    reps: 1,
+    concurrency: 4,
+    timeoutS: 900,
+    keep: false,
+    approveHarness: false,
+    regrade: false,
+    runSet: "",
+    restamp: false,
+  };
   const val = (i: number) => {
     if (argv[i] === undefined) fail(`missing value for ${argv[i - 1]}`);
     return argv[i];
@@ -85,17 +130,23 @@ function parseArgs(argv: string[]): Args {
     else if (k === "--keep") a.keep = true;
     else if (k === "--approve-harness") a.approveHarness = true;
     else if (k === "--auth") a.auth = resolve(val(++i));
+    else if (k === "--regrade") a.regrade = true;
+    else if (k === "--run-set") a.runSet = val(++i);
+    else if (k === "--restamp") a.restamp = true;
     else fail(`unknown argument: ${k}`);
   }
   if (!/^(baseline|v[1-9]\d*)$/.test(a.variant)) fail(`--variant must be 'baseline' or 'v<N>', got '${a.variant}'`);
-  if (!a.model) fail("--model is required (e.g. anthropic/claude-sonnet-5 or openai/gpt-5.5)");
+  if (!/^\d{4}-\d{2}-\d{2}-[a-z0-9-]+$/.test(a.runSet)) fail("--run-set is required: <date>-<purpose>, e.g. 2026-10-02-models");
+  if (!a.model && !a.regrade) fail("--model is required (e.g. anthropic/claude-sonnet-5 or openai/gpt-5.5)");
   if (!Number.isInteger(a.reps) || a.reps < 1 || !Number.isInteger(a.concurrency) || a.concurrency < 1) fail("bad --reps/--concurrency");
   return a;
 }
 
 function fail(message: string): never {
   console.error(message);
-  console.error("usage: npm run evals -- --variant ID --model PROVIDER/ID [--thinking LEVEL] [--reps N] [--concurrency N] [--timeout-s N] [--only id,…] [--auth auth.json] [--keep] [--approve-harness]");
+  console.error(
+    "usage: npm run evals -- --run-set DATE-PURPOSE --variant ID --model PROVIDER/ID [--thinking LEVEL] [--reps N] [--concurrency N] [--timeout-s N] [--only id,…] [--auth auth.json] [--keep] [--restamp] [--approve-harness] | --run-set … --variant … --regrade",
+  );
   process.exit(2);
 }
 
@@ -210,34 +261,51 @@ function servedModelOk(requested: string, served: string): boolean {
   return new RegExp(`^${escaped}(-\\d{8}|-\\d{4}-\\d{2}-\\d{2})?$`).test(served);
 }
 
-/** Bind a variant directory to one model and thinking level, so results from
- *  different models never mix in one variant. Writes change.md for the report. */
-function bindVariant(vdir: string, args: Args): void {
+type VariantInfo = { model: string; thinking: string; stamp: Stamp; runs: string[] };
+
+/** Bind a variant directory to one model and thinking level, and to the stamp
+ *  of what it runs against, so results never mix. Writes change.md for the report. */
+function bindVariant(vdir: string, args: Args, stamp: Stamp): void {
   const path = join(vdir, "variant.json");
-  const want = { model: args.model, thinking: args.thinking };
+  const today = new Date().toISOString().slice(0, 10);
   if (existsSync(path)) {
-    const have = JSON.parse(readFileSync(path, "utf8")) as typeof want;
-    if (have.model !== want.model || have.thinking !== want.thinking)
-      fail(`${relative(ROOT, vdir)} holds ${have.model} (thinking ${have.thinking}); use another --variant for ${want.model} (thinking ${want.thinking})`);
+    const have = JSON.parse(readFileSync(path, "utf8")) as VariantInfo;
+    if (have.model !== args.model || have.thinking !== args.thinking)
+      fail(`${relative(ROOT, vdir)} holds ${have.model} (thinking ${have.thinking}); use another --variant for ${args.model} (thinking ${args.thinking})`);
+    const changed = have.stamp ? stampDiff(have.stamp, stamp) : [];
+    if (changed.length && !args.restamp)
+      fail(
+        `${relative(ROOT, vdir)} was run against a different ${changed.join(", ")}. Start a new run set, or rerun the affected cases with --restamp.`,
+      );
+    have.stamp = stamp;
+    if (!have.runs.includes(today)) have.runs.push(today);
+    writeFileSync(path, `${JSON.stringify(have, null, 2)}\n`);
     return;
   }
-  writeFileSync(path, `${JSON.stringify(want, null, 2)}\n`);
+  const info: VariantInfo = { model: args.model, thinking: args.thinking, stamp, runs: [today] };
+  writeFileSync(path, `${JSON.stringify(info, null, 2)}\n`);
   writeFileSync(join(vdir, "change.md"), `${args.model}, thinking ${args.thinking}\n\nThe desktop agent (pi + accountant24 extension + system.md) on this model.\n`);
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const vdir = join(FLOW, args.variant);
+  const flow = join(RESULTS, args.runSet);
+  const vdir = join(flow, args.variant);
   mkdirSync(join(vdir, "traces"), { recursive: true });
   mkdirSync(join(vdir, "diffs"), { recursive: true });
-  const statePath = join(FLOW, "_state.json");
-  const state = existsSync(statePath) ? (JSON.parse(readFileSync(statePath, "utf8")) as Record<string, unknown>) : {};
-  checkHarness(statePath, state, args.approveHarness);
+  mkdirSync(join(vdir, "facts"), { recursive: true });
+  const statePath = join(flow, "_state.json");
+  if (!existsSync(statePath)) writeFileSync(statePath, `${JSON.stringify(RUN_SET_STATE, null, 2)}\n`);
+  // Harness approval is shared by every run set.
+  const harnessPath = join(RESULTS, "_harness.json");
+  const harness = existsSync(harnessPath) ? (JSON.parse(readFileSync(harnessPath, "utf8")) as Record<string, unknown>) : {};
+  checkHarness(harnessPath, harness, args.approveHarness);
+  if (args.regrade) return regrade(vdir);
   loadDotEnv(join(PKG, ".env"));
   const keyVar = KEY_VARS[splitModel(args.model).provider];
   if (!args.auth && keyVar && !process.env[keyVar]) fail(`${keyVar} is not set (export it, put it in packages/evals/.env, or pass --auth)`);
-  bindVariant(vdir, args);
   if (!existsSync(join(RESOURCES, "accountant24-extension.js"))) fail("bundle the extension first: npx tsx scripts/bundle-extension.ts");
+  bindVariant(vdir, args, computeStamp(PKG, ROOT));
 
   const resultsPath = join(vdir, "results.jsonl");
   const errorsPath = join(vdir, "errors.jsonl");
@@ -269,8 +337,9 @@ async function main(): Promise<void> {
         const served = summary.models.find((m) => !servedModelOk(splitModel(args.model).id, m));
         if (served) throw new AttemptError(`served model ${served} != requested ${args.model}`, "serving_substitution", run);
         if (summary.stopReason === "error") throw new AttemptError(`provider error: ${summary.errors.at(-1)}`, "serving_error", run);
-        const facts = collect(run.ws, run.before, run.today, summary.lastReply, bashJournalWrites(messages));
+        const facts = collect(run.ws, run.before, run.today, summary.replies, bashJournalWrites(messages));
         const graded = gradeFacts(c.expect, facts);
+        writeFileSync(join(vdir, "facts", `${c.id}_rep${rep}.json`), JSON.stringify(facts));
         const model = summary.models[0] ?? args.model;
         const row = {
           prompt_id: c.id,
@@ -315,6 +384,33 @@ async function main(): Promise<void> {
   await Promise.all(Array.from({ length: args.concurrency }, worker));
   console.error(`[${args.variant}] done in ${Math.round((Date.now() - started) / 1000)}s: ${ok} graded, ${failed} errors -> ${relative(ROOT, resultsPath)}`);
   process.exit(failed ? 1 : 0);
+}
+
+/** Re-score every saved run of a variant against the current cases. Runs saved
+ *  before facts existed are left as they are and listed. */
+function regrade(vdir: string): void {
+  const resultsPath = join(vdir, "results.jsonl");
+  const cases = new Map(loadCases(CASES, FIXTURES).map((c) => [c.id, c]));
+  let changed = 0;
+  const missing: string[] = [];
+  const rows = readFileSync(resultsPath, "utf8")
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => {
+      const row = JSON.parse(line) as { prompt_id: string; rep: number; grade: Record<string, number>; explanation: Record<string, string> };
+      const factsPath = join(vdir, "facts", `${row.prompt_id}_rep${row.rep}.json`);
+      const c = cases.get(row.prompt_id);
+      if (!c || !existsSync(factsPath)) {
+        missing.push(`${row.prompt_id} rep${row.rep}`);
+        return row;
+      }
+      const graded = gradeFacts(c.expect, JSON.parse(readFileSync(factsPath, "utf8")));
+      if (JSON.stringify(graded.grade) !== JSON.stringify(row.grade)) changed++;
+      return { ...row, grade: graded.grade, explanation: graded.explanation };
+    });
+  writeFileSync(resultsPath, `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`);
+  console.error(`regraded ${rows.length - missing.length} runs, ${changed} grades changed`);
+  if (missing.length) console.error(`no saved facts (left as they were): ${missing.join(", ")}`);
 }
 
 /** What the agent changed, committed or not, relative to the fixture (attachments excluded). */

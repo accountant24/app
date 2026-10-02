@@ -31,6 +31,8 @@ export type RunSummary = {
   stopReason: string;
   /** Text of the last assistant message. */
   lastReply: string;
+  /** Everything the agent said in the conversation, in order. */
+  replies: string;
   /** Error messages pi recorded on assistant messages (provider failures). */
   errors: string[];
   /** Dollar cost pi computed per call from its model catalog prices, summed. */
@@ -123,6 +125,10 @@ export function summarize(messages: Message[]): RunSummary {
     toolErrors: messages.filter((m) => m.role === "toolResult" && m.isError).length,
     stopReason: last?.stopReason ?? "none",
     lastReply: last ? text(last.content) : "",
+    replies: assistants
+      .map((a) => text(a.content))
+      .filter((t) => t.trim())
+      .join("\n\n"),
     errors,
     costUsd: cost,
   };
