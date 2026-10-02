@@ -92,7 +92,7 @@ const GROCERY_RECEIPT = `<!doctype html><meta charset="utf-8"><style>${RECEIPT_S
   <div class="row"><span>ROMA TOMATOES</span><span>2.19</span></div><div class="row"><span>OLIVE OIL 16 OZ</span><span>4.73</span></div><hr>
   <div class="row"><span>SUBTOTAL</span><span>23.47</span></div><div class="row"><span>TAX</span><span>0.00</span></div>
   <div class="row big"><span>TOTAL</span><span>$23.47</span></div><div class="row"><span>CASH</span><span>30.00</span></div><div class="row"><span>CHANGE</span><span>6.53</span></div><hr>
-  <div class="c">09/29/2026 6:42 PM · Reg 3 · Trans 4471<br>Thank you for shopping with us!</div></div>`;
+  <div class="c">09/26/2026 6:42 PM · Reg 3 · Trans 4471<br>Thank you for shopping with us!</div></div>`;
 
 const TORONTO_RECEIPT = `<!doctype html><meta charset="utf-8"><style>${RECEIPT_STYLE}</style><div class="r">
   <div class="c big">THE MAPLE TABLE</div><div class="c">88 Queens Quay W, Toronto, ON<br>HST # 81234 5678 RT0001</div><hr>
