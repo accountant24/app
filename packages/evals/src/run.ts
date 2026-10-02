@@ -16,6 +16,7 @@ import { DEFAULT_AUTO_REPLY, type EvalCase, loadCases } from "./cases";
 import type { SessionJob, SessionOutput } from "./agent/session";
 import { collect, snapshot } from "./grade/collect";
 import { gradeFacts } from "./grade/grade";
+import { bashJournalWrites } from "./grade/guard";
 import { costUsd, summarize, toTranscript } from "./trace";
 import { git, prepareTurn, prepareWorkspace } from "./workspace";
 
@@ -217,7 +218,7 @@ async function main(): Promise<void> {
         const served = summary.models.find((m) => !servedModelOk(args.model, m));
         if (served) throw new AttemptError(`served model ${served} != requested ${args.model}`, "serving_substitution", run);
         if (summary.stopReason === "error") throw new AttemptError(`provider error: ${summary.errors.at(-1)}`, "serving_error", run);
-        const facts = collect(run.ws, run.before, run.today, summary.lastReply);
+        const facts = collect(run.ws, run.before, run.today, summary.lastReply, bashJournalWrites(messages));
         const graded = gradeFacts(c.expect, facts);
         const model = summary.models[0] ?? args.model;
         const row = {

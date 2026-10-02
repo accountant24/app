@@ -61,7 +61,7 @@ export function snapshot(ws: string, unchanged: string[] = []): Snapshot {
   };
 }
 
-export function collect(ws: string, before: Snapshot, today: string, lastReply: string): Facts {
+export function collect(ws: string, before: Snapshot, today: string, lastReply: string, bashJournalWrites: string[]): Facts {
   const ledger = readLedger(ws);
   const check = spawnSync("hledger", ["check", "--strict", "-f", "ledger/main.journal"], { cwd: ws, encoding: "utf8" });
   const uncommitted = git(ws, "status", "--porcelain", "--untracked-files=all")
@@ -88,5 +88,6 @@ export function collect(ws: string, before: Snapshot, today: string, lastReply: 
     commitsAdded: Number(git(ws, "rev-list", "--count", `${before.head}..HEAD`)),
     historyRewritten: spawnSync("git", ["merge-base", "--is-ancestor", before.head, "HEAD"], { cwd: ws }).status !== 0,
     changedSinceFixture: changed.length > 0 || untracked.length > 0,
+    bashJournalWrites,
   };
 }
