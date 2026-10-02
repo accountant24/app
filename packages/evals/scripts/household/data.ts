@@ -13,7 +13,8 @@ export type Posting = { account: string; amount: number; commodity: string; cost
 export type Tx = {
   date: string;
   payee: string;
-  note?: string;
+  /** Text after ` | ` in the header. */
+  description?: string;
   tags?: Record<string, string>;
   postings: Posting[];
   /** Statement line as the bank shows it, for imported transactions. */
@@ -114,31 +115,31 @@ export function world(): Tx[] {
   });
 
   for (const m of months) {
-    txs.push(spend(day(m, 1), "Brightwave Inc.", "Income:Salary", -4850, CHECKING, { note: "salary" }));
-    txs.push(spend(day(m, 1), "Oakridge Property Management", "Expenses:Housing", 1850, JOINT, { note: "rent" }));
-    txs.push(spend(day(m, 1), "City Transit", "Expenses:Transport", 75, CHECKING, { note: "monthly pass" }));
-    txs.push(transfer(day(m, 2), CHECKING, JOINT, 1700, { note: "my share of rent and bills" }));
-    txs.push(spend(day(m, 3), "Lakeside Fiber", "Expenses:Utilities", 59.99, JOINT, { note: "internet" }));
-    txs.push(spend(day(m, 5), "Metro Electric", "Expenses:Utilities", 92, JOINT, { note: "electricity" }));
-    txs.push(transfer(day(m, 5), CHECKING, BROKER, 300, { note: "monthly investment" }));
+    txs.push(spend(day(m, 1), "Brightwave Inc.", "Income:Salary", -4850, CHECKING, { description: "salary" }));
+    txs.push(spend(day(m, 1), "Oakridge Property Management", "Expenses:Housing", 1850, JOINT, { description: "rent" }));
+    txs.push(spend(day(m, 1), "City Transit", "Expenses:Transport", 75, CHECKING, { description: "monthly pass" }));
+    txs.push(transfer(day(m, 2), CHECKING, JOINT, 1700, { description: "my share of rent and bills" }));
+    txs.push(spend(day(m, 3), "Lakeside Fiber", "Expenses:Utilities", 59.99, JOINT, { description: "internet" }));
+    txs.push(spend(day(m, 5), "Metro Electric", "Expenses:Utilities", 92, JOINT, { description: "electricity" }));
+    txs.push(transfer(day(m, 5), CHECKING, BROKER, 300, { description: "monthly investment" }));
     const price = VTI_PRICE[m];
     txs.push({
       date: day(m, 6),
       payee: "Brightline",
-      note: "monthly investment",
+      description: "monthly investment",
       postings: [
         { account: BROKER, amount: 1, commodity: "VTI", cost: { total: price, commodity: "USD" } },
         usd(BROKER, -price),
       ],
     });
-    txs.push(transfer(day(m, 7), CHECKING, WALLET, 100, { note: "ATM" }));
+    txs.push(transfer(day(m, 7), CHECKING, WALLET, 100, { description: "ATM" }));
     txs.push(spend(day(m, 10), "StreamFlix", "Expenses:Subscriptions", 15.49, CHECKING));
     txs.push(spend(day(m, 15), "CloudBox", "Expenses:Subscriptions", 2.99, CHECKING));
     [4, 11, 18, 25].forEach((d, i) => txs.push(spend(day(m, d), "Green Basket Market", "Expenses:Food", GROCERIES[m][i], CHECKING)));
     [8, 22].forEach((d, i) => txs.push(spend(day(m, d), "Harvest Co-op", "Expenses:Food", COOP[m][i], CHECKING)));
     [9, 16, 23].forEach((d, i) => txs.push(spend(day(m, d), "Daily Grind Coffee", "Expenses:Food", COFFEE[m][i], CHECKING)));
-    txs.push(spend(day(m, 13), "Luigi's Trattoria", "Expenses:Food", m === "2026-08" ? 52.4 : 46.8, CHECKING, { note: "dinner" }));
-    txs.push(spend(day(m, 27), "Pho Saigon", "Expenses:Food", 28.6, CHECKING, { note: "dinner" }));
+    txs.push(spend(day(m, 13), "Luigi's Trattoria", "Expenses:Food", m === "2026-08" ? 52.4 : 46.8, CHECKING, { description: "dinner" }));
+    txs.push(spend(day(m, 27), "Pho Saigon", "Expenses:Food", 28.6, CHECKING, { description: "dinner" }));
     txs.push(spend(day(m, 14), "Farmers Market", "Expenses:Food", 18.5, WALLET));
     txs.push(spend(day(m, 21), "Corner Deli", "Expenses:Food", 6.4, WALLET));
     txs.push(spend(day(m, 19), "Parkside Pharmacy", "Expenses:Health", 23.8, CARD));
@@ -146,43 +147,43 @@ export function world(): Tx[] {
     txs.push({
       date: day(m, 3),
       payee: "Internal Transfer",
-      note: "top-up CAD account",
+      description: "top-up CAD account",
       postings: [
         { account: CAD_ACCOUNT, amount: 400, commodity: "CAD", cost: { total: 292, commodity: "USD" } },
         usd(CHECKING, -292),
       ],
     });
-    txs.push(spend(day(m, 12), "Linda Morgan", "Expenses:Gifts & Donations", 300, CAD_ACCOUNT, { note: "for mom" }));
-    txs.push(spend(day(m, 18), "Northern Mobile", "Expenses:Utilities", 45, CAD_ACCOUNT, { note: "phone plan" }));
+    txs.push(spend(day(m, 12), "Linda Morgan", "Expenses:Gifts & Donations", 300, CAD_ACCOUNT, { description: "for mom" }));
+    txs.push(spend(day(m, 18), "Northern Mobile", "Expenses:Utilities", 45, CAD_ACCOUNT, { description: "phone plan" }));
   }
 
   // One-offs.
   txs.push(spend("2026-07-16", "Chapter One Books", "Expenses:Education", 24.9, CHECKING));
   txs.push(...paypalPurchase("2026-07-20", "Thrift Loop", "Expenses:Shopping", 35, "jacket"));
-  txs.push(spend("2026-07-28", "Internal Transfer", CARD, 344.3, JOINT, { note: "card payment" }));
+  txs.push(spend("2026-07-28", "Internal Transfer", CARD, 344.3, JOINT, { description: "card payment" }));
   txs.push(...paypalPurchase("2026-08-09", "Game Vault", "Expenses:Entertainment", 59.99, "board game"));
-  txs.push(spend("2026-08-20", "Sparkle Cleaning", "Expenses:Household Help", 165, CHECKING, { note: "3 visits prepaid" }));
-  txs.push(spend("2026-08-22", "Volt Electronics", "Expenses:Shopping", 349, CARD, { note: "headphones" }));
-  txs.push(spend("2026-08-28", "Internal Transfer", CARD, 372.8, JOINT, { note: "card payment" }));
-  txs.push(spend("2026-09-02", "Harbourfront Hotel", "Expenses:Travel", 412, CHECKING, { note: "Toronto, 3 nights", tags: { trip: "toronto-2026" } }));
+  txs.push(spend("2026-08-20", "Sparkle Cleaning", "Expenses:Household Help", 165, CHECKING, { description: "3 visits prepaid" }));
+  txs.push(spend("2026-08-22", "Volt Electronics", "Expenses:Shopping", 349, CARD, { description: "headphones" }));
+  txs.push(spend("2026-08-28", "Internal Transfer", CARD, 372.8, JOINT, { description: "card payment" }));
+  txs.push(spend("2026-09-02", "Harbourfront Hotel", "Expenses:Travel", 412, CHECKING, { description: "Toronto, 3 nights", tags: { trip: "toronto-2026" } }));
   txs.push(spend("2026-09-12", "Starlight Cinema", "Expenses:Entertainment", 21, CHECKING));
-  txs.push(spend("2026-09-28", "Internal Transfer", CARD, 23.8, JOINT, { note: "card payment" }));
+  txs.push(spend("2026-09-28", "Internal Transfer", CARD, 23.8, JOINT, { description: "card payment" }));
 
   // After the last update: only in the September documents.
   txs.push(spend("2026-09-19", "Chapter One Books", "Expenses:Education", 18.5, CHECKING));
   txs.push(spend("2026-09-26", "Daily Grind Coffee", "Expenses:Food", 3.9, CHECKING));
-  txs.push(spend("2026-09-06", "Maple Books Online", "Expenses:Shopping", 64.99, CAD_ACCOUNT, { note: "books for mom" }));
-  txs.push(spend("2026-09-21", "Maple Trust", "Expenses:Financial", 4.95, CAD_ACCOUNT, { note: "monthly account fee" }));
+  txs.push(spend("2026-09-06", "Maple Books Online", "Expenses:Shopping", 64.99, CAD_ACCOUNT, { description: "books for mom" }));
+  txs.push(spend("2026-09-21", "Maple Trust", "Expenses:Financial", 4.95, CAD_ACCOUNT, { description: "monthly account fee" }));
 
   for (const t of txs) annotate(t);
   return txs.sort((a, b) => a.date.localeCompare(b.date) || a.payee.localeCompare(b.payee));
 }
 
-function paypalPurchase(date: string, merchant: string, category: string, amount: number, note: string): Tx[] {
+function paypalPurchase(date: string, merchant: string, category: string, amount: number, description: string): Tx[] {
   const link = `${merchant.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${date}`;
   return [
-    transfer(date, CHECKING, PAYPAL, amount, { note: `PayPal top-up for ${merchant}`, tags: { link } }),
-    spend(date, merchant, category, amount, PAYPAL, { note, tags: { link } }),
+    transfer(date, CHECKING, PAYPAL, amount, { description: `PayPal top-up for ${merchant}`, tags: { link } }),
+    spend(date, merchant, category, amount, PAYPAL, { description, tags: { link } }),
   ];
 }
 
@@ -193,14 +194,14 @@ function annotate(t: Tx): void {
   if (checking && t.payee !== "Opening Balance") {
     const raw = RAW[t.payee] ?? t.payee.toUpperCase();
     t.bank = { source: "harbor", rawPayee: raw, rawDescription: checking.amount > 0 ? "DIRECT DEPOSIT" : "DEBIT CARD PURCHASE" };
-    if (t.payee === "Internal Transfer") t.bank.rawDescription = t.note?.toUpperCase() ?? "TRANSFER";
+    if (t.payee === "Internal Transfer") t.bank.rawDescription = t.description?.toUpperCase() ?? "TRANSFER";
     if (t.date > HARBOR_RECORDED_THROUGH) t.unrecorded = true;
     else {
       const period = t.date < "2026-08-01" ? "2026-07" : t.date < "2026-09-01" ? "2026-08" : "2026-09-partial";
       t.tags = { ...t.tags, original_payee_name: raw, related_file: HARBOR_IMPORTED[period] };
     }
   } else if (cadPosting && t.payee !== "Opening Balance") {
-    t.bank = { source: "maple", rawPayee: t.payee, rawDescription: t.note ?? "" };
+    t.bank = { source: "maple", rawPayee: t.payee, rawDescription: t.description ?? "" };
     // The September top-up was recorded from the checking side; the rest of September is only in the CSV.
     if (t.date > CAD_RECORDED_THROUGH) t.unrecorded = true;
   }

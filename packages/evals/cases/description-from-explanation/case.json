@@ -1,30 +1,29 @@
 {
-  "id": "refund-headphones",
+  "id": "description-from-explanation",
   "tags": [
-    "edit",
-    "refund"
+    "description"
   ],
   "fixture": "household",
   "turns": [
     {
-      "text": "I returned the headphones from Volt Electronics. The $349 refund hit my Summit Visa today."
+      "text": "Paid $85 to Bright Smile Dental today on my Summit Visa. It was the copay for Sam's teeth cleaning."
     }
   ],
   "expect": {
     "present": [
       {
         "date": "today",
-        "payee": "^Volt Electronics$",
-        "description": "refund|return",
+        "payee": "^Bright Smile Dental$",
+        "description": "copay|clean",
         "postings": [
           {
             "account": "Liabilities:Credit Card:Summit Visa",
-            "amount": 349,
+            "amount": -85,
             "commodity": "USD"
           },
           {
-            "account": "Expenses:Shopping",
-            "amount": -349,
+            "account": "Expenses:Health",
+            "amount": 85,
             "commodity": "USD"
           }
         ]

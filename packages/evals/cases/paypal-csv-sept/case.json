@@ -18,7 +18,7 @@
     "present": [
       {
         "date": "2026-09-20",
-        "description": "^Internal Transfer",
+        "payee": "^Internal Transfer$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -37,7 +37,7 @@
       },
       {
         "date": "2026-09-20",
-        "description": "thrift loop",
+        "payee": "^Thrift Loop$",
         "postings": [
           {
             "account": "Assets:PayPal",

@@ -19,7 +19,7 @@
     "present": [
       {
         "date": "2026-09-06",
-        "description": "maple",
+        "payee": "^Maple Books Online$",
         "postings": [
           {
             "account": "Assets:Bank:Maple Trust",
@@ -35,7 +35,7 @@
       },
       {
         "date": "2026-09-12",
-        "description": "linda",
+        "payee": "^Linda Morgan$",
         "postings": [
           {
             "account": "Assets:Bank:Maple Trust",
@@ -51,7 +51,7 @@
       },
       {
         "date": "2026-09-18",
-        "description": "northern",
+        "payee": "^Northern Mobile$",
         "postings": [
           {
             "account": "Assets:Bank:Maple Trust",
@@ -67,6 +67,7 @@
       },
       {
         "date": "2026-09-21",
+        "payee": "^Maple Trust$",
         "postings": [
           {
             "account": "Assets:Bank:Maple Trust",
@@ -82,7 +83,7 @@
       },
       {
         "date": "2026-09-30",
-        "description": "^Balance Assertion",
+        "payee": "^Balance Assertion$",
         "postings": [
           {
             "account": "Assets:Bank:Maple Trust",

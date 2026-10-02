@@ -15,7 +15,8 @@
     "present": [
       {
         "date": "today",
-        "description": "megan",
+        "payee": "^Megan$",
+        "description": "babysit",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",

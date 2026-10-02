@@ -19,7 +19,8 @@
     "present": [
       {
         "date": "2026-10-01",
-        "description": "harbourfront",
+        "payee": "^Harbourfront Hotel$",
+        "description": "minibar|laundry|extras|checkout",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -32,7 +33,7 @@
         ],
         "exact": false,
         "tags": {
-          "trip": "toronto-2026",
+          "trip": "^toronto-2026$",
           "related_file": "^files/"
         }
       }

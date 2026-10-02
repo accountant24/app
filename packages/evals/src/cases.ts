@@ -20,12 +20,17 @@ export type PostingPattern = {
 export type TransactionPattern = {
   /** `YYYY-MM-DD`, or `today` / `today-N` relative to the run date. */
   date?: string;
-  /** Case-insensitive regex over the description (`payee | note`). */
+  /** Regex over the payee (the header text before ` | `). Case-sensitive:
+   *  payee names must be spelled properly. */
+  payee?: string;
+  /** Case-insensitive regex over the description (the header text after
+   *  ` | `), for cases where the user explains what the transaction was for. */
   description?: string;
   postings: PostingPattern[];
   /** When true (the default), the transaction has exactly these postings. */
   exact?: boolean;
-  /** Tag names the transaction (or one of its postings) must carry, with an optional value regex. */
+  /** Tag names the transaction (or one of its postings) must carry, with an
+   *  optional case-sensitive value regex (values are kept exactly as written). */
   tags?: Record<string, string | true>;
 };
 
@@ -119,6 +124,7 @@ export function validateCase(
   for (const t of [...(e?.present ?? []), ...(e?.absent ?? [])]) {
     if (!Array.isArray(t.postings)) problems.push("every transaction pattern needs postings");
     if (t.date && !/^(\d{4}-\d{2}-\d{2}|today(-\d+)?)$/.test(t.date)) problems.push(`bad date "${t.date}"`);
+    if ("note" in t) problems.push("use description instead of note");
   }
   return problems;
 }

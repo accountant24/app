@@ -14,6 +14,7 @@
     "present": [
       {
         "date": "today",
+        "payee": "^Unknown$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",
@@ -29,7 +30,7 @@
       },
       {
         "date": "today",
-        "description": "^Balance Assertion",
+        "payee": "^Balance Assertion$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",

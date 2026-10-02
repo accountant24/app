@@ -17,7 +17,7 @@
     "present": [
       {
         "date": "2026-09-29",
-        "description": "green basket",
+        "payee": "^Green Basket Market$",
         "postings": [
           {
             "account": "Assets:Cash:Wallet",

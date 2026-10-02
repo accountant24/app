@@ -15,7 +15,7 @@
     "present": [
       {
         "date": "today-1",
-        "description": "daily grind",
+        "payee": "^Daily Grind Coffee$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",

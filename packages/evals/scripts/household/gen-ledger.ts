@@ -60,7 +60,7 @@ function postingLine(account: string, amount: string): string {
 }
 
 export function formatTx(t: Tx): string {
-  const lines = [`${t.date} * ${t.payee}${t.note ? ` | ${t.note}` : ""}`];
+  const lines = [`${t.date} * ${t.payee}${t.description ? ` | ${t.description}` : ""}`];
   for (const [name, value] of Object.entries(t.tags ?? {}).sort(([a], [b]) => a.localeCompare(b)))
     lines.push(`    ; ${name}: ${value}`);
   const postings = [...t.postings].sort((a, b) => (a.amount < 0 ? 0 : 1) - (b.amount < 0 ? 0 : 1));
@@ -75,11 +75,11 @@ function assertion(date: string, account: string, amount: number): string {
   return `${date} * Balance Assertion\n${postingLine(account, "0.00 USD")} = ${amount.toFixed(2)} USD`;
 }
 
-const expense = (date: string, payee: string, amount: number, note?: string): string =>
+const expense = (date: string, payee: string, amount: number, description?: string): string =>
   formatTx({
     date,
     payee,
-    note,
+    description,
     postings: [
       { account: CHECKING, amount: -amount, commodity: "USD" },
       { account: "Expenses:Food", amount, commodity: "USD" },

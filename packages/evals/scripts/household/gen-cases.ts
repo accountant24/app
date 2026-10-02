@@ -43,11 +43,16 @@ function categoryOf(payee: string): string {
 const p = (account: string, amount?: number, commodity = "USD"): PostingPattern =>
   amount === undefined ? { account } : { account, amount, commodity };
 
-function tx(date: string | undefined, description: string | undefined, postings: PostingPattern[], extra: Partial<TransactionPattern> = {}): TransactionPattern {
-  return { ...(date ? { date } : {}), ...(description ? { description } : {}), postings, ...extra };
+/** Case-sensitive regex for exactly this payee name (either apostrophe style). */
+const named = (name: string) => `^${escapeRe(name).replace(/'/g, "['’]")}$`;
+
+/** `payee` is the exact expected name; pass `extra.payee` for a looser regex. */
+function tx(date: string | undefined, payee: string | undefined, postings: PostingPattern[], extra: Partial<TransactionPattern> = {}): TransactionPattern {
+  const { payee: payeeRe = payee && named(payee), description, ...rest } = extra;
+  return { ...(date ? { date } : {}), ...(payeeRe ? { payee: payeeRe } : {}), ...(description ? { description } : {}), postings, ...rest };
 }
 
-const assertion = (date: string, account: string): TransactionPattern => tx(date, "^Balance Assertion", [{ account, amount: 0 }]);
+const assertion = (date: string, account: string): TransactionPattern => tx(date, "Balance Assertion", [{ account, amount: 0 }]);
 const IMPORTED = { related_file: "^files/", original_payee_name: true as const };
 
 /** The statement rows a September import must add, as patterns. */
@@ -58,8 +63,7 @@ function importRows(source: NonNullable<Tx["bank"]>["source"], account: string, 
       const amount = t.postings.find((x) => x.account === account)!.amount;
       const expense = t.postings.find((x) => x.account.startsWith("Expenses:"))!;
       const category = recorded.some((x) => x.payee === t.payee) ? categoryOf(t.payee) : expense.account;
-      const words = t.payee === "Maple Trust" ? undefined : escapeRe(t.payee.split(" ")[0].replace(/'s$/, "")).toLowerCase();
-      return tx(t.date, words, [p(account, amount, commodity), p(category, -amount, commodity)], source === "harbor" ? { tags: IMPORTED } : {});
+      return tx(t.date, t.payee, [p(account, amount, commodity), p(category, -amount, commodity)], source === "harbor" ? { tags: IMPORTED } : {});
     });
 }
 
@@ -117,7 +121,7 @@ const cases: Def[] = [
     expect: {
       present: [
         ...harborRows.filter((r) => r.date !== "2026-09-22"),
-        tx("2026-09-22", "harvest", [p(CHECKING, -33.45), p("Expenses:Food*", 33.45)]),
+        tx("2026-09-22", "Harvest Co-op", [p(CHECKING, -33.45), p("Expenses:Food*", 33.45)]),
         assertion(END, CHECKING),
       ],
       countDelta: harborRows.length,
@@ -130,7 +134,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Import my Maple Trust export for September.", attachments: ["maple-trust-2026-09.csv"] }],
     expect: {
-      present: [...cadRows, tx(END, "^Balance Assertion", [{ account: CAD_ACCOUNT, amount: 0, commodity: "CAD" }])],
+      present: [...cadRows, tx(END, "Balance Assertion", [{ account: CAD_ACCOUNT, amount: 0, commodity: "CAD" }])],
       countDelta: cadRows.length + 1,
       balances: [{ account: CAD_ACCOUNT, amount: balance(all, CAD_ACCOUNT, "CAD", END), commodity: "CAD", date: END }],
     },
@@ -142,8 +146,8 @@ const cases: Def[] = [
     turns: [{ text: "Here's my PayPal activity for September, please add it.", attachments: ["paypal-2026-09.csv"] }],
     expect: {
       present: [
-        tx("2026-09-20", "^Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true } }),
-        tx("2026-09-20", "thrift loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true } }),
+        tx("2026-09-20", "Internal Transfer", [p(CHECKING, -22), p(PAYPAL, 22)], { tags: { link: true } }),
+        tx("2026-09-20", "Thrift Loop", [p(PAYPAL, -22), p("Expenses:Shopping", 22)], { tags: { link: true } }),
       ],
       countDelta: [2, 3],
       balances: [{ account: PAYPAL, amount: 0, commodity: "USD" }],
@@ -154,7 +158,7 @@ const cases: Def[] = [
     tags: ["receipt", "image"],
     fixture: "household",
     turns: [{ text: "Paid cash.", attachments: ["receipt.png"] }],
-    expect: { present: [tx("2026-09-29", "green basket", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])], countDelta: 1 },
+    expect: { present: [tx("2026-09-29", "Green Basket Market", [p(WALLET, -23.47), p("Expenses:Food*", 23.47)])], countDelta: 1 },
   },
   {
     id: "receipt-toronto-dinner",
@@ -162,7 +166,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.", attachments: ["receipt.png"] }],
     expect: {
-      present: [tx("2026-09-29", "maple table", [p(CHECKING, -36.55), p("Expenses:Travel*", 36.55)], { tags: { trip: "toronto-2026" } })],
+      present: [tx("2026-09-29", undefined, [p(CHECKING, -36.55), p("Expenses:Travel*", 36.55)], { payee: "^(The )?Maple Table$", description: "dinner", tags: { trip: named("toronto-2026") } })],
       countDelta: 1,
     },
   },
@@ -177,7 +181,7 @@ const cases: Def[] = [
       },
     ],
     expect: {
-      present: [tx("2026-10-01", "harbourfront", [p(CHECKING, -40), p("Expenses:Travel*")], { exact: false, tags: { trip: "toronto-2026", related_file: "^files/" } })],
+      present: [tx("2026-10-01", "Harbourfront Hotel", [p(CHECKING, -40), p("Expenses:Travel*")], { exact: false, description: "minibar|laundry|extras|checkout", tags: { trip: named("toronto-2026"), related_file: "^files/" } })],
       countDelta: 1,
       balances: [{ account: "Expenses:Travel", amount: 452, commodity: "USD" }],
     },
@@ -187,7 +191,7 @@ const cases: Def[] = [
     tags: ["entry", "cash"],
     fixture: "household",
     turns: [{ text: "Spent $14.80 at the farmers market this morning, cash." }],
-    expect: { present: [tx("today", "farmers market", [p(WALLET, -14.8), p("Expenses:Food*", 14.8)])], countDelta: 1 },
+    expect: { present: [tx("today", "Farmers Market", [p(WALLET, -14.8), p("Expenses:Food*", 14.8)])], countDelta: 1 },
   },
   {
     id: "quick-entry-tip",
@@ -195,7 +199,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Lunch at Pho Saigon yesterday, $24.50 plus a $3 tip, on my Harbor debit card." }],
     expect: {
-      present: [tx("today-1", "pho saigon", [p(CHECKING, -27.5), p("Expenses:Food*")], { exact: false })],
+      present: [tx("today-1", "Pho Saigon", [p(CHECKING, -27.5), p("Expenses:Food*")], { exact: false, description: "lunch" })],
       countDelta: 1,
       balances: [{ account: "Expenses:Food", amount: round2(food + 27.5), commodity: "USD" }],
     },
@@ -206,7 +210,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Took $50 from the cash jar at home into my wallet, then spent $12 of it at Corner Deli." }],
     expect: {
-      present: [tx("today", "^Internal Transfer", [p(HOME_CASH, -50), p(WALLET, 50)]), tx("today", "corner deli", [p(WALLET, -12), p("Expenses:Food*", 12)])],
+      present: [tx("today", "Internal Transfer", [p(HOME_CASH, -50), p(WALLET, 50)]), tx("today", "Corner Deli", [p(WALLET, -12), p("Expenses:Food*", 12)])],
       countDelta: 2,
       balances: [
         { account: WALLET, amount: round2(wallet + 38), commodity: "USD" },
@@ -220,7 +224,7 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "I have $280 in my wallet right now. I don't remember where the rest went." }],
     expect: {
-      present: [tx("today", undefined, [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]), assertion("today", WALLET)],
+      present: [tx("today", "Unknown", [p(WALLET, round2(280 - wallet)), p("Expenses:Uncategorized", round2(wallet - 280))]), assertion("today", WALLET)],
       absent: [tx("today", undefined, [{ account: "Equity*" }], { exact: false })],
       countDelta: 2,
       balances: [{ account: WALLET, amount: 280, commodity: "USD" }],
@@ -246,7 +250,7 @@ const cases: Def[] = [
     tags: ["edit", "refund"],
     fixture: "household",
     turns: [{ text: "I returned the headphones from Volt Electronics. The $349 refund hit my Summit Visa today." }],
-    expect: { present: [tx("today", "volt", [p(CARD, 349), p("Expenses:Shopping", -349)])], countDelta: 1 },
+    expect: { present: [tx("today", "Volt Electronics", [p(CARD, 349), p("Expenses:Shopping", -349)], { description: "refund|return" })], countDelta: 1 },
   },
   {
     id: "recategorize-merchant",
@@ -254,8 +258,8 @@ const cases: Def[] = [
     fixture: "household",
     turns: [{ text: "Parkside Pharmacy should be Personal Care, not Health. Fix the existing ones and keep it that way from now on." }],
     expect: {
-      present: ["2026-07-19", "2026-08-19", "2026-09-19"].map((d) => tx(d, "parkside", [p(CARD, -23.8), p("Expenses:Personal Care", 23.8)])),
-      absent: [tx(undefined, "parkside", [{ account: "Expenses:Health" }], { exact: false })],
+      present: ["2026-07-19", "2026-08-19", "2026-09-19"].map((d) => tx(d, "Parkside Pharmacy", [p(CARD, -23.8), p("Expenses:Personal Care", 23.8)])),
+      absent: [tx(undefined, undefined, [{ account: "Expenses:Health" }], { exact: false, payee: "[Pp]arkside" })],
       countDelta: 0,
     },
   },
@@ -266,9 +270,9 @@ const cases: Def[] = [
     turns: [{ text: "Rename the payee Corner Deli to Sal's Corner Deli everywhere, and keep the old name as original_payee_name." }],
     expect: {
       present: ["2026-07-21", "2026-08-21", "2026-09-21"].map((d) =>
-        tx(d, "^Sal's Corner Deli", [p(WALLET, -6.4), p("Expenses:Food", 6.4)], { tags: { original_payee_name: "^corner deli$" } }),
+        tx(d, "Sal's Corner Deli", [p(WALLET, -6.4), p("Expenses:Food", 6.4)], { tags: { original_payee_name: named("Corner Deli") } }),
       ),
-      absent: [tx(undefined, "^corner deli", [{ account: WALLET }], { exact: false })],
+      absent: [tx(undefined, "Corner Deli", [{ account: WALLET }], { exact: false })],
       countDelta: 0,
     },
   },
@@ -278,7 +282,34 @@ const cases: Def[] = [
     fixture: "household",
     setupCommit: { message: "Add Luigi's Trattoria dinner on 2026-09-29" },
     turns: [{ text: "Undo my last change, I logged that dinner by mistake." }],
-    expect: { absent: [tx("2026-09-29", "luigi", [{ account: CHECKING }], { exact: false })], countDelta: -1 },
+    expect: { absent: [tx("2026-09-29", undefined, [{ account: CHECKING }], { exact: false, payee: "Luigi" })], countDelta: -1 },
+  },
+  {
+    id: "description-from-explanation",
+    tags: ["description"],
+    fixture: "household",
+    turns: [{ text: "Paid $85 to Bright Smile Dental today on my Summit Visa. It was the copay for Sam's teeth cleaning." }],
+    expect: {
+      present: [tx("today", "Bright Smile Dental", [p(CARD, -85), p("Expenses:Health", 85)], { description: "copay|clean" })],
+      countDelta: 1,
+    },
+  },
+  {
+    id: "description-not-invented",
+    tags: ["description"],
+    fixture: "household",
+    turns: [{ text: "$9.40 at Daily Grind Coffee today, Harbor debit card." }],
+    expect: { present: [tx("today", "Daily Grind Coffee", [p(CHECKING, -9.4), p("Expenses:Food*", 9.4)], { description: "^$" })], countDelta: 1 },
+  },
+  {
+    id: "description-edit-existing",
+    tags: ["description"],
+    fixture: "household",
+    turns: [{ text: "The Luigi's Trattoria dinner on September 13 was Sam's birthday dinner, put that in its description." }],
+    expect: {
+      present: [tx("2026-09-13", "Luigi's Trattoria", [p(CHECKING, -46.8), p("Expenses:Food", 46.8)], { description: "birthday" })],
+      countDelta: 0,
+    },
   },
   {
     id: "query-food-august",
@@ -331,7 +362,7 @@ const cases: Def[] = [
       { text: "Also $4.20 at Daily Grind Coffee, same card." },
     ],
     expect: {
-      present: [tx("today", "harvest", [p(CHECKING, -32.4), p("Expenses:Food*", 32.4)]), tx("today", "daily grind", [p(CHECKING, -4.2), p("Expenses:Food*", 4.2)])],
+      present: [tx("today", "Harvest Co-op", [p(CHECKING, -32.4), p("Expenses:Food*", 32.4)]), tx("today", "Daily Grind Coffee", [p(CHECKING, -4.2), p("Expenses:Food*", 4.2)])],
       countDelta: 2,
       commit: "forbidden",
     },
@@ -342,7 +373,7 @@ const cases: Def[] = [
     fixture: "household",
     autoReply: "It was for babysitting. Book it under Children.",
     turns: [{ text: "Paid Megan $60 from my Harbor checking today." }],
-    expect: { present: [tx("today", "megan", [p(CHECKING, -60), p("Expenses:Children", 60)])], countDelta: 1 },
+    expect: { present: [tx("today", "Megan", [p(CHECKING, -60), p("Expenses:Children", 60)], { description: "babysit" })], countDelta: 1 },
   },
   {
     id: "ask-missing-amount",
@@ -350,7 +381,7 @@ const cases: Def[] = [
     fixture: "household",
     autoReply: "$3.80, Harbor debit card.",
     turns: [{ text: "Log a coffee at Daily Grind Coffee from yesterday." }],
-    expect: { present: [tx("today-1", "daily grind", [p(CHECKING, -3.8), p("Expenses:Food*", 3.8)])], countDelta: 1 },
+    expect: { present: [tx("today-1", "Daily Grind Coffee", [p(CHECKING, -3.8), p("Expenses:Food*", 3.8)])], countDelta: 1 },
   },
   {
     id: "prices-broker-screenshot",
@@ -364,7 +395,7 @@ const cases: Def[] = [
     tags: ["entry", "fresh"],
     fixture: "_template",
     turns: [{ text: "I just paid $12.50 for lunch at Rosie's Diner, in cash." }],
-    expect: { present: [tx("today", "rosie", [p("Assets:Cash", -12.5), p("Expenses:Food", 12.5)])], countDelta: 1 },
+    expect: { present: [tx("today", "Rosie's Diner", [p("Assets:Cash", -12.5), p("Expenses:Food", 12.5)], { description: "lunch" })], countDelta: 1 },
   },
 ];
 

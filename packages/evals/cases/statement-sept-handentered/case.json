@@ -19,7 +19,7 @@
     "present": [
       {
         "date": "2026-09-15",
-        "description": "cloudbox",
+        "payee": "^CloudBox$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -39,7 +39,7 @@
       },
       {
         "date": "2026-09-16",
-        "description": "daily",
+        "payee": "^Daily Grind Coffee$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -59,7 +59,7 @@
       },
       {
         "date": "2026-09-18",
-        "description": "green",
+        "payee": "^Green Basket Market$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -79,7 +79,7 @@
       },
       {
         "date": "2026-09-19",
-        "description": "chapter",
+        "payee": "^Chapter One Books$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -99,7 +99,7 @@
       },
       {
         "date": "2026-09-23",
-        "description": "daily",
+        "payee": "^Daily Grind Coffee$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -119,7 +119,7 @@
       },
       {
         "date": "2026-09-25",
-        "description": "green",
+        "payee": "^Green Basket Market$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -139,7 +139,7 @@
       },
       {
         "date": "2026-09-26",
-        "description": "daily",
+        "payee": "^Daily Grind Coffee$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -159,7 +159,7 @@
       },
       {
         "date": "2026-09-27",
-        "description": "pho",
+        "payee": "^Pho Saigon$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -179,7 +179,7 @@
       },
       {
         "date": "2026-09-22",
-        "description": "harvest",
+        "payee": "^Harvest Co-op$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",
@@ -195,7 +195,7 @@
       },
       {
         "date": "2026-09-30",
-        "description": "^Balance Assertion",
+        "payee": "^Balance Assertion$",
         "postings": [
           {
             "account": "Assets:Bank:Harbor Checking",

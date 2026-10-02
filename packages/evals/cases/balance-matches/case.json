@@ -13,7 +13,7 @@
     "present": [
       {
         "date": "today",
-        "description": "^Balance Assertion",
+        "payee": "^Balance Assertion$",
         "postings": [
           {
             "account": "Assets:Bank:Prairie Joint",
