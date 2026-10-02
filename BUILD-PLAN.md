@@ -23,6 +23,7 @@ Gaps against the blueprint, fixed along the way:
 
 - The `git/` wrappers ignore exit codes, so a failed commit or push counts as success. The cloud relies on the push being the save, so this gets fixed with a regression test.
 - The extension ships no skills; the desktop installs `accountant24/skills` from the marketplace. "Built-in skills ship with the bookkeeper" means vendoring that repo.
+- The text after `|` in a transaction header has three names: the agent's `add_transactions` tool calls it the description, hledger and the desktop code call it the note, and the desktop Transactions page labels the column "Comment" (in hledger a comment is the `; …` text, a different thing). Settle on description everywhere, the evals included, and relabel the column before the mobile pages copy it.
 - `extract_text` still uses `tesseract`, which the blueprint drops. `query` reads `process.stdout.columns` and spills large output to the host's tmpdir; in the cloud the spill file has to live in the container.
 
 ## Milestones
