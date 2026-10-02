@@ -1,0 +1,51 @@
+{
+  "id": "two-entries-one-incomplete",
+  "tags": [
+    "entry",
+    "ask"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "One message often has several purchases. Add the one that's clear right away and ask about the one that isn't, instead of guessing or holding both back.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Spent $30 at Daily Grind Coffee and $50 at Kestrel & Co today, both on my Harbor debit card."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -30,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 30,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "absent": [
+      {
+        "payee": "[Kk]estrel",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -50,
+            "commodity": "USD"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 1
+  }
+}

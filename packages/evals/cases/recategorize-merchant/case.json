@@ -8,7 +8,7 @@
     "sessions",
     "system.md"
   ],
-  "why": "Wrong categories and an overgrown memory were the biggest complaints. The agent should fix the old entries and leave memory.md alone.",
+  "why": "Wrong categories were a top complaint. The agent should fix the old entries, and since you said \"from now on\", save that rule as one short line in memory.md.",
   "fixture": "household",
   "turns": [
     {
@@ -77,6 +77,10 @@
         "exact": false
       }
     ],
-    "countDelta": 0
+    "countDelta": 0,
+    "memory": [
+      "parkside[^\\n]*personal care|personal care[^\\n]*parkside"
+    ],
+    "memoryMaxAdded": 1
   }
 }
