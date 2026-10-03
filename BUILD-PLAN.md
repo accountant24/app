@@ -2,7 +2,7 @@
 
 How we build [BLUEPRINT.md](BLUEPRINT.md): small milestones, each ending in something that runs, with the riskiest unknowns first so a dead end costs days, not weeks. The blueprint holds the decisions; this file holds the order, the status and what each step taught us.
 
-Branches: `docs/mobile-blueprint` is the mobile branch, and its PR (#1) goes to `main` only once the whole app is ready. Each milestone gets its own branch and PR into the mobile branch.
+Branches: `mobile-app` is the mobile branch, and its PR (#3) goes to `main` only once the whole app is ready. Each milestone gets its own branch and PR into `mobile-app`.
 
 ## Status
 
