@@ -19,38 +19,41 @@ Branches: `mobile-app` is the mobile branch, and its PR (#3) goes to `main` only
 
 - `packages/pi-extension` is about 2,400 lines with 484 tests. Every command goes through `spawnText` (`src/spawn.ts`); files are read and written with `node:fs` directly in about seven files (`ledger/edit-session.ts`, synchronous; `ledger/transactions.ts`; `ledger/query.ts`, the spill file; `memory/memory.ts`; `files/extract.ts`); paths come from module-level globals in `config.ts`. There is no execution-environment abstraction yet.
 - Three ledger files import values from pi: `generateDiffString` (`edit-session.ts`, `transactions.ts`) and `DEFAULT_MAX_BYTES` (`query.ts`). Everything else in `ledger/`, `memory/`, `git/`, `files/` and `system-prompt/sections.ts` is free of pi.
-- There was no eval set. The root `start:agent` script runs the pi CLI with the bundled extension, enough to drive it headlessly.
+- ~~There was no eval set. The root `start:agent` script runs the pi CLI with the bundled extension, enough to drive it headlessly.~~ Done in M0: `packages/evals`.
 
 Gaps against the blueprint, fixed along the way:
 
 - The `git/` wrappers ignore exit codes, so a failed commit or push counts as success. The cloud relies on the push being the save, so this gets fixed with a regression test.
 - The extension ships no skills; the desktop installs `accountant24/skills` from the marketplace. "Built-in skills ship with the bookkeeper" means vendoring that repo.
-- The text after `|` in a transaction header has three names: the agent's `add_transactions` tool calls it the description, hledger and the desktop code call it the note, and the desktop Transactions page labels the column "Comment" (in hledger a comment is the `; …` text, a different thing). Settle on description everywhere, the evals included, and relabel the column before the mobile pages copy it.
+- The text after `|` in a transaction header has three names: the agent's `add_transactions` tool calls it the description, hledger and the desktop code call it the note, and the desktop Transactions page labels the column "Comment" (in hledger a comment is the `; …` text, a different thing). Settle on description everywhere, ~~the evals included~~ (done in M0), and relabel the column before the mobile pages copy it.
 - `extract_text` still uses `tesseract`, which the blueprint drops. `query` reads `process.stdout.columns` and spills large output to the host's tmpdir; in the cloud the spill file has to live in the container.
 
 ## Milestones
 
-### M0 · Eval set and desktop baseline (≈ 3–4 days, alongside M1)
+### ~~M0 · Eval set and desktop baseline~~ (done, PR #2)
 
-- An `evals/` package with 20–30 scripted tasks over fixture ledgers: a receipt, a CSV statement, a balance assertion, a bulk edit, a query, a memory update, a multi-turn correction. Each task is scored by checking the resulting journal with hledger, never by reading the reply. Token counts, calls per message and wall time are recorded.
-- Run headlessly through pi with the current extension, as `start:agent` does, for the desktop baseline on Sonnet 5.5 and Haiku 4.5.
-- Done when `npm run evals` writes a baseline report, committed.
+- ~~An `evals/` package with 20–30 scripted tasks over fixture ledgers: a receipt, a CSV statement, a balance assertion, a bulk edit, a query, a memory update, a multi-turn correction. Each task is scored by checking the resulting journal with hledger, never by reading the reply. Token counts, calls per message and wall time are recorded.~~ 38 cases.
+- ~~Run headlessly through pi with the current extension, as `start:agent` does, for the desktop baseline on Sonnet 5.5 and Haiku 4.5.~~ Nine models, see Results.
+- ~~Done when `npm run evals` writes a baseline report, committed.~~
 
-### M1 · Cloud risk spike (≈ 4–5 days, throwaway code in `spikes/`)
+### M1 · Cloud risk spike (≈ 2–3 days, throwaway code in `spikes/`)
+
+Cloudflare's Pi harness (`agents/harness/pi`, agents 0.26) already hosts Pi Durable in a Durable Object, so the spike checks it fits rather than building that part.
 
 - `cloudflare.config.ts` and `infra/bootstrap.ts` for dev: D1, R2 and an Artifacts namespace in the EU, AI Gateway.
-- One EU Durable Object runs Pi Durable, calls Claude through AI Gateway, and has one `exec` tool reaching the container through `ctx.container`.
+- One EU Durable Object with `Lifecycle.install(this).use(new PiHarness(…))`, on pinned agents and Pi Durable versions, calling a model through AI Gateway with `createAI`. Two ledger tools, one prompt section and the memory guard ported to Pi Durable's extension API.
+- An `ExecutionEnv` over the container (`ctx.container`, Sandbox SDK) running Pi Durable's file tools, `bash` and hledger, one environment per set of books; tool calls set to run one at a time.
 - The container clones and pushes an Artifacts repo; the outbound rule adds the token; a force push is detected.
-- Kill or redeploy the Durable Object mid-run and check it resumes from the checkpoint.
-- Measure first-reply time, save time, Durable Object memory with a few chats, a run continuing with no client connected, container start time.
-- Decides: Pi Durable or the fallback (the desktop's agent host in the sandbox); `cloudflare.config.ts` or `wrangler.jsonc`.
+- Two chats at once on one container, then a crash or deploy mid-`bash`: the tool not safe to replay comes back as interrupted, the safe one reruns, and both chats finish.
+- Measure: first-reply time, save time, memory with a few chats, a run finishing with no client connected, container start time, a photo over 2 MB, SQLite writes per run, and whether a newly deployed tool reaches existing chats.
+- Decides: the harness, a vendored copy of it, or the fallback (the desktop's agent host in the sandbox); `cloudflare.config.ts` or `wrangler.jsonc`.
 
-What M1 needs: a Cloudflare account on Workers Paid with Artifacts and Containers, an Anthropic key for AI Gateway, the `cf` CLI logged in, and a pinnable Pi Durable version.
+What M1 needs: a Cloudflare account on Workers Paid with Artifacts and Containers, a model provider key for AI Gateway, and the `cf` CLI logged in.
 
 ### M1b · Phone client spike (≈ 2–3 days, `spikes/`)
 
-- A bare Expo app with `@assistant-ui/react-native` and `@assistant-ui/react-pi` that streams one M1 chat over the worker's WebSocket (`expo/fetch`, `watchEvents()`) and catches up after a reconnect.
-- Decides: assistant-ui's pi runtime as is, patched, or our own small adapter; and with it, the chat wire format the worker exposes.
+- A bare Expo app with `@assistant-ui/react-native` and `@assistant-ui/react-pi` that streams one M1 chat over the worker's WebSocket and catches up after a reconnect. react-pi is built for pi-coding-agent, so this includes the adapter that maps Pi Durable's snapshot and events to react-pi's client interface.
+- Decides: the adapter's shape and, with it, the chat wire format the worker exposes.
 
 ### M2 · Port the extension behind an execution environment (≈ 1 week)
 
