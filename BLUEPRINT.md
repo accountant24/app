@@ -4,7 +4,7 @@ How to turn the desktop agent into a paid, closed-source iPhone app on Cloudflar
 
 ## The short version
 
-Keep the ledger logic, the tools, the prompt and hledger. Each set of books gets one Durable Object, the bookkeeper, that runs the agent on Pi Durable through Cloudflare's Pi harness, with a checkpoint after every step, and one sandbox where the agent's commands run on a clone of the books repo (git, in Cloudflare Artifacts). Pages are computed at save time. Everything stored stays in Cloudflare's EU jurisdiction; the model goes through Cloudflare's AI Gateway, and the evals pick which one.
+Keep the ledger logic, the tools, the prompt and hledger. Each set of books gets one Durable Object, the bookkeeper, that runs the agent on Pi Durable through Cloudflare's Pi harness, with a checkpoint after every step, and one sandbox where the agent's commands run on a clone of the books repo (git, in Cloudflare Artifacts). Pages are computed at save time. Everything stored stays in Cloudflare's EU jurisdiction; the model is DeepSeek V4.1 Flash on Fireworks, reached through Cloudflare's AI Gateway.
 
 | Area | Pick |
 | --- | --- |
@@ -14,7 +14,7 @@ Keep the ledger logic, the tools, the prompt and hledger. Each set of books gets
 | State | The bookkeeper, one Durable Object per set of books: chats, checkpoints, page data. The directory (D1): users, sessions, members, limits |
 | Agent | Pi Durable in the bookkeeper, hosted by Cloudflare's Pi harness (`agents/harness/pi`), one session per chat, with `pi-extension` ported to Pi Durable's extension API |
 | Sandbox | One container per set of books, shared by its chats, driven through `ctx.container`; runs commands only |
-| Model | One model as a server setting, through AI Gateway, picked by the evals (`packages/evals`) |
+| Model | DeepSeek V4.1 Flash on Fireworks, through AI Gateway as a custom provider; one model as a server setting, picked from the evals (`packages/evals`) |
 | Accounting engine | hledger, one pinned version |
 | Uploads | PDFs, CSVs and photos in R2; PDFs and CSVs are read with `extract_text`, photos are shrunk and sent to the model |
 | Mobile app | Expo, assistant-ui (React Native) with its pi runtime (`@assistant-ui/react-pi`), over our own adapter for Pi Durable's events |
@@ -70,8 +70,8 @@ The bookkeeper holds the agent: it runs every chat, stores chats and checkpoints
 +-------------------------------------------|----------------------------------------------+
   Cloudflare, EU jurisdiction               v
                                   +------------------+
-                                  | MODEL PROVIDER   |
-                                  | (picked by evals)|
+                                  | DEEPSEEK V4.1    |
+                                  | FLASH (Fireworks)|
                                   +------------------+
 ```
 
@@ -168,7 +168,7 @@ Our extension is `pi-extension` ported to Pi Durable's extension API: the ledger
 
 One working copy means saves never conflict. A commit includes every unsaved change, whichever chat made it, and carries the chat ID, so undo is `git revert`. Artifacts can't refuse a push, so the checks run after it, and the daily forks cover a bad one. A tricked `bash` could get around the checks in the sandbox, but only on its own books, as on the desktop; a verifier container that never runs model code comes with shared books.
 
-**The model.** The bookkeeper calls the model through AI Gateway with the harness's pi-ai provider (`createAI` from `agents/models/pi-ai`), which routes Anthropic and OpenAI style APIs. The gateway holds the provider keys (or bills through Cloudflare) and the spend and rate limits, so the Worker holds none. Pi Durable records token use per chat, which feeds the per-run and daily caps. One model is a server setting, picked from the eval results (see Decisions). Gateway logging stays off, because prompts carry users' books.
+**The model.** DeepSeek V4.1 Flash, served by Fireworks (`accounts/fireworks/models/deepseek-v4p1-flash`), at $0.30 input, $0.006 cached input and $1.20 output per million tokens. In the evals it passed 86% at $0.008 per message, and it reads photos. The model runs on Fireworks' servers from open weights, so users' books go to Fireworks, never to DeepSeek. AI Gateway doesn't support Fireworks natively, so Fireworks is set up as a custom provider (`custom-fireworks`) with its key stored in the gateway (BYOK); the bookkeeper points pi-ai's Anthropic-style provider at the gateway's custom URL, so the Worker holds no key, and the gateway keeps the spend and rate limits. Pi Durable records token use per chat, which feeds the per-run and daily caps. The model is a server setting, so switching later is a config change, measured by the evals first. Gateway logging stays off, because prompts carry users' books.
 
 **Documents.** Photos are shrunk on the phone to well under 1 MB and kept in R2; the shrunk copy goes to the model, because Pi Durable stores a message's images in SQLite rows, which cap at 2 MB. PDFs and CSVs go to R2, and the message carries their path. `extract_text` reads the file from the uploads bucket, mounted read-only in the sandbox (`S3Mount`), then runs `pdftotext -layout`, or returns page images (`pdftoppm`) for scans. Text is several times cheaper than a native PDF, on every later call too, and works with models that can't read PDFs.
 
@@ -229,32 +229,36 @@ Pages are computed on every save in the sandbox and stored in the bookkeeper: `p
 | RevenueCat, Expo, Sentry, PostHog | $0 | $0–50 |
 | **Total** | **≈ $5–10** | **≈ $20–110** + model + sandbox time |
 
-Per subscriber per month, assuming 80 messages with 3 model calls each, 20k tokens of context per call with 75% from cache, 800 output tokens per call, and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT; Claude at Anthropic's list prices, open models at Workers AI's (written before the evals; see the measured costs below).
+Per subscriber per month, assuming 80 messages, each costing what one eval case cost on that model (`packages/evals/results/2026-10-02-models`: measured tokens, caching and provider prices, a mean over 76 runs), and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT.
 
 ```
-                               ||     Sonnet 5.5     Sonnet 5.5      Haiku 4.5  GLM-5.3-Flash      Kimi K2.6
-                               ||          $9.99         $12.99          $9.99          $9.99          $9.99
-===============================++===========================================================================
-income:subscription            ||           9.99          12.99           9.99           9.99           9.99
--------------------------------++---------------------------------------------------------------------------
-expenses:tax:vat               ||           1.67           2.17           1.67           1.67           1.67
-expenses:store:commission      ||           1.25           1.62           1.25           1.25           1.25
-expenses:llm:tokens            ||           6.84           6.84           3.42           0.46           2.94
-expenses:sandbox               ||           0.06           0.06           0.06           0.06           0.06
-expenses:revenuecat            ||           0.09           0.12           0.09           0.09           0.09
-expenses:platform:shared       ||           0.03           0.03           0.03           0.03           0.03
-expenses:storage               ||           0.01           0.01           0.01           0.01           0.01
--------------------------------++---------------------------------------------------------------------------
-                               ||           9.95          10.85           6.53           3.57           6.05
-===============================++===========================================================================
-Net                            ||           0.04           2.14           3.46           6.42           3.94
-Margin (of revenue after VAT)  ||             0%            20%            42%            77%            47%
+                               ||       Opus 5       Opus 5     Sonnet 5      GPT-5.6     DeepSeek      GLM 5.3
+                               ||                                               Terra   V4.1 Flash        Flash
+                               ||        $9.99       $12.99        $9.99        $9.99        $9.99        $9.99
+===============================++==============================================================================
+eval pass rate                 ||          95%          95%          78%          89%          86%          84%
+cost per message               ||       $0.111       $0.111       $0.050       $0.032       $0.008       $0.004
+-------------------------------++------------------------------------------------------------------------------
+income:subscription            ||         9.99        12.99         9.99         9.99         9.99         9.99
+-------------------------------++------------------------------------------------------------------------------
+expenses:tax:vat               ||         1.67         2.17         1.67         1.67         1.67         1.67
+expenses:store:commission      ||         1.25         1.62         1.25         1.25         1.25         1.25
+expenses:llm:tokens            ||         8.86         8.86         3.99         2.54         0.66         0.30
+expenses:sandbox               ||         0.06         0.06         0.06         0.06         0.06         0.06
+expenses:revenuecat            ||         0.09         0.12         0.09         0.09         0.09         0.09
+expenses:platform:shared       ||         0.03         0.03         0.03         0.03         0.03         0.03
+expenses:storage               ||         0.01         0.01         0.01         0.01         0.01         0.01
+-------------------------------++------------------------------------------------------------------------------
+                               ||        11.97        12.87         7.10         5.65         3.77         3.41
+===============================++==============================================================================
+Net                            ||        -1.98         0.12         2.89         4.34         6.22         6.58
+Margin (of revenue after VAT)  ||         -24%           1%          35%          52%          75%          79%
 ```
 
-- **Tokens are about 80% of costs.** The levers, in order: shorter chats, better cache hits, fewer calls per message, a cheaper model, the price. The table predates the evals; redo it with the eval run's measured token counts once the model is picked.
-- **Measured in the evals** (`packages/evals/results/2026-10-02-models`, cost per eval case, which is one short conversation): Opus 5 $0.111, GPT-5.6 Sol $0.099, Sonnet 5 $0.050, GPT-5.6 Terra $0.032, GLM 5.3 $0.034, DeepSeek V4.1 Flash $0.008, GLM 5.3 Flash $0.004.
+- **Tokens are most of the cost,** so the model sets the margin. Opus, the most reliable, loses money at $9.99 and only breaks even at $12.99; GPT-5.6 Sol (89%, $0.099 per message) is in the same place. GPT-5.6 Terra keeps about half at $9.99 at 89%, and DeepSeek V4.1 Flash and GLM 5.3 Flash keep three quarters at 84–86%. The levers after the model, in order: shorter chats, better cache hits, fewer calls per message, the price.
+- **How far the numbers carry.** Eval cases are short conversations on a 90-transaction ledger, each starting with a cold cache. Real chats reuse the cache across messages, which makes them cheaper; real ledgers carry longer account, payee and tag lists in every prompt, which makes them dearer. Check the real cost per message in the beta.
 - **Haiku 4.5** retires in mid-October 2026, and the evals ruled it out anyway: it passed 45% and often left changes unsaved.
-- **Open models** (GLM, DeepSeek, Kimi) run outside the EU on Workers AI or Fireworks, and each provider is another processor. An EU-only Claude route (Bedrock or Vertex EU) costs about 10% more.
+- **DeepSeek V4.1 Flash on Fireworks** runs outside the EU, so Fireworks is a processor that needs a data processing agreement and a line in the privacy policy. Fireworks lists a separate, dearer US route ($0.45 / $0.009 / $1.80 per million tokens); the standard route's data location must be confirmed with Fireworks.
 - **Sandbox and platform lines** are AWS-era estimates; the spike measures container time and the bookkeeper's billed duration while runs wait on the model.
 - **Usage limits.** The beta has none, under a fair-use clause. The public launch adds a hidden daily cap of about 200 messages per user and a spend limit at the model provider.
 
@@ -277,7 +281,8 @@ Margin (of revenue after VAT)  ||             0%            20%            42%  
 - **Tools added in a deploy may not reach existing chats.** The harness's example and Pi Durable's docs disagree; check it in the spike before relying on it.
 - **Deploys restart Durable Objects.** Runs resume from their checkpoints, so saves must be safe to retry. A deploy doesn't restart a running sandbox (Sandbox SDK 1.0), so the working copy and its unsaved changes survive it.
 - **Confirm with Cloudflare:** Artifacts, R2 and D1 in the EU; container prices and limits; point-in-time recovery for Durable Object storage; Artifacts access, the outbound rule reaching a repo with an injected token, and refusing force pushes.
-- **Confirm with the model provider and Cloudflare:** zero data retention for API calls, and AI Gateway passing images unchanged with logging off.
+- **Confirm with Fireworks and Cloudflare:** zero data retention on Fireworks, where the standard route processes data, Fireworks' rate limits for production, and AI Gateway passing images unchanged with logging off through the custom provider.
+- **One model provider is a single point of failure.** If Fireworks is down, chats stop. A fallback model through the gateway (GLM 5.3 Flash on Fireworks doesn't help, GPT-5.6 Terra on OpenAI does) costs more per message; decide before launch whether to keep one ready.
 - **Commands run as a user that can't change hledger, git or the page script,** so a tricked `bash` can't weaken the save checks.
 - **The iOS share extension** (`expo-share-intent`) takes a few days; test it with statements shared from real bank apps.
 - **assistant-ui's pi runtime doesn't speak Pi Durable.** `@assistant-ui/react-pi` is built for pi-coding-agent; its client interface is transport-agnostic, so we write an adapter that maps Pi Durable's snapshot and events to it over our WebSocket. It's also unproven on React Native. Prototype both first.
@@ -288,7 +293,7 @@ Margin (of revenue after VAT)  ||             0%            20%            42%  
 ## Launch checklist
 
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that revokes the Apple token and reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
-- **Privacy:** policy and terms; processor agreements with Cloudflare, the model provider, RevenueCat, Sentry, PostHog; a DPIA; where RevenueCat keeps data; privacy label.
+- **Privacy:** policy and terms; processor agreements with Cloudflare, Fireworks, RevenueCat, Sentry, PostHog; a DPIA; where RevenueCat keeps data; privacy label.
 - **Security:** cross-user tests that must fail; logs with IDs only; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger, git and poppler run; git hooks off on saves; commands as a restricted user; page data checked before it is stored.
 - **Cost control:** the hidden daily cap, a cap on model calls per run, a cap on running sandboxes (the new policy has none of its own), cache-friendly prompt order (context block last), Cloudflare usage notifications, a spend limit at the model provider, and a switch that pauses new runs.
 - **Operations:** a tested restore from git history and from a snapshot; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger and poppler GPL).
@@ -306,5 +311,5 @@ The milestones, their status and what each one taught us live in [BUILD-PLAN.md]
 
 ## Decisions for you
 
-1. **Which model at launch?** One model, from the eval results (38 cases, 2 runs each; pass rate, cost per case): Opus 5 95% ($0.111), GPT-5.6 Sol 89% ($0.099), GPT-5.6 Terra 89% ($0.032), DeepSeek V4.1 Flash 86% ($0.008), GLM 5.3 Flash 84% ($0.004), Sonnet 5 78% ($0.050), Haiku 4.5 45% ($0.026). Opus is the most reliable and the most expensive, about 2.2× Sonnet per case; Terra, DeepSeek V4.1 Flash and GLM 5.3 Flash come close for a fraction of the cost, but each non-Anthropic provider is another processor, and the open models run outside the EU. The shared weak spots (descriptions, screenshot holdings, balance checks after CSV imports) look like prompt fixes, so rerun the evals after a prompt round before deciding.
+1. ~~**Which model at launch?**~~ Decided on 2026-10-03: DeepSeek V4.1 Flash on Fireworks (86% in the evals, $0.008 per message, 75% margin at $9.99). Opus 5 passed 95% but loses money at $9.99; GPT-5.6 Terra (89%, 52% margin) is the fallback if DeepSeek falls short in the beta or Fireworks can't meet the privacy terms. Rerun the evals after a prompt round, since the shared weak spots look like prompt fixes.
 2. **Which legal entity publishes the app?** Apple and every processor agreement need a company.

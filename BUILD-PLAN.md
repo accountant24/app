@@ -41,14 +41,14 @@ Gaps against the blueprint, fixed along the way:
 Cloudflare's Pi harness (`agents/harness/pi`, agents 0.26) already hosts Pi Durable in a Durable Object, so the spike checks it fits rather than building that part.
 
 - `cloudflare.config.ts` and `infra/bootstrap.ts` for dev: D1, R2 and an Artifacts namespace in the EU, AI Gateway.
-- One EU Durable Object with `Lifecycle.install(this).use(new PiHarness(…))`, on pinned agents and Pi Durable versions, calling a model through AI Gateway with `createAI`. Two ledger tools, one prompt section and the memory guard ported to Pi Durable's extension API.
+- One EU Durable Object with `Lifecycle.install(this).use(new PiHarness(…))`, on pinned agents and Pi Durable versions, calling DeepSeek V4.1 Flash on Fireworks through AI Gateway's custom provider (`custom-fireworks`, key stored in the gateway), with images passing through unchanged. Two ledger tools, one prompt section and the memory guard ported to Pi Durable's extension API.
 - An `ExecutionEnv` over the container (`ctx.container`, Sandbox SDK) running Pi Durable's file tools, `bash` and hledger, one environment per set of books; tool calls set to run one at a time.
 - The container clones and pushes an Artifacts repo; the outbound rule adds the token; a force push is detected.
 - Two chats at once on one container, then a crash or deploy mid-`bash`: the tool not safe to replay comes back as interrupted, the safe one reruns, and both chats finish.
 - Measure: first-reply time, save time, memory with a few chats, a run finishing with no client connected, container start time, a photo over 2 MB, SQLite writes per run, and whether a newly deployed tool reaches existing chats.
 - Decides: the harness, a vendored copy of it, or the fallback (the desktop's agent host in the sandbox); `cloudflare.config.ts` or `wrangler.jsonc`.
 
-What M1 needs: a Cloudflare account on Workers Paid with Artifacts and Containers, a model provider key for AI Gateway, and the `cf` CLI logged in.
+What M1 needs: a Cloudflare account on Workers Paid with Artifacts and Containers, a Fireworks key to store in AI Gateway, and the `cf` CLI logged in.
 
 ### M1b · Phone client spike (≈ 2–3 days, `spikes/`)
 
