@@ -6,20 +6,20 @@ How to turn the desktop agent into a paid, closed-source iPhone app on Cloudflar
 
 Keep the ledger logic, the tools, the prompt and hledger. Each set of books gets one Durable Object, the bookkeeper, that runs the agent on Pi Durable through Cloudflare's Pi harness, with a checkpoint after every step, and one sandbox where the agent's commands run on a clone of the books repo (git, in Cloudflare Artifacts). Pages are computed at save time. Everything stored stays in Cloudflare's EU jurisdiction; the model is DeepSeek V4.1 Flash on Fireworks, reached through Cloudflare's AI Gateway.
 
-| Area | Pick |
-| --- | --- |
-| Cloud | Cloudflare: Workers, Durable Objects, Containers, Artifacts, R2, D1, AI Gateway; storage in the EU; defined in TypeScript (`cloudflare.config.ts`, `cf` CLI) |
-| Books | One git repo per set of books in Artifacts (the books repo), with a daily fork as a snapshot |
-| Server | One Worker (the worker): sign-in, the chat connection, uploads, pages |
-| State | The bookkeeper, one Durable Object per set of books: chats, checkpoints, page data. The directory (D1): users, sessions, members, limits |
-| Agent | Pi Durable in the bookkeeper, hosted by Cloudflare's Pi harness (`agents/harness/pi`), one session per chat, with `pi-extension` ported to Pi Durable's extension API |
-| Sandbox | One container per set of books, shared by its chats, driven through `ctx.container`; runs commands only |
-| Model | DeepSeek V4.1 Flash on Fireworks, through AI Gateway as a custom provider; one model as a server setting, picked from the evals (`packages/evals`) |
-| Accounting engine | hledger, one pinned version |
-| Uploads | PDFs, CSVs and photos in R2; PDFs and CSVs are read with `extract_text`, photos are shrunk and sent to the model |
-| Mobile app | Expo, assistant-ui (React Native) with its pi runtime (`@assistant-ui/react-pi`), over our own adapter for Pi Durable's events |
-| Sign-in | Sign in with Apple only, with our own session tokens |
-| Payments | None in the beta; RevenueCat on StoreKit 2 at the public launch |
+| Area              | Pick                                                                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloud             | Cloudflare: Workers, Durable Objects, Containers, Artifacts, R2, D1, AI Gateway; storage in the EU; defined in TypeScript (`cloudflare.config.ts`, `cf` CLI)          |
+| Books             | One git repo per set of books in Artifacts (the books repo), with a daily fork as a snapshot                                                                          |
+| Server            | One Worker (the worker): sign-in, the chat connection, uploads, pages                                                                                                 |
+| State             | The bookkeeper, one Durable Object per set of books: chats, checkpoints, page data. The directory (D1): users, sessions, members, limits                              |
+| Agent             | Pi Durable in the bookkeeper, hosted by Cloudflare's Pi harness (`agents/harness/pi`), one session per chat, with `pi-extension` ported to Pi Durable's extension API |
+| Sandbox           | One container per set of books, shared by its chats, driven through `ctx.container`; runs commands only                                                               |
+| Model             | DeepSeek V4.1 Flash on Fireworks, through AI Gateway as a custom provider; one model as a server setting, picked from the evals (`packages/evals`)                    |
+| Accounting engine | hledger, one pinned version                                                                                                                                           |
+| Uploads           | PDFs, CSVs and photos in R2; PDFs and CSVs are read with `extract_text`, photos are shrunk and sent to the model                                                      |
+| Mobile app        | Expo, assistant-ui (React Native) with its pi runtime (`@assistant-ui/react-pi`), over our own adapter for Pi Durable's events                                        |
+| Sign-in           | Sign in with Apple only, with our own session tokens                                                                                                                  |
+| Payments          | None in the beta; RevenueCat on StoreKit 2 at the public launch                                                                                                       |
 
 This repo is a closed fork of the open-source desktop app; keep the Apache-2.0 license and notice for the forked code.
 
@@ -142,11 +142,11 @@ iPhone             Bookkeeper (pi)         Sandbox                 Model
 
 ## How it works
 
-| Part | Called by | Does | Holds or reaches |
-| --- | --- | --- | --- |
-| worker | the mobile app, with Apple's token or our session token | sign-in, account deletion, the chat connection, uploads, pages | directory, bookkeepers, uploads |
-| bookkeeper | the worker | the agent, chats, the sandbox, saves, pages, the outbound rule | the AI Gateway token, the books repo token and `log`, uploads, the container |
-| sandbox | the bookkeeper | the agent's commands: files, `bash`, hledger, git, poppler | its clone; through the outbound rule, only its own books repo |
+| Part       | Called by                                               | Does                                                           | Holds or reaches                                                             |
+| ---------- | ------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| worker     | the mobile app, with Apple's token or our session token | sign-in, account deletion, the chat connection, uploads, pages | directory, bookkeepers, uploads                                              |
+| bookkeeper | the worker                                              | the agent, chats, the sandbox, saves, pages, the outbound rule | the AI Gateway token, the books repo token and `log`, uploads, the container |
+| sandbox    | the bookkeeper                                          | the agent's commands: files, `bash`, hledger, git, poppler     | its clone; through the outbound rule, only its own books repo                |
 
 **Sign-in and identity.** The app signs in with `expo-apple-authentication`. The worker verifies Apple's token, exchanges the code for Apple's refresh token, and finds or creates the user by `(provider, sub)`, which is unique; a new user gets `users`, `books` and `members` rows and an empty books repo. The user ID comes only from the session token, and the worker forwards a request for a `books_id` only if `members` lists that user. Deleting the account revokes the Apple token (App Store 5.1.1(v)) and deletes the sessions, the sandbox, the user's books with their repos, snapshots, uploads and bookkeepers, and the user's rows. Cross-user tests in CI check that one user can't reach another's books.
 
@@ -168,9 +168,9 @@ Our extension is `pi-extension` ported to Pi Durable's extension API: the ledger
 
 One working copy means saves never conflict. A commit includes every unsaved change, whichever chat made it, and carries the chat ID, so undo is `git revert`. Artifacts can't refuse a push, so the checks run after it, and the daily forks cover a bad one. A tricked `bash` could get around the checks in the sandbox, but only on its own books, as on the desktop; a verifier container that never runs model code comes with shared books.
 
-**The model.** DeepSeek V4.1 Flash, served by Fireworks (`accounts/fireworks/models/deepseek-v4p1-flash`), at $0.30 input, $0.006 cached input and $1.20 output per million tokens. In the evals it passed 86% at $0.008 per message, and it reads photos. The model runs on Fireworks' servers from open weights, so users' books go to Fireworks, never to DeepSeek. AI Gateway doesn't support Fireworks natively, so Fireworks is set up as a custom provider (`custom-fireworks`) with its key stored in the gateway (BYOK); the bookkeeper points pi-ai's Anthropic-style provider at the gateway's custom URL, so the Worker holds no key, and the gateway keeps the spend and rate limits. Pi Durable records token use per chat, which feeds the per-run and daily caps. The model is a server setting, so switching later is a config change, measured by the evals first. Gateway logging stays off, because prompts carry users' books.
+**The model.** DeepSeek V4.1 Flash, served by Fireworks (`accounts/fireworks/models/deepseek-v4p1-flash`), at $0.30 input, $0.006 cached input and $1.20 output per million tokens. In the evals it passed 86% at $0.008 per message, and it reads photos. The model runs on Fireworks' servers from open weights, so users' books go to Fireworks, never to DeepSeek. AI Gateway doesn't support Fireworks natively, so Fireworks is set up as a custom provider with its key stored in the gateway (BYOK, registered under the provider's bare slug). The harness's `createAI` and the gateway's universal endpoint (what the AI binding calls) don't route custom providers, so the bookkeeper uses its own small pi-ai provider: pi-ai's Anthropic-style client posting to the gateway's provider URL with a gateway token that can only run requests. The Worker never holds the Fireworks key, and the gateway keeps the spend and rate limits. A Run token reaches every gateway in its account, so production keeps the gateway in an account of its own or in one that holds nothing else to spend. Pi Durable records token use per chat, which feeds the per-run and daily caps. The model is a server setting, so switching later is a config change, measured by the evals first. Gateway logging stays off, because prompts carry users' books.
 
-**Documents.** Photos are shrunk on the phone to well under 1 MB and kept in R2; the shrunk copy goes to the model, because Pi Durable stores a message's images in SQLite rows, which cap at 2 MB. PDFs and CSVs go to R2, and the message carries their path. `extract_text` reads the file from the uploads bucket, mounted read-only in the sandbox (`S3Mount`), then runs `pdftotext -layout`, or returns page images (`pdftoppm`) for scans. Text is several times cheaper than a native PDF, on every later call too, and works with models that can't read PDFs.
+**Documents.** Photos are shrunk on the phone to well under 1 MB and kept in R2; the shrunk copy goes to the model, because every image is resent on every later call and stored in the bookkeeper's SQLite (a 2.3 MB photo was stored and read fine in the spike, but grew the database by 3 MB). PDFs and CSVs go to R2, and the message carries their path. `extract_text` reads the file from the uploads bucket, mounted read-only in the sandbox (`S3Mount`), then runs `pdftotext -layout`, or returns page images (`pdftoppm`) for scans. Text is several times cheaper than a native PDF, on every later call too, and works with models that can't read PDFs.
 
 **Skills.** Instructions only (`SKILL.md`), offered through the harness's skill tools: the built-in ones ship with the bookkeeper's code, and users' own live in the books repo.
 
@@ -194,11 +194,11 @@ Two rules carry most of the security: the agent never gets a way to name another
 
 Pages are computed on every save in the sandbox and stored in the bookkeeper: `page_transactions` (one row per month, so a save rewrites only the months that changed), `page_net_worth` and `page_lists`. The bookkeeper serves them after the worker checks membership, so no page ever starts a container. Pages refetch after a save and when the app returns to the foreground.
 
-| Page | hledger command |
-| --- | --- |
-| Transactions | `hledger print -O json` |
-| Net worth | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
-| Mentions, pickers | `hledger accounts`, `payees`, `tags` |
+| Page              | hledger command                                         |
+| ----------------- | ------------------------------------------------------- |
+| Transactions      | `hledger print -O json`                                 |
+| Net worth         | `hledger bs -O json`, at cost and valued (`-V` or `-X`) |
+| Mentions, pickers | `hledger accounts`, `payees`, `tags`                    |
 
 ## Planned for the public launch
 
@@ -212,22 +212,22 @@ Pages are computed on every save in the sandbox and stored in the bookkeeper: `p
 
 ## Infrastructure as code
 
-| Layer | Where | What it defines |
-| --- | --- | --- |
-| Project | `cloudflare.config.ts`, deployed with `cf deploy` | the worker, the `Bookkeeper` class and its container image, bindings, model settings; dev and prod from one function of the mode |
-| Code | the `Bookkeeper` class | EU jurisdiction for every bookkeeper (`jurisdiction("eu")`, in one helper); the outbound rules |
+| Layer   | Where                                                         | What it defines                                                                                                                                  |
+| ------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Project | `cloudflare.config.ts`, deployed with `cf deploy`             | the worker, the `Bookkeeper` class and its container image, bindings, model settings; dev and prod from one function of the mode                 |
+| Code    | the `Bookkeeper` class                                        | EU jurisdiction for every bookkeeper (`jurisdiction("eu")`, in one helper); the outbound rules                                                   |
 | Account | `infra/bootstrap.ts`, run once per environment, safe to rerun | D1, R2 and the Artifacts namespace in the EU; AI Gateway (the model provider key, logging off, token, rate limits); secrets; usage notifications |
 
 `cloudflare.config.ts` only refers to resources and has no EU setting, so the bootstrap script creates them. GitHub Actions runs the tests, the directory's migrations and `cf deploy`: dev on every merge, prod on a tag. A rollback restores code, never data. `cf` is in open beta: D1 migrations, single secrets and live logs still go through Wrangler, and if the spike finds the container unsupported in `cloudflare.config.ts`, start on `wrangler.jsonc` and run `cf migrate` later.
 
 ## Costs and unit economics
 
-| | Before launch | At launch |
-| --- | --- | --- |
-| Cloudflare (Workers Paid, objects, Artifacts, R2, D1) | ≈ $5 | ≈ $20–60 |
-| Sandboxes (Containers, per use) | usage | measure in the spike |
-| RevenueCat, Expo, Sentry, PostHog | $0 | $0–50 |
-| **Total** | **≈ $5–10** | **≈ $20–110** + model + sandbox time |
+|                                                       | Before launch | At launch                            |
+| ----------------------------------------------------- | ------------- | ------------------------------------ |
+| Cloudflare (Workers Paid, objects, Artifacts, R2, D1) | ≈ $5          | ≈ $20–60                             |
+| Sandboxes (Containers, per use)                       | usage         | measure in the spike                 |
+| RevenueCat, Expo, Sentry, PostHog                     | $0            | $0–50                                |
+| **Total**                                             | **≈ $5–10**   | **≈ $20–110** + model + sandbox time |
 
 Per subscriber per month, assuming 80 messages, each costing what one eval case cost on that model (`packages/evals/results/2026-10-02-models`: measured tokens, caching and provider prices, a mean over 76 runs), and 2,000 subscribers. Prices include 20% EU VAT; Apple takes 15% of the price after VAT.
 
@@ -278,12 +278,11 @@ Margin (of revenue after VAT)  ||         -24%           1%          35%        
 - **Cloudflare previews.** The `durable_object` scheduling policy, Sandbox SDK 1.0 (`@next`) and `cf` are betas, and the old `Container` and `Sandbox` classes end on 31 December 2026. Pin them and prove them in the spike, along with the Workers compatibility date.
 - **Containers can't be pinned to the EU yet** ([workers-sdk #15995](https://github.com/cloudflare/workers-sdk/issues/15995)). The beta discloses it; settle it with Cloudflare before the public launch.
 - **The agent in a Durable Object.** About 128 MB of memory and 2 MB per SQLite row, so the app shrinks photos. A run continues with no phone connected because the harness's alarm keeps waking it; an alarm can wait at most 15 minutes, so a single model call longer than that is at risk, and Pi Durable's retry timers live in memory, which the harness works around by turning long waits into alarms. Check memory, a large photo and a run with the phone closed in the spike.
-- **Tools added in a deploy may not reach existing chats.** The harness's example and Pi Durable's docs disagree; check it in the spike before relying on it.
-- **Deploys restart Durable Objects.** Runs resume from their checkpoints, so saves must be safe to retry. A deploy doesn't restart a running sandbox (Sandbox SDK 1.0), so the working copy and its unsaved changes survive it.
+- **Deploys restart Durable Objects.** The bookkeeper picks up new code about 30–40 seconds after a deploy, and existing chats get newly deployed tools (both checked in the spike). Runs resume from their checkpoints: a replay-safe tool reruns and an unsafe one comes back as interrupted, so saves must be safe to retry. The running sandbox survives the restart with its unsaved changes (checked in the spike); a stopped one comes back as a fresh clone, so idle stops save first.
 - **Confirm with Cloudflare:** Artifacts, R2 and D1 in the EU; container prices and limits; point-in-time recovery for Durable Object storage; Artifacts access, the outbound rule reaching a repo with an injected token, and refusing force pushes.
 - **Confirm with Fireworks and Cloudflare:** zero data retention on Fireworks, where the standard route processes data, Fireworks' rate limits for production, and AI Gateway passing images unchanged with logging off through the custom provider.
 - **One model provider is a single point of failure.** If Fireworks is down, chats stop. A fallback model through the gateway (GLM 5.3 Flash on Fireworks doesn't help, GPT-5.6 Terra on OpenAI does) costs more per message; decide before launch whether to keep one ready.
-- **Commands run as a user that can't change hledger, git or the page script,** so a tricked `bash` can't weaken the save checks.
+- **The agent's commands run as root in the container.** The container is temporary and holds one set of books, no internet and no tokens, and the checks that matter run outside it after each push, so a tricked `bash` can only spoil its own working copy, which the checks catch. A separate user isn't worth it: the runtime gives even non-root processes `CAP_DAC_OVERRIDE`, so it would also need dropped capabilities and file writes kept off the Sandbox SDK's `Files` helper (both worked in the spike, if it's ever wanted).
 - **The iOS share extension** (`expo-share-intent`) takes a few days; test it with statements shared from real bank apps.
 - **assistant-ui's pi runtime doesn't speak Pi Durable.** `@assistant-ui/react-pi` is built for pi-coding-agent; its client interface is transport-agnostic, so we write an adapter that maps Pi Durable's snapshot and events to it over our WebSocket. It's also unproven on React Native. Prototype both first.
 - **Statements are the priciest messages.** Cap pages and size per upload, and check `pdftotext -layout` on real statements.
@@ -294,7 +293,7 @@ Margin (of revenue after VAT)  ||         -24%           1%          35%        
 
 - **App Store:** organization account (5.1.1(ix)); Sign in with Apple; in-app account deletion that revokes the Apple token and reaches every processor; AI consent screen naming the provider (5.1.2(i)); restore purchases; a reviewer demo account.
 - **Privacy:** policy and terms; processor agreements with Cloudflare, Fireworks, RevenueCat, Sentry, PostHog; a DPIA; where RevenueCat keeps data; privacy label.
-- **Security:** cross-user tests that must fail; logs with IDs only; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger, git and poppler run; git hooks off on saves; commands as a restricted user; page data checked before it is stored.
+- **Security:** cross-user tests that must fail; logs with IDs only; hledger `include` kept inside the ledger (`resolveSafePath`); limits on attachment size and type; timeouts on every hledger, git and poppler run; git hooks off on saves; page data checked before it is stored.
 - **Cost control:** the hidden daily cap, a cap on model calls per run, a cap on running sandboxes (the new policy has none of its own), cache-friendly prompt order (context block last), Cloudflare usage notifications, a spend limit at the model provider, and a switch that pauses new runs.
 - **Operations:** a tested restore from git history and from a snapshot; remote config for the model and the daily cap; a license review (Apache-2.0 notices, hledger and poppler GPL).
 
@@ -302,12 +301,12 @@ Margin (of revenue after VAT)  ||         -24%           1%          35%        
 
 The milestones, their status and what each one taught us live in [BUILD-PLAN.md](BUILD-PLAN.md).
 
-| Phase | Time | Work | Done when |
-| --- | --- | --- | --- |
-| 0 · Groundwork | ≈ 2 weeks | Eval set and the desktop's baseline (done: nine models, see BUILD-PLAN.md); `pi-extension` ported to Pi Durable's extension API in its own package, then desktop, website, docs and demos deleted from the fork; dev environment from `cloudflare.config.ts` and the bootstrap script; a spike: Cloudflare's Pi harness in one EU bookkeeper calling AI Gateway, with an `ExecutionEnv` over `ctx.container`, a sandbox that clones and pushes an Artifacts repo, and a WebSocket client through the react-pi adapter | the ported tools' tests pass, `cf deploy` works in dev, a run resumes after the bookkeeper restarts, two chats share one sandbox safely, first-reply and save times exist |
-| 1 · Cloud agent | ≈ 3 weeks | worker and bookkeeper (agent, execution environment, streaming chats, saves with checks, pages, uploads); sign-in and the directory; the sandbox image | evals match the desktop, concurrent chats never lose a change, runs survive a deploy, cross-user tests pass |
-| 2 · App on TestFlight | ≈ 4–6 weeks | sign-in, chat, attachments, share extension, Transactions, Net worth, account deletion | you keep your own books on the phone for two weeks |
-| 3 · Launch | ≈ 2–3 weeks | payments and export, the daily cap, consent screen, privacy label, legal entity, App Review, prod | live, and the first renewal goes through |
+| Phase                 | Time        | Work                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Done when                                                                                                                                                                 |
+| --------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 · Groundwork        | ≈ 2 weeks   | Eval set and the desktop's baseline (done: nine models, see BUILD-PLAN.md); `pi-extension` ported to Pi Durable's extension API in its own package, then desktop, website, docs and demos deleted from the fork; dev environment from `cloudflare.config.ts` and the bootstrap script; a spike: Cloudflare's Pi harness in one EU bookkeeper calling AI Gateway, with an `ExecutionEnv` over `ctx.container`, a sandbox that clones and pushes an Artifacts repo, and a WebSocket client through the react-pi adapter | the ported tools' tests pass, `cf deploy` works in dev, a run resumes after the bookkeeper restarts, two chats share one sandbox safely, first-reply and save times exist |
+| 1 · Cloud agent       | ≈ 3 weeks   | worker and bookkeeper (agent, execution environment, streaming chats, saves with checks, pages, uploads); sign-in and the directory; the sandbox image                                                                                                                                                                                                                                                                                                                                                                | evals match the desktop, concurrent chats never lose a change, runs survive a deploy, cross-user tests pass                                                               |
+| 2 · App on TestFlight | ≈ 4–6 weeks | sign-in, chat, attachments, share extension, Transactions, Net worth, account deletion                                                                                                                                                                                                                                                                                                                                                                                                                                | you keep your own books on the phone for two weeks                                                                                                                        |
+| 3 · Launch            | ≈ 2–3 weeks | payments and export, the daily cap, consent screen, privacy label, legal entity, App Review, prod                                                                                                                                                                                                                                                                                                                                                                                                                     | live, and the first renewal goes through                                                                                                                                  |
 
 ## Decisions for you
 
