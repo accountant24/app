@@ -1,0 +1,46 @@
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..8169fb2 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -120,3 +120,30 @@
+ 
+ P 2026-09-14 VTI 294.80 USD
+ P 2026-09-14 CAD 0.734 USD
++
++2026-09-06 * Chapter One Books | online order
++    ; original_payee_name: MAPLE BOOKS ONLINE
++    ; related_file: files/2026/10/20261003015123.csv
++    Assets:Bank:Maple Trust                                         -64.99 CAD
++    Expenses:Education                                               64.99 CAD
++
++2026-09-12 * Linda Morgan | for mom
++    ; original_payee_name: E-TRANSFER SENT LINDA MORGAN
++    ; related_file: files/2026/10/20261003015123.csv
++    Assets:Bank:Maple Trust                                         -300.00 CAD
++    Expenses:Gifts & Donations                                       300.00 CAD
++
++2026-09-18 * Northern Mobile | phone plan
++    ; original_payee_name: NORTHERN MOBILE
++    ; related_file: files/2026/10/20261003015123.csv
++    Assets:Bank:Maple Trust                                         -45.00 CAD
++    Expenses:Utilities                                               45.00 CAD
++
++2026-09-21 * Maple Trust | monthly account fee
++    ; original_payee_name: MONTHLY ACCOUNT FEE
++    ; related_file: files/2026/10/20261003015123.csv
++    Assets:Bank:Maple Trust                                         -4.95 CAD
++    Expenses:Financial                                               4.95 CAD
++
++2026-09-30 * Balance Assertion
++    Assets:Bank:Maple Trust                                          0.00 CAD = 2595.06 CAD
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..29d9fed
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/glm-5p3"
++}
+\ No newline at end of file
