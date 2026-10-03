@@ -1,0 +1,58 @@
+{
+  "id": "dont-commit",
+  "tags": [
+    "entry",
+    "commit"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The agent once committed after being told not to. \"Don't commit\" should hold for the rest of the chat.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Don't commit anything until I say so. Log $32.40 at Harvest Co-op today, Harbor debit card."
+    },
+    {
+      "text": "Also $4.20 at Daily Grind Coffee, same card."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Harvest Co-op$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -32.4,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 32.4,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
+        "date": "today",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -4.2,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 4.2,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 2,
+    "commit": "forbidden"
+  }
+}

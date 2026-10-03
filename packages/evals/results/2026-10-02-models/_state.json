@@ -1,0 +1,53 @@
+{
+  "metrics": [
+    {
+      "id": "pass",
+      "label": "pass",
+      "kind": "binary"
+    },
+    {
+      "id": "correct",
+      "label": "correct",
+      "kind": "binary"
+    },
+    {
+      "id": "saved",
+      "label": "saved",
+      "kind": "binary"
+    },
+    {
+      "id": "valid",
+      "label": "valid",
+      "kind": "binary"
+    },
+    {
+      "id": "safe",
+      "label": "safe",
+      "kind": "binary"
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "cost_usd",
+      "label": "cost",
+      "unit": "$"
+    },
+    {
+      "id": "latency_s",
+      "label": "time",
+      "unit": "s"
+    },
+    {
+      "id": "model_calls",
+      "label": "model calls"
+    },
+    {
+      "id": "tool_calls",
+      "label": "tool calls"
+    },
+    {
+      "id": "auto_replied",
+      "label": "asked"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "id": "invoice-hotel-extras",
+  "tags": [
+    "receipt",
+    "pdf",
+    "trip",
+    "duplicate"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "The hotel was already paid in advance. Only the extras paid at checkout are new, so the agent should add just those.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Here's the final bill from the Toronto hotel. I paid the extras at checkout with my Harbor debit card, it came to $40.00.",
+      "attachments": [
+        "folio-2026-10-0183.pdf"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-10-01",
+        "payee": "^Harbourfront Hotel$",
+        "description": "minibar|laundry|extras|checkout",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -40,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Travel*"
+          }
+        ],
+        "exact": false,
+        "tags": {
+          "trip": "^toronto-2026$",
+          "related_file": "^files/"
+        }
+      }
+    ],
+    "countDelta": 1,
+    "balances": [
+      {
+        "account": "Expenses:Travel",
+        "amount": 452,
+        "commodity": "USD"
+      }
+    ]
+  }
+}

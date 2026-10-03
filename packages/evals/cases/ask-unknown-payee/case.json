@@ -1,0 +1,40 @@
+{
+  "id": "ask-unknown-payee",
+  "tags": [
+    "entry",
+    "ask"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "Megan has never been paid before, so the category is unknown. The agent should ask, then book what you say.",
+  "fixture": "household",
+  "autoReply": "It was for babysitting. Book it under Children.",
+  "turns": [
+    {
+      "text": "Paid Megan $60 from my Harbor checking today."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Megan$",
+        "description": "babysit",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -60,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Children",
+            "amount": 60,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

@@ -1,0 +1,62 @@
+diff --git a/ledger/2026/07.journal b/ledger/2026/07.journal
+index fa6a176..97f363a 100644
+--- a/ledger/2026/07.journal
++++ b/ledger/2026/07.journal
+@@ -136,7 +136,7 @@
+ 
+ 2026-07-19 * Parkside Pharmacy
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+-    Expenses:Health                                                  23.80 USD
++    Expenses:Personal Care                                           23.80 USD
+ 
+ 2026-07-20 * Internal Transfer | PayPal top-up for Thrift Loop
+     ; link: thrift-loop-2026-07-20
+diff --git a/ledger/2026/08.journal b/ledger/2026/08.journal
+index 645ef92..6f8e63e 100644
+--- a/ledger/2026/08.journal
++++ b/ledger/2026/08.journal
+@@ -130,7 +130,7 @@
+ 
+ 2026-08-19 * Parkside Pharmacy
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+-    Expenses:Health                                                  23.80 USD
++    Expenses:Personal Care                                           23.80 USD
+ 
+ 2026-08-20 * Sparkle Cleaning | 3 visits prepaid
+     ; original_payee_name: SPARKLE CLEANING SVCS
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..14e53a6 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -108,7 +108,7 @@
+ 
+ 2026-09-19 * Parkside Pharmacy
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+-    Expenses:Health                                                  23.80 USD
++    Expenses:Personal Care                                           23.80 USD
+ 
+ 2026-09-21 * Corner Deli
+     Assets:Cash:Wallet                                              -6.40 USD
+diff --git a/memory.md b/memory.md
+index 7384273..b2f1cd7 100644
+--- a/memory.md
++++ b/memory.md
+@@ -7,6 +7,7 @@
+ - Unexplained cash differences go to Expenses:Uncategorized, never to equity.
+ - Notes go in the transaction description, never in comments.
+ - After every bank statement import, add a balance assertion for that account on the statement's closing date.
++- Parkside Pharmacy purchases are Personal Care, not Health.
+ 
+ ## Arrangements
+ - Sparkle Cleaning: a visit every other Thursday; each payment ($165) covers 3 visits and is made on the first visit it covers.
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..f646200
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "openai",
++  "defaultModel": "gpt-5.6-terra"
++}
+\ No newline at end of file

@@ -1,0 +1,134 @@
+{
+  "id": "csv-cad-sept",
+  "tags": [
+    "import",
+    "csv",
+    "statement",
+    "fx"
+  ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "The money moved in from checking is already in the books from the other side. The agent should not add it again, only the new spending.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Import my Maple Trust export for September.",
+      "attachments": [
+        "maple-trust-2026-09.csv"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-06",
+        "payee": "^Maple Books Online$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -64.99,
+            "commodity": "CAD"
+          },
+          {
+            "account": [
+              "Expenses:Education",
+              "Expenses:Gifts & Donations"
+            ],
+            "amount": 64.99,
+            "commodity": "CAD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-12",
+        "payee": "^Linda Morgan$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -300,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Gifts & Donations*",
+            "amount": 300,
+            "commodity": "CAD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-18",
+        "payee": "^Northern Mobile$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -45,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Utilities*",
+            "amount": 45,
+            "commodity": "CAD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-21",
+        "payee": "^Maple Trust$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": -4.95,
+            "commodity": "CAD"
+          },
+          {
+            "account": "Expenses:Financial",
+            "amount": 4.95,
+            "commodity": "CAD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": [
+          "2026-09-21",
+          "2026-09-30"
+        ],
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Maple Trust",
+            "amount": 0,
+            "commodity": "CAD",
+            "asserts": 2595.06
+          }
+        ]
+      }
+    ],
+    "countDelta": 5,
+    "balances": [
+      {
+        "account": "Assets:Bank:Maple Trust",
+        "amount": 2595.06,
+        "commodity": "CAD",
+        "date": "2026-09-30"
+      }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "explicit-account-wins",
+  "tags": [
+    "entry"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "memory.md says Harbor Checking is the main account, but you name the joint account. What you say always wins over memory.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "$45 at Green Basket Market today, paid from the Prairie joint account."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Green Basket Market$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Prairie Joint",
+            "amount": -45,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 45,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

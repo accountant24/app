@@ -1,0 +1,27 @@
+{
+  "id": "query-cleaning-next-due",
+  "tags": [
+    "query",
+    "memory"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Questions like when a prepaid service is due again came up often. The answer comes from the last payment and the schedule in memory.md.",
+  "fixture": "household",
+  "autoReply": "No thanks, I was just asking.",
+  "turns": [
+    {
+      "text": "Going by my last Sparkle Cleaning payment, which visit dates does it cover, and when is the next payment due?"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "(2026-08-20|aug(ust|\\.)? 20(th)?\\b|8/20)",
+      "(2026-09-03|sep(tember|\\.)? 3(rd)?\\b|9/0?3)",
+      "(2026-09-17|sep(tember|\\.)? 17(th)?\\b|9/17)",
+      "(2026-10-01|oct(ober|\\.)? 1(st)?\\b|10/0?1)"
+    ]
+  }
+}

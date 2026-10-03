@@ -1,0 +1,223 @@
+{
+  "id": "statement-sept-handentered",
+  "tags": [
+    "import",
+    "pdf",
+    "statement",
+    "duplicate"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "A purchase typed in by hand later showed up again in the statement and got added twice. The agent should spot that it's already there.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Here's my Harbor Bank statement for September. Add whatever is missing.",
+      "attachments": [
+        "harbor-2026-09.pdf"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-15",
+        "payee": "^CloudBox$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -2.99,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Subscriptions*",
+            "amount": 2.99,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-16",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -7.6,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 7.6,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-18",
+        "payee": "^Green Basket Market$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -70.8,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 70.8,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-19",
+        "payee": "^Chapter One Books$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -18.5,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Education*",
+            "amount": 18.5,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-23",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -5.1,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 5.1,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-25",
+        "payee": "^Green Basket Market$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -59.15,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 59.15,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-26",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -3.9,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 3.9,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-27",
+        "payee": "^Pho Saigon$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -28.6,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 28.6,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": "2026-09-22",
+        "payee": "^Harvest Co-op$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -33.45,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 33.45,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-30",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": 0,
+            "commodity": "USD",
+            "asserts": 6366.77
+          }
+        ]
+      }
+    ],
+    "countDelta": 9,
+    "balances": [
+      {
+        "account": "Assets:Bank:Harbor Checking",
+        "amount": 6366.77,
+        "commodity": "USD",
+        "date": "2026-09-30"
+      }
+    ]
+  }
+}

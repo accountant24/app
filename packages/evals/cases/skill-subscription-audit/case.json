@@ -1,0 +1,26 @@
+{
+  "id": "skill-subscription-audit",
+  "tags": [
+    "query",
+    "skill"
+  ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "This is the most used skill, and skills must keep working after the move to mobile. It should list the subscriptions.",
+  "fixture": "household",
+  "autoReply": "No thanks, I was just asking.",
+  "turns": [
+    {
+      "text": "/skill:accountant24-skills:subscription-audit"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "streamflix",
+      "cloudbox"
+    ]
+  }
+}

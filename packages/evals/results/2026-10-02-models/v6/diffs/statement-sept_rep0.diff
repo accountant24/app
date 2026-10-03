@@ -1,0 +1,76 @@
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..6d2136d 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -120,3 +120,60 @@
+ 
+ P 2026-09-14 VTI 294.80 USD
+ P 2026-09-14 CAD 0.734 USD
++
++2026-09-15 * CloudBox
++    ; original_payee_name: CLOUDBOX STORAGE
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -2.99 USD
++    Expenses:Subscriptions                                           2.99 USD
++
++2026-09-16 * Daily Grind Coffee
++    ; original_payee_name: DAILY GRIND COFFEE
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -7.60 USD
++    Expenses:Food                                                    7.60 USD
++
++2026-09-18 * Green Basket Market
++    ; original_payee_name: GREEN BASKET MKT #112 CHICAGO IL
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -70.80 USD
++    Expenses:Food                                                    70.80 USD
++
++2026-09-19 * Chapter One Books
++    ; original_payee_name: CHAPTER ONE BOOKS
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -18.50 USD
++    Expenses:Education                                               18.50 USD
++
++2026-09-22 * Harvest Co-op
++    ; original_payee_name: HARVEST CO-OP LOGAN SQ
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -33.45 USD
++    Expenses:Food                                                    33.45 USD
++
++2026-09-23 * Daily Grind Coffee
++    ; original_payee_name: DAILY GRIND COFFEE
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -5.10 USD
++    Expenses:Food                                                    5.10 USD
++
++2026-09-25 * Green Basket Market
++    ; original_payee_name: GREEN BASKET MKT #112 CHICAGO IL
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -59.15 USD
++    Expenses:Food                                                    59.15 USD
++
++2026-09-26 * Daily Grind Coffee
++    ; original_payee_name: DAILY GRIND COFFEE
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -3.90 USD
++    Expenses:Food                                                    3.90 USD
++
++2026-09-27 * Pho Saigon | dinner
++    ; original_payee_name: PHO SAIGON CHICAGO
++    ; related_file: files/2026/10/20261003001444.pdf
++    Assets:Bank:Harbor Checking                                     -28.60 USD
++    Expenses:Food                                                    28.60 USD
++
++2026-09-30 * Balance Assertion
++    Assets:Bank:Harbor Checking                                      0.00 USD = 6366.77 USD
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dd253e9
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/deepseek-v4p1-flash"
++}
+\ No newline at end of file

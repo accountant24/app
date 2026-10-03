@@ -1,0 +1,36 @@
+{
+  "id": "undo-last-commit",
+  "tags": [
+    "edit",
+    "commit",
+    "undo"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Undo must never rewrite history. The agent should remove the mistaken dinner with a new commit and keep the old ones.",
+  "fixture": "household",
+  "setupCommit": {
+    "message": "Add Luigi's Trattoria dinner on 2026-09-29"
+  },
+  "turns": [
+    {
+      "text": "Undo my last change, I logged that dinner by mistake."
+    }
+  ],
+  "expect": {
+    "absent": [
+      {
+        "date": "2026-09-29",
+        "payee": "Luigi",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": -1
+  }
+}

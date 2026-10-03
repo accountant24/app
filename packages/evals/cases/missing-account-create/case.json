@@ -1,0 +1,41 @@
+{
+  "id": "missing-account-create",
+  "tags": [
+    "entry",
+    "ask"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "There is no savings account yet. The agent should offer to create it, create it only after you say yes, then book the purchase there.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Paid $20 at Daily Grind Coffee today from my savings account."
+    },
+    {
+      "text": "Yes, create it. It's my Harbor Savings account."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Savings",
+            "amount": -20,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 20,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

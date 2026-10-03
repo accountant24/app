@@ -1,0 +1,24 @@
+{
+  "id": "balance-mismatch",
+  "tags": [
+    "balance",
+    "ask"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "When the stated balance doesn't match, the agent should point out the $50 difference and change nothing, not paper over it.",
+  "fixture": "household",
+  "autoReply": "I'm not sure. Can you check what might be missing?",
+  "turns": [
+    {
+      "text": "My Prairie joint account balance is $1,253.13 today."
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "(?<![\\d.,])50([.,]00)?(?!\\d)"
+    ]
+  }
+}

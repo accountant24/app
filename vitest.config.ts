@@ -43,6 +43,9 @@ export default defineConfig({
         "packages/desktop/src/main/template/**",
         "packages/website/src/worker/index.ts",
         "packages/website/src/pages/sitemap.xml.ts",
+        // Eval entry points: the runner CLI and the per-case pi child process.
+        "packages/evals/src/run.ts",
+        "packages/evals/src/agent/session.ts",
       ],
       // Enforced floor — ratchets up toward 100 as gaps close; never lowered.
       // Kept just under the current effective baseline so the gate is honest

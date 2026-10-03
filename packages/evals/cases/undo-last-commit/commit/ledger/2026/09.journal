@@ -1,0 +1,126 @@
+2026-09-01 * Brightwave Inc. | salary
+    ; original_payee_name: BRIGHTWAVE INC PAYROLL
+    ; related_file: files/2026/09/20260915071820.pdf
+    Income:Salary                                                   -4850.00 USD
+    Assets:Bank:Harbor Checking                                      4850.00 USD
+
+2026-09-01 * City Transit | monthly pass
+    ; original_payee_name: CITY TRANSIT MONTHLY PASS
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -75.00 USD
+    Expenses:Transport                                               75.00 USD
+
+2026-09-01 * Oakridge Property Management | rent
+    Assets:Bank:Prairie Joint                                       -1850.00 USD
+    Expenses:Housing                                                 1850.00 USD
+
+2026-09-02 * Harbourfront Hotel | Toronto, 3 nights
+    ; original_payee_name: HARBOURFRONT HOTEL TORONTO
+    ; related_file: files/2026/09/20260915071820.pdf
+    ; trip: toronto-2026
+    Assets:Bank:Harbor Checking                                     -412.00 USD
+    Expenses:Travel                                                  412.00 USD
+
+2026-09-02 * Internal Transfer | my share of rent and bills
+    ; original_payee_name: ONLINE TRANSFER
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -1700.00 USD
+    Assets:Bank:Prairie Joint                                        1700.00 USD
+
+2026-09-03 * Internal Transfer | top-up CAD account
+    ; original_payee_name: ONLINE TRANSFER
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -292.00 USD
+    Assets:Bank:Maple Trust                                          400.00 CAD @@ 292.00 USD
+
+2026-09-03 * Lakeside Fiber | internet
+    Assets:Bank:Prairie Joint                                       -59.99 USD
+    Expenses:Utilities                                               59.99 USD
+
+2026-09-04 * Green Basket Market
+    ; original_payee_name: GREEN BASKET MKT #112 CHICAGO IL
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -67.45 USD
+    Expenses:Food                                                    67.45 USD
+
+2026-09-05 * Internal Transfer | monthly investment
+    ; original_payee_name: ONLINE TRANSFER
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -300.00 USD
+    Assets:Investments:Brightline                                    300.00 USD
+
+2026-09-05 * Metro Electric | electricity
+    Assets:Bank:Prairie Joint                                       -92.00 USD
+    Expenses:Utilities                                               92.00 USD
+
+2026-09-06 * Brightline | monthly investment
+    Assets:Investments:Brightline                                   -294.80 USD
+    Assets:Investments:Brightline                                    1.0000 VTI @@ 294.80 USD
+
+2026-09-07 * Internal Transfer | ATM
+    ; original_payee_name: ONLINE TRANSFER
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -100.00 USD
+    Assets:Cash:Wallet                                               100.00 USD
+
+2026-09-08 * Harvest Co-op
+    ; original_payee_name: HARVEST CO-OP LOGAN SQ
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -25.20 USD
+    Expenses:Food                                                    25.20 USD
+
+2026-09-09 * Daily Grind Coffee
+    ; original_payee_name: DAILY GRIND COFFEE
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -4.40 USD
+    Expenses:Food                                                    4.40 USD
+
+2026-09-10 * StreamFlix
+    ; original_payee_name: STREAMFLIX.COM
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -15.49 USD
+    Expenses:Subscriptions                                           15.49 USD
+
+2026-09-11 * Green Basket Market
+    ; original_payee_name: GREEN BASKET MKT #112 CHICAGO IL
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -52.30 USD
+    Expenses:Food                                                    52.30 USD
+
+2026-09-12 * Starlight Cinema
+    ; original_payee_name: STARLIGHT CINEMA
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -21.00 USD
+    Expenses:Entertainment                                           21.00 USD
+
+2026-09-13 * Luigi's Trattoria | dinner
+    ; original_payee_name: LUIGIS TRATTORIA
+    ; related_file: files/2026/09/20260915071820.pdf
+    Assets:Bank:Harbor Checking                                     -46.80 USD
+    Expenses:Food                                                    46.80 USD
+
+2026-09-14 * Farmers Market
+    Assets:Cash:Wallet                                              -18.50 USD
+    Expenses:Food                                                    18.50 USD
+
+2026-09-14 * Balance Assertion
+    Assets:Bank:Harbor Checking                                      0.00 USD = 6596.86 USD
+
+2026-09-19 * Parkside Pharmacy
+    Liabilities:Credit Card:Summit Visa                             -23.80 USD
+    Expenses:Health                                                  23.80 USD
+
+2026-09-21 * Corner Deli
+    Assets:Cash:Wallet                                              -6.40 USD
+    Expenses:Food                                                    6.40 USD
+
+2026-09-28 * Internal Transfer | card payment
+    Assets:Bank:Prairie Joint                                       -23.80 USD
+    Liabilities:Credit Card:Summit Visa                              23.80 USD
+
+P 2026-09-14 VTI 294.80 USD
+P 2026-09-14 CAD 0.734 USD
+
+2026-09-29 * Luigi's Trattoria | dinner
+    Assets:Bank:Harbor Checking                                     -46.80 USD
+    Expenses:Food                                                    46.80 USD

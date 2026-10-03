@@ -1,0 +1,27 @@
+{
+  "id": "memory-correct-fact",
+  "tags": [
+    "memory"
+  ],
+  "source": [
+    "system.md",
+    "sessions"
+  ],
+  "why": "When a remembered fact changes, the old line should be updated in place, not duplicated.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Correction: Sparkle Cleaning comes every week now, not every other Thursday."
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "memory": [
+      "sparkle[^\\n]*(every week|weekly|every thursday)"
+    ],
+    "memoryReplaces": [
+      "sparkle"
+    ],
+    "memoryMaxAdded": 0
+  }
+}

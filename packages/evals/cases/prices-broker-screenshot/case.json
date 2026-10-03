@@ -1,0 +1,58 @@
+{
+  "id": "prices-broker-screenshot",
+  "tags": [
+    "prices",
+    "image"
+  ],
+  "source": [
+    "sessions",
+    "system.md"
+  ],
+  "why": "Prices are often updated from broker screenshots. The VTI price should be recorded, plus balance checks for the 23 shares and the cash the screenshot shows.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Update prices from this.",
+      "attachments": [
+        "portfolio.png"
+      ]
+    }
+  ],
+  "expect": {
+    "prices": [
+      {
+        "date": "2026-09-30",
+        "commodity": "VTI",
+        "amount": 297.4,
+        "in": "USD"
+      }
+    ],
+    "present": [
+      {
+        "date": "2026-09-30",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Investments:Brightline",
+            "amount": 0,
+            "commodity": "VTI",
+            "asserts": 23
+          }
+        ]
+      },
+      {
+        "date": "2026-09-30",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Investments:Brightline",
+            "amount": 0,
+            "commodity": "USD",
+            "asserts": 177.7
+          }
+        ]
+      }
+    ],
+    "countDelta": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "ask-missing-amount",
+  "tags": [
+    "entry",
+    "ask"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "No amount was given. The agent should ask instead of guessing, then book what you say.",
+  "fixture": "household",
+  "autoReply": "$3.80, Harbor debit card.",
+  "turns": [
+    {
+      "text": "Log a coffee at Daily Grind Coffee from yesterday."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today-1",
+        "payee": "^Daily Grind Coffee$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -3.8,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 3.8,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

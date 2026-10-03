@@ -1,0 +1,90 @@
+{
+  "id": "payee-rename",
+  "tags": [
+    "edit",
+    "payees"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Renaming payees in bulk is a common chore. Every Corner Deli entry should become Sal's Corner Deli, keeping the old name as a tag.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Rename the payee Corner Deli to Sal's Corner Deli everywhere, and keep the old name as original_payee_name."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-07-21",
+        "payee": "^Sal['’]s Corner Deli$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -6.4,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 6.4,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "original_payee_name": "^Corner Deli$"
+        }
+      },
+      {
+        "date": "2026-08-21",
+        "payee": "^Sal['’]s Corner Deli$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -6.4,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 6.4,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "original_payee_name": "^Corner Deli$"
+        }
+      },
+      {
+        "date": "2026-09-21",
+        "payee": "^Sal['’]s Corner Deli$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -6.4,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 6.4,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "original_payee_name": "^Corner Deli$"
+        }
+      }
+    ],
+    "absent": [
+      {
+        "payee": "^Corner Deli$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "description-not-invented",
+  "tags": [
+    "description"
+  ],
+  "source": [
+    "sessions",
+    "system.md"
+  ],
+  "why": "The agent used to make up descriptions nobody gave it. If you don't say what it was for, the description should stay empty.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "$9.40 at Daily Grind Coffee today, Harbor debit card."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Daily Grind Coffee$",
+        "description": "^$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -9.4,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 9.4,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

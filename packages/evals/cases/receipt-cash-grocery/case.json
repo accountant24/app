@@ -1,0 +1,42 @@
+{
+  "id": "receipt-cash-grocery",
+  "tags": [
+    "receipt",
+    "image"
+  ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "Receipts are often sent as photos. The agent should read the shop, date and total from the picture and book it as cash.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Paid cash from my wallet.",
+      "attachments": [
+        "receipt.png"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-26",
+        "payee": "^Green Basket Market$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -23.47,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 23.47,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

@@ -1,0 +1,33 @@
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..0d8e281 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -120,3 +120,17 @@
+ 
+ P 2026-09-14 VTI 294.80 USD
+ P 2026-09-14 CAD 0.734 USD
++
++2026-09-20 * Internal Transfer
++    ; link: paypal-20260920-thriftloop
++    Assets:Bank:Harbor Checking                                     -22.00 USD
++    Assets:PayPal                                                    22.00 USD
++
++2026-09-20 * Thrift Loop | Wool scarf, gray
++    ; link: paypal-20260920-thriftloop
++    ; related_file: files/2026/10/20261002212451.csv
++    Assets:PayPal                                                   -22.00 USD
++    Expenses:Shopping                                                22.00 USD
++
++2026-09-20 * Balance Assertion
++    Assets:PayPal                                                    0.00 USD = 0.00 USD
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..6b50a86
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "anthropic",
++  "defaultModel": "claude-haiku-4-5"
++}
+\ No newline at end of file

@@ -1,0 +1,44 @@
+{
+  "id": "quick-entry-tip",
+  "tags": [
+    "entry"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "People often mention a tip with a meal. The full amount with the tip should leave the account, and the description should say it was lunch.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Lunch at Pho Saigon yesterday, $24.50 plus a $3 tip, on my Harbor debit card."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today-1",
+        "payee": "^Pho Saigon$",
+        "description": "lunch",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -27.5,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 1,
+    "balances": [
+      {
+        "account": "Expenses:Food",
+        "amount": 1084,
+        "commodity": "USD"
+      }
+    ]
+  }
+}

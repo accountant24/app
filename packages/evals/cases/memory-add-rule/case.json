@@ -1,0 +1,25 @@
+{
+  "id": "memory-add-rule",
+  "tags": [
+    "memory"
+  ],
+  "source": [
+    "sessions",
+    "system.md"
+  ],
+  "why": "Asked to remember one thing, the agent used to rewrite or bloat memory.md. It should add one short line and keep everything else.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Remember this: my employer reimburses my City Transit monthly pass, so book those reimbursements against Transport."
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "memory": [
+      "transit",
+      "transport"
+    ],
+    "memoryMaxAdded": 2
+  }
+}

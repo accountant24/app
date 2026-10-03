@@ -1,0 +1,39 @@
+{
+  "id": "fresh-first-expense",
+  "tags": [
+    "entry",
+    "fresh"
+  ],
+  "source": [
+    "coverage"
+  ],
+  "why": "Every new user starts with an empty setup. The very first expense should work there too.",
+  "fixture": "_template",
+  "turns": [
+    {
+      "text": "I just paid $12.50 for lunch at Rosie's Diner, in cash."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Rosie['’]s Diner$",
+        "description": "lunch",
+        "postings": [
+          {
+            "account": "Assets:Cash",
+            "amount": -12.5,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food",
+            "amount": 12.5,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

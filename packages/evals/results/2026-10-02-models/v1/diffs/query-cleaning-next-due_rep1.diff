@@ -1,0 +1,11 @@
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..dee90cf
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "anthropic",
++  "defaultModel": "claude-sonnet-5"
++}
+\ No newline at end of file

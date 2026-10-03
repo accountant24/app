@@ -1,0 +1,38 @@
+{
+  "id": "quick-cash-entry",
+  "tags": [
+    "entry",
+    "cash"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Short messages like this are a big part of daily use. The agent should book it today, from the wallet, under the existing payee name.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Spent $14.80 at the farmers market this morning, cash."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Farmers Market$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -14.8,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 14.8,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

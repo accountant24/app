@@ -1,0 +1,89 @@
+{
+  "id": "paypal-csv-sept",
+  "tags": [
+    "import",
+    "csv",
+    "paypal"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "PayPal purchases were booked straight from the card. They should be two linked steps: checking to PayPal, then PayPal to the shop.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Here's my PayPal activity for September, please add it.",
+      "attachments": [
+        "paypal-2026-09.csv"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-20",
+        "payee": "^Internal Transfer$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -22,
+            "commodity": "USD"
+          },
+          {
+            "account": "Assets:PayPal",
+            "amount": 22,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "link": true,
+          "related_file": "^files/"
+        }
+      },
+      {
+        "date": "2026-09-20",
+        "payee": "^Thrift Loop$",
+        "postings": [
+          {
+            "account": "Assets:PayPal",
+            "amount": -22,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Shopping",
+            "amount": 22,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "link": true,
+          "related_file": "^files/",
+          "original_payee_name": true
+        }
+      },
+      {
+        "date": [
+          "2026-09-20",
+          "2026-09-30"
+        ],
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:PayPal",
+            "amount": 0,
+            "commodity": "USD",
+            "asserts": 0
+          }
+        ]
+      }
+    ],
+    "countDelta": 3,
+    "balances": [
+      {
+        "account": "Assets:PayPal",
+        "amount": 0,
+        "commodity": "USD"
+      }
+    ]
+  }
+}

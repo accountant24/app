@@ -1,0 +1,40 @@
+{
+  "id": "refund-headphones",
+  "tags": [
+    "edit",
+    "refund"
+  ],
+  "source": [
+    "system.md",
+    "sessions"
+  ],
+  "why": "Refunds were sometimes booked as income. A returned purchase should reduce Shopping and the card balance instead.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "I returned the headphones from Volt Electronics. The $349 refund hit my Summit Visa today."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Volt Electronics$",
+        "description": "refund|return",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Summit Visa",
+            "amount": 349,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Shopping",
+            "amount": -349,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

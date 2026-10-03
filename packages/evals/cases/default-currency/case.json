@@ -1,0 +1,37 @@
+{
+  "id": "default-currency",
+  "tags": [
+    "entry"
+  ],
+  "source": [
+    "system.md"
+  ],
+  "why": "People often skip the currency. The agent should use the default from memory.md (USD) without asking.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Spent 18.20 at Harvest Co-op today on my Harbor debit card."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Harvest Co-op$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -18.2,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 18.2,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

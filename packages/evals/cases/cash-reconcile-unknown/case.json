@@ -1,0 +1,69 @@
+{
+  "id": "cash-reconcile-unknown",
+  "tags": [
+    "balance",
+    "cash"
+  ],
+  "source": [
+    "sessions",
+    "system.md"
+  ],
+  "why": "When cash didn't add up, the gap was once booked to equity, which was wrong. It should go to Uncategorized with payee Unknown, plus a balance check.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "I have $280 in my wallet right now. I don't remember where the rest went."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Unknown$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -65.3,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Uncategorized",
+            "amount": 65.3,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
+        "date": "today",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": 0,
+            "commodity": "USD",
+            "asserts": 280
+          }
+        ]
+      }
+    ],
+    "absent": [
+      {
+        "date": "today",
+        "postings": [
+          {
+            "account": "Equity*"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 2,
+    "balances": [
+      {
+        "account": "Assets:Cash:Wallet",
+        "amount": 280,
+        "commodity": "USD"
+      }
+    ]
+  }
+}

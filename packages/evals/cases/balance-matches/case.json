@@ -1,0 +1,34 @@
+{
+  "id": "balance-matches",
+  "tags": [
+    "balance"
+  ],
+  "source": [
+    "system.md",
+    "sessions"
+  ],
+  "why": "When you tell the agent a balance and the books already agree, it should only record a balance check.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "My Prairie joint account balance is $1203.13 today."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Balance Assertion$",
+        "postings": [
+          {
+            "account": "Assets:Bank:Prairie Joint",
+            "amount": 0,
+            "commodity": "USD",
+            "asserts": 1203.13
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

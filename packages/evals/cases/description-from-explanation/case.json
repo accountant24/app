@@ -1,0 +1,38 @@
+{
+  "id": "description-from-explanation",
+  "tags": [
+    "description"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Explanations ended up in tags or comments instead of the description. When you say what a payment was for, it belongs in the description.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Paid $85 to Bright Smile Dental today on my Summit Visa. It was the copay for Sam's teeth cleaning."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Bright Smile Dental$",
+        "description": "copay|clean",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Summit Visa",
+            "amount": -85,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Health",
+            "amount": 85,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 1
+  }
+}

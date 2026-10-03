@@ -1,0 +1,86 @@
+{
+  "id": "recategorize-merchant",
+  "tags": [
+    "edit",
+    "memory"
+  ],
+  "source": [
+    "sessions",
+    "system.md"
+  ],
+  "why": "Wrong categories were a top complaint. The agent should fix the old entries, and since you said \"from now on\", save that rule as one short line in memory.md.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Parkside Pharmacy should be Personal Care, not Health. Fix the existing ones and keep it that way from now on."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-07-19",
+        "payee": "^Parkside Pharmacy$",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Summit Visa",
+            "amount": -23.8,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Personal Care",
+            "amount": 23.8,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
+        "date": "2026-08-19",
+        "payee": "^Parkside Pharmacy$",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Summit Visa",
+            "amount": -23.8,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Personal Care",
+            "amount": 23.8,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-19",
+        "payee": "^Parkside Pharmacy$",
+        "postings": [
+          {
+            "account": "Liabilities:Credit Card:Summit Visa",
+            "amount": -23.8,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Personal Care",
+            "amount": 23.8,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "absent": [
+      {
+        "payee": "[Pp]arkside",
+        "postings": [
+          {
+            "account": "Expenses:Health"
+          }
+        ],
+        "exact": false
+      }
+    ],
+    "countDelta": 0,
+    "memory": [
+      "parkside[^\\n]*personal care|personal care[^\\n]*parkside"
+    ],
+    "memoryMaxAdded": 1
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "query-food-august",
+  "tags": [
+    "query"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Spending by category is the most common question. The answer should be the exact August food total.",
+  "fixture": "household",
+  "autoReply": "No thanks, I was just asking.",
+  "turns": [
+    {
+      "text": "How much did I spend on food in August 2026?"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "417\\.40"
+    ]
+  }
+}

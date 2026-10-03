@@ -1,0 +1,67 @@
+{
+  "id": "cash-transfer-then-spend",
+  "tags": [
+    "entry",
+    "cash",
+    "transfer"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Moving cash around and then spending it is common. That's two entries: a transfer from the jar to the wallet, then the purchase.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Took $50 from the cash jar at home into my wallet, then spent $12 of it at Corner Deli."
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "today",
+        "payee": "^Internal Transfer$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Home",
+            "amount": -50,
+            "commodity": "USD"
+          },
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": 50,
+            "commodity": "USD"
+          }
+        ]
+      },
+      {
+        "date": "today",
+        "payee": "^Corner Deli$",
+        "postings": [
+          {
+            "account": "Assets:Cash:Wallet",
+            "amount": -12,
+            "commodity": "USD"
+          },
+          {
+            "account": "Expenses:Food*",
+            "amount": 12,
+            "commodity": "USD"
+          }
+        ]
+      }
+    ],
+    "countDelta": 2,
+    "balances": [
+      {
+        "account": "Assets:Cash:Wallet",
+        "amount": 383.3,
+        "commodity": "USD"
+      },
+      {
+        "account": "Assets:Cash:Home",
+        "amount": 350,
+        "commodity": "USD"
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+diff --git a/ledger/2026/07.journal b/ledger/2026/07.journal
+index fa6a176..97f363a 100644
+--- a/ledger/2026/07.journal
++++ b/ledger/2026/07.journal
+@@ -136,7 +136,7 @@
+ 
+ 2026-07-19 * Parkside Pharmacy
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+-    Expenses:Health                                                  23.80 USD
++    Expenses:Personal Care                                           23.80 USD
+ 
+ 2026-07-20 * Internal Transfer | PayPal top-up for Thrift Loop
+     ; link: thrift-loop-2026-07-20
+diff --git a/ledger/2026/08.journal b/ledger/2026/08.journal
+index 645ef92..6f8e63e 100644
+--- a/ledger/2026/08.journal
++++ b/ledger/2026/08.journal
+@@ -130,7 +130,7 @@
+ 
+ 2026-08-19 * Parkside Pharmacy
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+-    Expenses:Health                                                  23.80 USD
++    Expenses:Personal Care                                           23.80 USD
+ 
+ 2026-08-20 * Sparkle Cleaning | 3 visits prepaid
+     ; original_payee_name: SPARKLE CLEANING SVCS
+diff --git a/ledger/2026/09.journal b/ledger/2026/09.journal
+index 8bd08de..14e53a6 100644
+--- a/ledger/2026/09.journal
++++ b/ledger/2026/09.journal
+@@ -108,7 +108,7 @@
+ 
+ 2026-09-19 * Parkside Pharmacy
+     Liabilities:Credit Card:Summit Visa                             -23.80 USD
+-    Expenses:Health                                                  23.80 USD
++    Expenses:Personal Care                                           23.80 USD
+ 
+ 2026-09-21 * Corner Deli
+     Assets:Cash:Wallet                                              -6.40 USD
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..fb2edc3
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "openai",
++  "defaultModel": "gpt-5.6-sol"
++}
+\ No newline at end of file

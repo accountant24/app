@@ -1,0 +1,31 @@
+diff --git a/ledger/2026/10.journal b/ledger/2026/10.journal
+new file mode 100644
+index 0000000..a6547cf
+--- /dev/null
++++ b/ledger/2026/10.journal
+@@ -0,0 +1,5 @@
++2026-10-01 * Harbourfront Hotel | hotel extras at checkout: minibar 24.50 CAD, laundry 30.30 CAD — folio 2026-10-0183, total CAD 54.80 charged as USD 40.00 on Visa Debit ****4417
++    ; related_file: files/2026/10/20261003015354.pdf
++    ; trip: toronto-2026
++    Assets:Bank:Harbor Checking                                     -40.00 USD
++    Expenses:Travel                                                  40.00 USD
+diff --git a/ledger/main.journal b/ledger/main.journal
+index 1400bab..7bdb4b5 100644
+--- a/ledger/main.journal
++++ b/ledger/main.journal
+@@ -5,3 +5,4 @@ include accounts.journal
+ include 2026/07.journal
+ include 2026/08.journal
+ include 2026/09.journal
++include 2026/10.journal
+diff --git a/settings.json b/settings.json
+new file mode 100644
+index 0000000..29d9fed
+--- /dev/null
++++ b/settings.json
+@@ -0,0 +1,4 @@
++{
++  "defaultProvider": "fireworks",
++  "defaultModel": "accounts/fireworks/models/glm-5p3"
++}
+\ No newline at end of file

@@ -1,0 +1,25 @@
+{
+  "id": "query-net-worth",
+  "tags": [
+    "query",
+    "fx"
+  ],
+  "source": [
+    "sessions",
+    "coverage"
+  ],
+  "why": "Net worth is a frequent question, and it needs the latest prices for the shares and the Canadian dollars.",
+  "fixture": "household",
+  "autoReply": "No thanks, I was just asking.",
+  "turns": [
+    {
+      "text": "What's my net worth in USD at the latest prices?"
+    }
+  ],
+  "expect": {
+    "countDelta": 0,
+    "answer": [
+      "(17,?712|17,?713)"
+    ]
+  }
+}

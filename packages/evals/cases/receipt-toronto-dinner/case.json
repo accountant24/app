@@ -1,0 +1,49 @@
+{
+  "id": "receipt-toronto-dinner",
+  "tags": [
+    "receipt",
+    "image",
+    "trip"
+  ],
+  "source": [
+    "sessions"
+  ],
+  "why": "Spending on trips in another currency comes up a lot. The agent should book the dollar amount from the card, file it as travel and tag the trip.",
+  "fixture": "household",
+  "turns": [
+    {
+      "text": "Dinner in Toronto, paid with my Harbor debit card. It came to $36.55 on my statement.",
+      "attachments": [
+        "receipt.png"
+      ]
+    }
+  ],
+  "expect": {
+    "present": [
+      {
+        "date": "2026-09-29",
+        "payee": "^(The )?Maple Table$",
+        "description": "dinner",
+        "postings": [
+          {
+            "account": "Assets:Bank:Harbor Checking",
+            "amount": -36.55,
+            "commodity": "USD"
+          },
+          {
+            "account": [
+              "Expenses:Travel*",
+              "Expenses:Food*"
+            ],
+            "amount": 36.55,
+            "commodity": "USD"
+          }
+        ],
+        "tags": {
+          "trip": "^toronto-2026$"
+        }
+      }
+    ],
+    "countDelta": 1
+  }
+}
