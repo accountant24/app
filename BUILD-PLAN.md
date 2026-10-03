@@ -1,12 +1,14 @@
 # Accountant24 Mobile Build Plan
 
-How we build [BLUEPRINT.md](BLUEPRINT.md): small milestones, each ending in something that runs, with the riskiest unknowns first so a dead end costs days, not weeks. One branch and PR per milestone, in this repo. The blueprint holds the decisions; this file holds the order, the status and what each step taught us.
+How we build [BLUEPRINT.md](BLUEPRINT.md): small milestones, each ending in something that runs, with the riskiest unknowns first so a dead end costs days, not weeks. The blueprint holds the decisions; this file holds the order, the status and what each step taught us.
+
+Branches: `docs/mobile-blueprint` is the mobile branch, and its PR (#1) goes to `main` only once the whole app is ready. Each milestone gets its own branch and PR into the mobile branch.
 
 ## Status
 
 | Milestone | Status | PR |
 | --- | --- | --- |
-| M0 · Eval set and desktop baseline | done (PR pending) | |
+| M0 · Eval set and desktop baseline | done | #2 |
 | M1 · Cloud risk spike | not started | |
 | M1b · Phone client spike | not started | |
 | M2 · Port the extension behind an execution environment | not started | |
