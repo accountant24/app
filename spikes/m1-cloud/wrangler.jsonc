@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // No account_id here: wrangler reads CLOUDFLARE_ACCOUNT_ID from .env, so moving accounts changes no code.
+  "name": "a24-m1-spike",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "ai": { "binding": "AI", "remote": true },
+  "artifacts": [{ "binding": "ARTIFACTS", "namespace": "a24-m1-books" }],
+  // R2 isn't enabled on the spike account yet; M1 doesn't use the uploads bucket.
+  // "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "a24-m1-uploads", "jurisdiction": "eu" }],
+  "containers": [
+    {
+      "class_name": "Bookkeeper",
+      "scheduling_policy": "durable_object",
+      "images": { "books": { "dockerfile": "./Dockerfile" } }
+    }
+  ],
+  "durable_objects": { "bindings": [{ "name": "BOOKKEEPER", "class_name": "Bookkeeper" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Bookkeeper"] }],
+  "vars": {
+    "GATEWAY_ID": "a24-m1-gateway",
+    "MODEL_PROVIDER": "custom-a24-m1-fireworks",
+    "MODEL_ID": "accounts/fireworks/models/deepseek-v4p1-flash",
+    "ARTIFACTS_NAMESPACE": "a24-m1-books"
+  },
+  // SPIKE_TOKEN guards the public workers.dev URL, so nobody else can spend model credit.
+  // GATEWAY_RUN_TOKEN can only run requests on the AI Gateway; the Fireworks key stays in the gateway.
+  "secrets": { "required": ["SPIKE_TOKEN", "GATEWAY_RUN_TOKEN"] },
+  "observability": { "enabled": true }
+}

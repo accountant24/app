@@ -1,0 +1,28 @@
+{
+  "name": "a24-m1-cloud-spike",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cloudflare/sandbox": "^1.0.0",
+    "@earendil-works/pi-ai": "^1.0.0",
+    "@earendil-works/pi-durable": "^1.0.0",
+    "agents": "^0.26.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261003.1",
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.147.0"
+  },
+  "scripts": {
+    "up": "node --env-file=.env infra/up.ts",
+    "down": "node --env-file=.env infra/down.ts",
+    "deploy": "node --env-file=.env infra/check.ts && node --env-file=.env node_modules/wrangler/bin/wrangler.js deploy",
+    "secret": "node --env-file=.env infra/check.ts && node --env-file=.env node_modules/wrangler/bin/wrangler.js secret put SPIKE_TOKEN",
+    "tail": "node --env-file=.env infra/check.ts && node --env-file=.env node_modules/wrangler/bin/wrangler.js tail",
+    "measure": "node --env-file=.env scripts/measure.ts",
+    "types": "wrangler types --include-runtime=false",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "wrangler": "node --env-file=.env infra/check.ts && node --env-file=.env node_modules/wrangler/bin/wrangler.js"
+  }
+}
